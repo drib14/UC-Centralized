@@ -1,17 +1,18 @@
 /* UC-Central Styles */
 
 :root {
-    /* Mint Green Palette */
-    --primary-mint: #98ff98; /* Mint Green */
-    --primary-dark-mint: #2e8b57; /* Sea Green */
-    --primary-light-mint: #e0ffe0;
+    /* UC Blue & Yellow Palette */
+    --primary-uc-blue: #003399; /* Deep Blue */
+    --primary-uc-yellow: #FFCC00; /* Gold/Yellow */
+    --primary-light-blue: #e6f0ff;
     --accent-color: #ffffff;
     --text-dark: #333333;
 
     /* Bootstrap Overrides map */
-    --bs-primary: #2e8b57; /* Use darker mint for primary buttons/text for contrast */
-    --bs-primary-rgb: 46, 139, 87;
-    --bs-body-bg: #f8fdf8;
+    --bs-primary: #003399;
+    --bs-primary-rgb: 0, 51, 153;
+    --bs-body-bg: #f4f6f9; /* Light gray-blue tint for background */
+    --bs-link-color: #003399;
 }
 
 body {
@@ -28,37 +29,53 @@ main {
 
 /* Navbar */
 .navbar {
-    background-color: var(--primary-dark-mint) !important;
+    background-color: var(--primary-uc-blue) !important;
     box-shadow: 0 2px 4px rgba(0,0,0,0.1);
 }
 
-.navbar-brand, .nav-link {
-    color: white !important;
+.navbar-brand {
+    color: var(--primary-uc-yellow) !important;
+    font-weight: bold;
 }
 
-.nav-link:hover {
-    color: var(--primary-mint) !important;
+.nav-link {
+    color: rgba(255,255,255,0.9) !important;
+}
+
+.nav-link:hover, .nav-link.active {
+    color: var(--primary-uc-yellow) !important;
+}
+
+/* Admin Navbar Distinction */
+.admin-nav {
+    background-color: #002266 !important; /* Darker blue for admin */
+    border-bottom: 3px solid var(--primary-uc-yellow);
 }
 
 /* Buttons */
 .btn-primary {
-    background-color: var(--primary-dark-mint);
-    border-color: var(--primary-dark-mint);
+    background-color: var(--primary-uc-blue);
+    border-color: var(--primary-uc-blue);
 }
 
 .btn-primary:hover {
-    background-color: #246b42;
-    border-color: #246b42;
+    background-color: #002266;
+    border-color: #002266;
 }
 
 .btn-outline-primary {
-    color: var(--primary-dark-mint);
-    border-color: var(--primary-dark-mint);
+    color: var(--primary-uc-blue);
+    border-color: var(--primary-uc-blue);
 }
 
 .btn-outline-primary:hover {
-    background-color: var(--primary-dark-mint);
+    background-color: var(--primary-uc-blue);
     color: white;
+}
+
+/* Text Colors */
+.text-success {
+    color: var(--primary-uc-blue) !important; /* Replace mint green text with blue */
 }
 
 /* Cards */
@@ -73,8 +90,8 @@ main {
 }
 
 .card-header {
-    background-color: var(--primary-light-mint);
-    color: var(--primary-dark-mint);
+    background-color: var(--primary-light-blue);
+    color: var(--primary-uc-blue);
     font-weight: bold;
     border-bottom: none;
 }
@@ -87,17 +104,18 @@ main {
     background: white;
     border-radius: 10px;
     box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    border-top: 5px solid var(--primary-uc-blue);
 }
 
 .auth-header {
     text-align: center;
-    color: var(--primary-dark-mint);
+    color: var(--primary-uc-blue);
     margin-bottom: 1.5rem;
 }
 
 /* Footer */
 footer {
-    background-color: var(--primary-dark-mint);
+    background-color: var(--primary-uc-blue);
     color: white;
     padding: 1rem 0;
     text-align: center;
