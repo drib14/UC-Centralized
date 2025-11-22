@@ -52,6 +52,10 @@ class API {
         return this.request('/auth/register', 'POST', data);
     }
 
+    static updateProfile(data) {
+        return this.request('/auth/profile', 'PUT', data);
+    }
+
     // Events
     static getEvents() {
         return this.request('/events');

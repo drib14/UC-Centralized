@@ -113,7 +113,11 @@ function updateNav() {
 
             // Update Username display
             const userNameDisplay = document.getElementById('nav-user-name');
-            if(userNameDisplay) userNameDisplay.textContent = `Hi, ${user.firstName}`;
+            if(userNameDisplay) {
+                 // Handle firstName or name or fallback
+                 const displayName = user.firstName || (user.name ? user.name.split(' ')[0] : 'Student');
+                 userNameDisplay.textContent = `Hi, ${displayName}`;
+            }
 
             // Admin Check
             if (user.role === 'admin' && adminLinks) {

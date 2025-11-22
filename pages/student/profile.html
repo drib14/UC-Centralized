@@ -93,9 +93,12 @@
             </div>
             <div class="card-body text-center py-4">
               <img
-                src="https://placehold.co/150x150?text=User"
+                src=""
+                id="profile-img-display"
                 class="rounded-circle mb-3 border border-4 border-success"
                 width="120"
+                height="120"
+                style="object-fit: cover; display: none;"
               />
               <h3 id="p-name" class="fw-bold">Student Name</h3>
               <p id="p-id" class="text-muted mb-4">ID: 12345678</p>
@@ -222,11 +225,13 @@
     ></div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="../../assets/js/api.js"></script>
     <script src="../../assets/js/auth.js"></script>
     <script src="../../assets/js/main.js"></script>
     <script>
-      Auth.requireLogin();
+      Auth.checkSession();
       let user = Auth.getCurrentUser();
+      const profileImgEl = document.getElementById('profile-img-display');
 
       function renderProfile() {
         if (user) {
@@ -234,20 +239,46 @@
             "p-name"
           ).textContent = `${user.firstName} ${user.lastName}`;
           document.getElementById("p-id").textContent = `ID: ${user.studentId}`;
-          document.getElementById("p-dept").textContent = user.department;
-          document.getElementById("p-prog").textContent = user.program;
-          document.getElementById("p-year").textContent = user.year;
+          document.getElementById("p-dept").textContent = user.department || 'N/A';
+          document.getElementById("p-prog").textContent = user.program || 'N/A';
+          document.getElementById("p-year").textContent = user.year || 'N/A';
           document.getElementById("p-role").textContent = user.role;
+
+          // Initials Logic
+          if (user.profileImage) {
+              profileImgEl.src = user.profileImage;
+              profileImgEl.style.display = 'inline-block';
+              const ph = document.getElementById('profile-placeholder');
+              if (ph) ph.style.display = 'none';
+          } else {
+              profileImgEl.style.display = 'none';
+              const fInitial = user.firstName ? user.firstName.charAt(0) : '';
+              const lInitial = user.lastName ? user.lastName.charAt(0) : '';
+              const initials = (fInitial + lInitial).toUpperCase();
+
+              let placeholder = document.getElementById('profile-placeholder');
+              if (!placeholder) {
+                  placeholder = document.createElement('div');
+                  placeholder.id = 'profile-placeholder';
+                  placeholder.className = 'rounded-circle mb-3 border border-4 border-success d-flex align-items-center justify-content-center bg-light text-success fw-bold mx-auto';
+                  placeholder.style.width = '120px';
+                  placeholder.style.height = '120px';
+                  placeholder.style.fontSize = '40px';
+                  profileImgEl.parentNode.insertBefore(placeholder, profileImgEl);
+              }
+              placeholder.textContent = initials;
+              placeholder.style.display = 'flex';
+          }
 
           // Pre-fill Edit Form
           document.getElementById("e-fname").value = user.firstName;
           document.getElementById("e-lname").value = user.lastName;
           document.getElementById("e-id").value = user.studentId;
-          document.getElementById("e-dept").value = user.department;
+          document.getElementById("e-dept").value = user.department || '';
         }
       }
 
-      function saveProfile() {
+      async function saveProfile() {
         const fname = document.getElementById("e-fname").value;
         const lname = document.getElementById("e-lname").value;
         const pass = document.getElementById("e-pass").value;
@@ -257,33 +288,34 @@
           return;
         }
 
-        // Update local object
-        user.firstName = fname;
-        user.lastName = lname;
-        if (pass) user.password = pass; // In real app, re-hash. Here just raw.
+        const updateData = {
+            firstName: fname,
+            lastName: lname
+        };
+        if (pass) updateData.password = pass;
 
-        // Save to LocalStorage
-        // Need to update the main User List in Auth class
-        const users = Auth.getUsers();
-        const index = users.findIndex((u) => u.studentId === user.studentId);
-        if (index !== -1) {
-          users[index] = { ...users[index], firstName: fname, lastName: lname };
-          if (pass) users[index].password = pass;
+        try {
+            const updatedUser = await API.updateProfile(updateData);
 
-          localStorage.setItem(Auth.USERS_KEY, JSON.stringify(users));
-          localStorage.setItem(
-            Auth.CURRENT_USER_KEY,
-            JSON.stringify(users[index])
-          ); // Update session
+            // Update local session
+            // API returns user object (without token)
+            // We need to keep the token
+            const currentSession = JSON.parse(localStorage.getItem(Auth.CURRENT_USER_KEY));
+            const newToken = localStorage.getItem(Auth.TOKEN_KEY); // Token doesn't change
 
-          // Refresh
-          user = Auth.getCurrentUser(); // Reload from storage
-          renderProfile();
-          showToast("Profile updated!", "success");
+            // Update Auth class keys if they differ?
+            // Auth.js uses CURRENT_USER_KEY for user object.
+            localStorage.setItem(Auth.CURRENT_USER_KEY, JSON.stringify(updatedUser));
 
-          bootstrap.Modal.getInstance(
-            document.getElementById("editProfileModal")
-          ).hide();
+            user = updatedUser;
+            renderProfile();
+            showToast("Profile updated!", "success");
+
+            bootstrap.Modal.getInstance(
+                document.getElementById("editProfileModal")
+            ).hide();
+        } catch (e) {
+            showToast(e.message, "error");
         }
       }
 

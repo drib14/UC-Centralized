@@ -21,13 +21,26 @@ const userSchema = new mongoose.Schema({
         enum: ['student', 'admin'],
         default: 'student'
     },
-    name: {
+    firstName: {
+        type: String,
+        required: true
+    },
+    lastName: {
         type: String,
         required: true
     },
     department: {
         type: String,
         default: 'CCS'
+    },
+    program: {
+        type: String
+    },
+    year: {
+        type: String
+    },
+    profileImage: {
+        type: String
     }
 }, { timestamps: true });
 

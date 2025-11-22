@@ -146,8 +146,11 @@
           const user = {
             studentId: document.getElementById("studentId").value,
             email: document.getElementById("email").value,
-            name: document.getElementById("firstName").value + " " + document.getElementById("lastName").value,
+            firstName: document.getElementById("firstName").value,
+            lastName: document.getElementById("lastName").value,
             department: document.getElementById("department").value,
+            program: document.getElementById("program").value,
+            year: document.getElementById("year").value,
             password: password,
             role: "student",
           };
