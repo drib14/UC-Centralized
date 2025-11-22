@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 512 512%22><path fill=%22%23FFCC00%22 d=%22M256 0c-26.5 0-48 21.5-48 48v24h-16c-26.5 0-48 21.5-48 48v24h-16c-26.5 0-48 21.5-48 48v24H64c-26.5 0-48 21.5-48 48v256h480V264c0-26.5-21.5-48-48-48h-16v-24c0-26.5-21.5-48-48-48h-16v-24c0-26.5-21.5-48-48-48h-16V48c0-26.5-21.5-48-48-48h-48zm0 32h48c8.8 0 16 7.2 16 16v24h-16c-13.3 0-24 10.7-24 24s10.7 24 24 24h16v24h-16c-13.3 0-24 10.7-24 24s10.7 24 24 24h16v24H224v-24h16c13.3 0 24-10.7 24-24s-10.7-24-24-24h-16v-24h16c13.3 0 24-10.7 24-24s-10.7-24-24-24h-16V48c0-8.8 7.2-16 16-16zm-80 80h16c8.8 0 16 7.2 16 16v24h-16c-13.3 0-24 10.7-24 24s10.7 24 24 24h16v24h-16c-13.3 0-24 10.7-24 24s10.7 24 24 24h16v24h-64v-24h16c13.3 0 24-10.7 24-24s-10.7-24-24-24h-16v-24h16c13.3 0 24-10.7 24-24s-10.7-24-24-24h-16v-24c0-8.8 7.2-16 16-16zm-80 80h16c8.8 0 16 7.2 16 16v24h-16c-13.3 0-24 10.7-24 24s10.7 24 24 24h16v24h-16c-13.3 0-24 10.7-24 24s10.7 24 24 24h16v24H16v-24h16c13.3 0 24-10.7 24-24s-10.7-24-24-24H16v-24c0-8.8 7.2-16 16-16zm320-160h16c8.8 0 16 7.2 16 16v24h-16c-13.3 0-24 10.7-24 24s10.7 24 24 24h16v24h-16c-13.3 0-24 10.7-24 24s10.7 24 24 24h16v24h-64V128h16c13.3 0 24-10.7 24-24s-10.7-24-24-24h-16V48c0-8.8 7.2-16 16-16zm80 80h16c8.8 0 16 7.2 16 16v24h-16c-13.3 0-24 10.7-24 24s10.7 24 24 24h16v24h-16c-13.3 0-24 10.7-24 24s10.7 24 24 24h16v24h-64v-24h16c13.3 0 24-10.7 24-24s-10.7-24-24-24h-16v-24c0-8.8 7.2-16 16-16z%22/%3E</svg>">
+    <link rel="icon" href="/assets/uc-central-logo.png" type="image/x-icon">
     <meta charset="UTF-8">
     <title>UC-Central</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
@@ -12,7 +12,7 @@
 
     <nav class="navbar navbar-expand-lg navbar-dark admin-nav sticky-top">
         <div class="container">
-            <a class="navbar-brand" href="dashboard.html"><i class="fa-solid fa-shield-halved me-2"></i>UC-Central</a>
+            <a class="navbar-brand" href="dashboard.html"><img src="../../assets/uc-central-logo.png" alt="Logo" style="height: 30px;" class="me-2">UC-Central</a>
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
                 <span class="navbar-toggler-icon"></span>
             </button>
@@ -38,6 +38,9 @@
                     </li>
                     <li class="nav-item">
                         <a class="nav-link" href="users.html">Users</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="pos.html">POS</a>
                     </li>
                 </ul>
                 <ul class="navbar-nav ms-auto">
@@ -98,45 +101,57 @@
     <div class="toast-container position-fixed top-0 end-0 p-3" id="toast-container"></div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="../../assets/js/mock-data.js"></script>
-    <script src="../../assets/js/db.js"></script>
+    <script src="../../assets/js/api.js"></script>
     <script src="../../assets/js/auth.js"></script>
     <script src="../../assets/js/main.js"></script>
     <script>
-        Auth.requireAdmin();
+        Auth.checkSession();
 
-        // Populate Dept
         const deptSelect = document.getElementById('a-dept');
-        if(window.MockData) {
-            window.MockData.departments.forEach(d => {
-                const opt = document.createElement('option');
-                opt.value = d.id;
-                opt.textContent = d.name;
-                deptSelect.appendChild(opt);
-            });
+        const departments = [
+            {id: 'CCS', name: 'College of Computer Studies'},
+            {id: 'CBA', name: 'College of Business Administration'},
+            {id: 'CAS', name: 'College of Arts and Sciences'},
+            {id: 'ALL', name: 'All Departments'}
+        ];
+
+        departments.forEach(d => {
+            const opt = document.createElement('option');
+            opt.value = d.id;
+            opt.textContent = d.name;
+            deptSelect.appendChild(opt);
+        });
+
+        async function fetchAnnouncements() {
+            try {
+                const items = await API.getAnnouncements();
+                renderAnnouncements(items);
+            } catch(e) {
+                showToast("Failed to load announcements", "error");
+            }
         }
 
-        function renderAnnouncements() {
+        function renderAnnouncements(items) {
             const list = document.getElementById('ann-list');
             list.innerHTML = '';
-            const items = DB.getAnnouncements();
 
             items.forEach(item => {
+                const date = new Date(item.date).toLocaleDateString();
                 const el = document.createElement('div');
                 el.className = 'list-group-item list-group-item-action';
                 el.innerHTML = `
                     <div class="d-flex w-100 justify-content-between">
                         <h5 class="mb-1">${item.title}</h5>
-                        <small class="text-muted">${item.date}</small>
+                        <small class="text-muted">${date}</small>
                     </div>
                     <p class="mb-1">${item.message}</p>
-                    <small class="text-primary">Target: ${item.dept}</small>
+                    <small class="text-primary">Target: ${item.department}</small>
                 `;
                 list.appendChild(el);
             });
         }
 
-        function saveAnnouncement() {
+        window.saveAnnouncement = async function() {
             const title = document.getElementById('a-title').value;
             const message = document.getElementById('a-msg').value;
             const dept = document.getElementById('a-dept').value;
@@ -146,23 +161,26 @@
                 return;
             }
 
-            DB.addAnnouncement({
-                title,
-                message,
-                dept,
-                author: 'Admin'
-            });
-            showToast('Announcement posted!', 'success');
+            try {
+                await API.createAnnouncement({
+                    title,
+                    message,
+                    department: dept
+                });
+                showToast('Announcement posted!', 'success');
 
-            const modalEl = document.getElementById('addAnnModal');
-            const modal = bootstrap.Modal.getInstance(modalEl);
-            modal.hide();
+                const modalEl = document.getElementById('addAnnModal');
+                const modal = bootstrap.Modal.getInstance(modalEl);
+                modal.hide();
 
-            document.getElementById('add-ann-form').reset();
-            renderAnnouncements();
+                document.getElementById('add-ann-form').reset();
+                fetchAnnouncements();
+            } catch(e) {
+                showToast(e.message, "error");
+            }
         }
 
-        renderAnnouncements();
+        fetchAnnouncements();
     </script>
 </body>
 </html>

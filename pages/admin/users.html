@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 512 512%22><path fill=%22%23FFCC00%22 d=%22M256 0c-26.5 0-48 21.5-48 48v24h-16c-26.5 0-48 21.5-48 48v24h-16c-26.5 0-48 21.5-48 48v24H64c-26.5 0-48 21.5-48 48v256h480V264c0-26.5-21.5-48-48-48h-16v-24c0-26.5-21.5-48-48-48h-16v-24c0-26.5-21.5-48-48-48h-16V48c0-26.5-21.5-48-48-48h-48zm0 32h48c8.8 0 16 7.2 16 16v24h-16c-13.3 0-24 10.7-24 24s10.7 24 24 24h16v24h-16c-13.3 0-24 10.7-24 24s10.7 24 24 24h16v24H224v-24h16c13.3 0 24-10.7 24-24s-10.7-24-24-24h-16v-24h16c13.3 0 24-10.7 24-24s-10.7-24-24-24h-16V48c0-8.8 7.2-16 16-16zm-80 80h16c8.8 0 16 7.2 16 16v24h-16c-13.3 0-24 10.7-24 24s10.7 24 24 24h16v24h-16c-13.3 0-24 10.7-24 24s10.7 24 24 24h16v24h-64v-24h16c13.3 0 24-10.7 24-24s-10.7-24-24-24h-16v-24h16c13.3 0 24-10.7 24-24s-10.7-24-24-24h-16v-24c0-8.8 7.2-16 16-16zm-80 80h16c8.8 0 16 7.2 16 16v24h-16c-13.3 0-24 10.7-24 24s10.7 24 24 24h16v24h-16c-13.3 0-24 10.7-24 24s10.7 24 24 24h16v24H16v-24h16c13.3 0 24-10.7 24-24s-10.7-24-24-24H16v-24c0-8.8 7.2-16 16-16zm320-160h16c8.8 0 16 7.2 16 16v24h-16c-13.3 0-24 10.7-24 24s10.7 24 24 24h16v24h-16c-13.3 0-24 10.7-24 24s10.7 24 24 24h16v24h-64V128h16c13.3 0 24-10.7 24-24s-10.7-24-24-24h-16V48c0-8.8 7.2-16 16-16zm80 80h16c8.8 0 16 7.2 16 16v24h-16c-13.3 0-24 10.7-24 24s10.7 24 24 24h16v24h-16c-13.3 0-24 10.7-24 24s10.7 24 24 24h16v24h-64v-24h16c13.3 0 24-10.7 24-24s-10.7-24-24-24h-16v-24c0-8.8 7.2-16 16-16z%22/%3E</svg>">
+    <link rel="icon" href="/assets/uc-central-logo.png" type="image/x-icon">
     <meta charset="UTF-8">
     <title>UC-Central</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
@@ -12,7 +12,7 @@
 
     <nav class="navbar navbar-expand-lg navbar-dark admin-nav sticky-top">
         <div class="container">
-            <a class="navbar-brand" href="dashboard.html"><i class="fa-solid fa-shield-halved me-2"></i>UC-Central</a>
+            <a class="navbar-brand" href="dashboard.html"><img src="../../assets/uc-central-logo.png" alt="Logo" style="height: 30px;" class="me-2">UC-Central</a>
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
                 <span class="navbar-toggler-icon"></span>
             </button>
@@ -38,6 +38,9 @@
                     </li>
                     <li class="nav-item">
                         <a class="nav-link active" href="users.html">Users</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="pos.html">POS</a>
                     </li>
                 </ul>
                 <ul class="navbar-nav ms-auto">
@@ -105,7 +108,6 @@
                             <label class="form-label">Password</label>
                             <input type="password" id="u-pass" class="form-control" required>
                         </div>
-                        <!-- Role is Admin by default for this modal -->
                     </form>
                 </div>
                 <div class="modal-footer">
@@ -116,24 +118,20 @@
         </div>
     </div>
 
-    <!-- Edit Role Modal -->
-    <div class="modal fade" id="editRoleModal" tabindex="-1">
+    <!-- Delete Modal -->
+    <div class="modal fade" id="deleteConfirmModal" tabindex="-1">
         <div class="modal-dialog">
             <div class="modal-content">
-                <div class="modal-header bg-warning text-dark">
-                    <h5 class="modal-title">Change User Role</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                <div class="modal-header bg-danger text-white">
+                    <h5 class="modal-title">Confirm Delete</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
-                    <p>Editing role for: <strong id="edit-role-name"></strong></p>
-                    <select id="edit-role-select" class="form-select">
-                        <option value="student">Student</option>
-                        <option value="admin">Admin</option>
-                    </select>
+                    <p>Delete this user?</p>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                    <button type="button" class="btn btn-primary" onclick="saveRoleChange()">Save Changes</button>
+                    <button type="button" class="btn btn-danger" id="confirm-delete-btn">Delete</button>
                 </div>
             </div>
         </div>
@@ -142,20 +140,29 @@
     <div class="toast-container position-fixed top-0 end-0 p-3" id="toast-container"></div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="../../assets/js/db.js"></script>
+    <script src="../../assets/js/api.js"></script>
     <script src="../../assets/js/auth.js"></script>
     <script src="../../assets/js/main.js"></script>
     <script>
-        Auth.requireAdmin();
+        Auth.checkSession();
 
-        function renderUsers() {
+        async function fetchUsers() {
+            try {
+                const users = await API.getUsers();
+                renderUsers(users);
+            } catch(e) {
+                showToast("Failed to load users", "error");
+            }
+        }
+
+        function renderUsers(users) {
             const tbody = document.getElementById('users-table');
             tbody.innerHTML = '';
-            const users = Auth.getUsers();
+            const currentUser = Auth.getCurrentUser();
 
             users.forEach(user => {
                 const row = document.createElement('tr');
-                const isMe = Auth.getCurrentUser().studentId === user.studentId;
+                const isMe = currentUser.studentId === user.studentId;
                 const roleBadge = user.role === 'admin' ? 'bg-danger' : 'bg-secondary';
 
                 row.innerHTML = `
@@ -164,8 +171,8 @@
                     <td>${user.department || 'N/A'}</td>
                     <td><span class="badge ${roleBadge} text-uppercase">${user.role}</span></td>
                     <td>
-                        <button class="btn btn-sm btn-outline-primary" onclick="openEditRole('${user.studentId}')" ${isMe ? 'disabled' : ''}>
-                            <i class="fa-solid fa-user-gear"></i> Edit Role
+                        <button class="btn btn-sm btn-outline-danger" onclick="deleteUser('${user._id}')" ${isMe ? 'disabled' : ''}>
+                            <i class="fa-solid fa-trash"></i> Delete
                         </button>
                     </td>
                 `;
@@ -173,7 +180,26 @@
             });
         }
 
-        function addAdminUser() {
+        let deleteTargetId = null;
+        window.deleteUser = function(id) {
+            deleteTargetId = id;
+            new bootstrap.Modal(document.getElementById('deleteConfirmModal')).show();
+        }
+
+        document.getElementById('confirm-delete-btn').addEventListener('click', async () => {
+            if(deleteTargetId) {
+                try {
+                    await API.deleteUser(deleteTargetId);
+                    showToast("User deleted", "success");
+                    fetchUsers();
+                    bootstrap.Modal.getInstance(document.getElementById('deleteConfirmModal')).hide();
+                } catch(e) {
+                    showToast("Failed to delete user", "error");
+                }
+            }
+        });
+
+        async function addAdminUser() {
             const studentId = document.getElementById('u-id').value;
             const firstName = document.getElementById('u-fname').value;
             const lastName = document.getElementById('u-lname').value;
@@ -185,8 +211,9 @@
             }
 
             try {
-                Auth.saveUser({
+                await API.register({
                     studentId,
+                    email: studentId + '@admin.uc-central.com',
                     firstName,
                     lastName,
                     password,
@@ -197,41 +224,13 @@
                 });
                 showToast("Admin added successfully!", "success");
                 bootstrap.Modal.getInstance(document.getElementById('addUserModal')).hide();
-                renderUsers();
+                fetchUsers();
             } catch (e) {
                 showToast(e.message, "error");
             }
         }
 
-        let editingUserId = null;
-
-        function openEditRole(id) {
-            const users = Auth.getUsers();
-            const user = users.find(u => u.studentId === id);
-            if(user) {
-                editingUserId = id;
-                document.getElementById('edit-role-name').textContent = `${user.firstName} ${user.lastName}`;
-                document.getElementById('edit-role-select').value = user.role;
-                new bootstrap.Modal(document.getElementById('editRoleModal')).show();
-            }
-        }
-
-        function saveRoleChange() {
-            if(!editingUserId) return;
-            const newRole = document.getElementById('edit-role-select').value;
-            const users = Auth.getUsers();
-            const user = users.find(u => u.studentId === editingUserId);
-
-            if(user) {
-                user.role = newRole;
-                Auth.updateUser(user);
-                showToast(`User role updated to ${newRole}`, "success");
-                bootstrap.Modal.getInstance(document.getElementById('editRoleModal')).hide();
-                renderUsers();
-            }
-        }
-
-        renderUsers();
+        fetchUsers();
     </script>
 </body>
 </html>

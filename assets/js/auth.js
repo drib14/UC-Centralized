@@ -74,10 +74,27 @@ class Auth {
              }
         }
     }
+
+    static async syncSession() {
+        if (this.isAuthenticated()) {
+            try {
+                const user = await API.getMe();
+                localStorage.setItem(this.CURRENT_USER_KEY, JSON.stringify(user));
+                if (window.updateNav) window.updateNav();
+                // Also update profile if on profile page?
+                // Profile page calls renderProfile() which uses Auth.getCurrentUser()
+                // So if we refresh data, we might want to re-render profile.
+                if (typeof renderProfile === 'function') renderProfile();
+            } catch (err) {
+                console.error("Session sync failed", err);
+            }
+        }
+    }
 }
 
 window.Auth = Auth;
 
 document.addEventListener('DOMContentLoaded', () => {
     Auth.checkSession();
+    Auth.syncSession();
 });

@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <link rel="icon" href="/assets/uc-central-logo.png" type="image/x-icon">
+    <meta charset="UTF-8">
+    <title>UC-Central - POS</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="../../assets/css/styles.css">
+    <style>
+        .pos-product-card { cursor: pointer; transition: transform 0.1s; }
+        .pos-product-card:active { transform: scale(0.98); }
+        .pos-cart-items { max-height: 50vh; overflow-y: auto; }
+    </style>
+</head>
+<body>
+
+    <nav class="navbar navbar-expand-lg navbar-dark admin-nav sticky-top">
+        <div class="container">
+            <a class="navbar-brand" href="dashboard.html"><img src="../../assets/uc-central-logo.png" alt="Logo" style="height: 30px;" class="me-2">UC-Central</a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav me-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="dashboard.html">Overview</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="orders.html">Orders</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="events.html">Events</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="merch.html">Merch</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="announcements.html">Announcements</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="messages.html">Messages</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="users.html">Users</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link active" href="pos.html">POS</a>
+                    </li>
+                </ul>
+                <ul class="navbar-nav ms-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="#" id="logout-btn">Logout</a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container-fluid py-4">
+        <div class="row">
+            <!-- Product Grid -->
+            <div class="col-md-8">
+                <div class="d-flex justify-content-between mb-3 align-items-center">
+                    <h3>Products</h3>
+                    <input type="text" id="search-input" class="form-control w-50" placeholder="Search products..." oninput="filterProducts()">
+                </div>
+                <div class="row g-3" id="product-grid">
+                    <!-- JS Populated -->
+                </div>
+            </div>
+
+            <!-- Cart -->
+            <div class="col-md-4">
+                <div class="card h-100 shadow-sm">
+                    <div class="card-header bg-primary text-white">
+                        <h5 class="mb-0"><i class="fa-solid fa-cash-register me-2"></i>Current Transaction</h5>
+                    </div>
+                    <div class="card-body d-flex flex-column">
+                        <div class="pos-cart-items flex-grow-1 mb-3" id="cart-items">
+                            <div class="text-center text-muted mt-5">
+                                <i class="fa-solid fa-basket-shopping fa-3x mb-3"></i>
+                                <p>Cart is empty</p>
+                            </div>
+                        </div>
+
+                        <div class="border-top pt-3 mt-auto">
+                            <div class="d-flex justify-content-between fs-4 fw-bold mb-3">
+                                <span>Total:</span>
+                                <span id="cart-total">PHP 0.00</span>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Customer Name</label>
+                                <input type="text" id="customer-name" class="form-control" placeholder="Walk-in Customer">
+                            </div>
+                            <button class="btn btn-success w-100 py-3 fs-5 fw-bold" onclick="checkout()">
+                                <i class="fa-solid fa-check me-2"></i>Complete Order
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="toast-container position-fixed top-0 end-0 p-3" id="toast-container"></div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="../../assets/js/api.js"></script>
+    <script src="../../assets/js/auth.js"></script>
+    <script src="../../assets/js/main.js"></script>
+    <script>
+        Auth.checkSession();
+
+        let allProducts = [];
+        let cart = [];
+
+        async function init() {
+            try {
+                allProducts = await API.getMerch();
+                renderProducts(allProducts);
+            } catch(e) {
+                showToast("Failed to load products", "error");
+            }
+        }
+
+        function renderProducts(list) {
+            const grid = document.getElementById('product-grid');
+            grid.innerHTML = '';
+            list.forEach(p => {
+                const col = document.createElement('div');
+                col.className = 'col-md-4 col-lg-3';
+                col.innerHTML = `
+                    <div class="card h-100 pos-product-card" onclick="addToCart('${p._id}')">
+                        <img src="${p.image || 'https://via.placeholder.com/150'}" class="card-img-top" style="height: 120px; object-fit: cover;">
+                        <div class="card-body p-2 text-center">
+                            <h6 class="card-title mb-1 small text-truncate">${p.name}</h6>
+                            <div class="fw-bold text-success">${formatCurrency(p.price)}</div>
+                        </div>
+                    </div>
+                `;
+                grid.appendChild(col);
+            });
+        }
+
+        function filterProducts() {
+            const term = document.getElementById('search-input').value.toLowerCase();
+            const filtered = allProducts.filter(p => p.name.toLowerCase().includes(term));
+            renderProducts(filtered);
+        }
+
+        window.addToCart = function(id) {
+            const product = allProducts.find(p => p._id === id);
+            const existing = cart.find(i => i.merch === id);
+            if(existing) {
+                existing.quantity++;
+            } else {
+                cart.push({ merch: id, name: product.name, price: product.price, quantity: 1 });
+            }
+            renderCart();
+        }
+
+        function updateQty(id, change) {
+            const index = cart.findIndex(i => i.merch === id);
+            if(index !== -1) {
+                cart[index].quantity += change;
+                if(cart[index].quantity <= 0) cart.splice(index, 1);
+                renderCart();
+            }
+        }
+
+        function renderCart() {
+            const container = document.getElementById('cart-items');
+            if(cart.length === 0) {
+                container.innerHTML = '<div class="text-center text-muted mt-5"><i class="fa-solid fa-basket-shopping fa-3x mb-3"></i><p>Cart is empty</p></div>';
+                document.getElementById('cart-total').textContent = formatCurrency(0);
+                return;
+            }
+
+            container.innerHTML = '';
+            let total = 0;
+            cart.forEach(item => {
+                total += item.price * item.quantity;
+                const row = document.createElement('div');
+                row.className = 'd-flex justify-content-between align-items-center mb-2 p-2 border rounded';
+                row.innerHTML = `
+                    <div class="text-truncate me-2" style="max-width: 120px;">
+                        <div class="fw-bold small">${item.name}</div>
+                        <div class="text-muted small">${formatCurrency(item.price)}</div>
+                    </div>
+                    <div class="d-flex align-items-center">
+                        <button class="btn btn-sm btn-outline-secondary" onclick="updateQty('${item.merch}', -1)">-</button>
+                        <span class="mx-2 small fw-bold">${item.quantity}</span>
+                        <button class="btn btn-sm btn-outline-secondary" onclick="updateQty('${item.merch}', 1)">+</button>
+                    </div>
+                    <div class="fw-bold ms-2 small">${formatCurrency(item.price * item.quantity)}</div>
+                `;
+                container.appendChild(row);
+            });
+            document.getElementById('cart-total').textContent = formatCurrency(total);
+        }
+
+        window.checkout = async function() {
+            if(cart.length === 0) return showToast("Cart is empty", "error");
+
+            const customerName = document.getElementById('customer-name').value || "Walk-in Customer";
+            const total = cart.reduce((sum, i) => sum + (i.price * i.quantity), 0);
+
+            const orderData = {
+                items: cart.map(i => ({ merch: i.merch, quantity: i.quantity })),
+                totalPrice: total,
+                customerName: customerName,
+                status: 'claimed' // POS orders are immediate
+            };
+
+            try {
+                await API.createOrder(orderData);
+                showToast("Transaction completed!", "success");
+                cart = [];
+                document.getElementById('customer-name').value = "";
+                renderCart();
+            } catch(e) {
+                showToast("Transaction failed: " + e.message, "error");
+            }
+        }
+
+        init();
+    </script>
+</body>
+</html>

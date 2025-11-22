@@ -52,6 +52,10 @@ class API {
         return this.request('/auth/register', 'POST', data);
     }
 
+    static getMe() {
+        return this.request('/auth/me');
+    }
+
     static updateProfile(data) {
         return this.request('/auth/profile', 'PUT', data);
     }
@@ -102,6 +106,24 @@ class API {
     // Announcements
     static getAnnouncements() {
         return this.request('/announcements');
+    }
+
+    static createAnnouncement(data) {
+        return this.request('/announcements', 'POST', data);
+    }
+
+    // Admin Stats
+    static getAdminStats() {
+        return this.request('/stats/dashboard');
+    }
+
+    // Users
+    static getUsers() {
+        return this.request('/users');
+    }
+
+    static deleteUser(id) {
+        return this.request(`/users/${id}`, 'DELETE');
     }
 }
 

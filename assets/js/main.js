@@ -75,6 +75,20 @@ class Cart {
         window.dispatchEvent(new Event('cartUpdated'));
     }
 
+    static updateQuantity(productId, quantity) {
+        let items = this.getItems();
+        const index = items.findIndex(i => i.id === productId);
+        if (index !== -1) {
+            if (quantity <= 0) {
+                items = items.filter(i => i.id !== productId);
+            } else {
+                items[index].quantity = parseInt(quantity);
+            }
+            localStorage.setItem(this.KEY, JSON.stringify(items));
+            window.dispatchEvent(new Event('cartUpdated'));
+        }
+    }
+
     static clear() {
         localStorage.removeItem(this.KEY);
         window.dispatchEvent(new Event('cartUpdated'));

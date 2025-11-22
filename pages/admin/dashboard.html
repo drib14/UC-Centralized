@@ -13,7 +13,7 @@
     <!-- Admin Nav -->
     <nav class="navbar navbar-expand-lg navbar-dark admin-nav sticky-top">
         <div class="container">
-            <a class="navbar-brand" href="dashboard.html"><i class="fa-solid fa-shield-halved me-2"></i>UC-Central</a>
+            <a class="navbar-brand" href="dashboard.html"><img src="../../assets/uc-central-logo.png" alt="Logo" style="height: 30px;" class="me-2">UC-Central</a>
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
                 <span class="navbar-toggler-icon"></span>
             </button>
@@ -40,6 +40,9 @@
                     <li class="nav-item">
                         <a class="nav-link" href="users.html">Users</a>
                     </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="pos.html">POS</a>
+                    </li>
                 </ul>
                 <ul class="navbar-nav ms-auto">
                     <li class="nav-item dropdown">
@@ -64,8 +67,8 @@
                 <div class="card bg-primary text-white h-100">
                     <div class="card-body">
                         <h6 class="card-title">Total Sales</h6>
-                        <h2 class="fw-bold">PHP 0.00</h2>
-                        <small><i class="fa-solid fa-arrow-up"></i> 0% this week</small>
+                        <h2 class="fw-bold" id="total-sales">PHP 0.00</h2>
+                        <small>Revenue (Claimed)</small>
                     </div>
                 </div>
             </div>
@@ -73,8 +76,8 @@
                 <div class="card bg-success text-white h-100">
                     <div class="card-body">
                         <h6 class="card-title">Active Orders</h6>
-                        <h2 class="fw-bold">0</h2>
-                        <small>0 pending approval</small>
+                        <h2 class="fw-bold" id="active-orders">0</h2>
+                        <small>Pending/Processing</small>
                     </div>
                 </div>
             </div>
@@ -82,8 +85,8 @@
                 <div class="card bg-warning text-dark h-100">
                     <div class="card-body">
                         <h6 class="card-title">Upcoming Events</h6>
-                        <h2 class="fw-bold">0</h2>
-                        <small>Check events tab</small>
+                        <h2 class="fw-bold" id="upcoming-events">0</h2>
+                        <small>Future events</small>
                     </div>
                 </div>
             </div>
@@ -113,8 +116,8 @@
                                     <th>Status</th>
                                 </tr>
                             </thead>
-                            <tbody>
-                                <!-- Placeholder -->
+                            <tbody id="recent-orders-table">
+                                <!-- Populated via JS -->
                             </tbody>
                         </table>
                         <a href="orders.html" class="btn btn-sm btn-outline-primary w-100">View All Orders</a>
@@ -147,7 +150,56 @@
     <script src="../../assets/js/auth.js"></script>
     <script src="../../assets/js/main.js"></script>
     <script>
-        // Dashboard stats would need new API endpoints
+        Auth.checkSession();
+
+        async function loadDashboard() {
+            try {
+                const stats = await API.getAdminStats();
+
+                document.getElementById('total-sales').textContent = formatCurrency(stats.totalSales);
+                document.getElementById('active-orders').textContent = stats.activeOrders;
+                document.getElementById('upcoming-events').textContent = stats.eventCount;
+                document.getElementById('user-count').textContent = stats.userCount;
+
+                renderRecentOrders(stats.recentOrders);
+            } catch(e) {
+                console.error("Failed to load stats", e);
+            }
+        }
+
+        function renderRecentOrders(orders) {
+            const tbody = document.getElementById('recent-orders-table');
+            tbody.innerHTML = '';
+            if (orders.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="4" class="text-center text-muted">No recent orders</td></tr>';
+                return;
+            }
+            orders.forEach(order => {
+                const user = order.user ? `${order.user.firstName} ${order.user.lastName}` : 'Unknown';
+                const statusBadge = getStatusBadge(order.status);
+                const row = `
+                    <tr>
+                        <td>#${order._id.slice(-6).toUpperCase()}</td>
+                        <td>${user}</td>
+                        <td>${formatCurrency(order.totalPrice)}</td>
+                        <td>${statusBadge}</td>
+                    </tr>
+                `;
+                tbody.innerHTML += row;
+            });
+        }
+
+        function getStatusBadge(status) {
+            const map = {
+                'pending': 'bg-warning text-dark',
+                'processing': 'bg-info text-white',
+                'claimed': 'bg-success',
+                'cancelled': 'bg-danger'
+            };
+            return `<span class="badge ${map[status] || 'bg-secondary'}">${status.toUpperCase()}</span>`;
+        }
+
+        loadDashboard();
     </script>
 </body>
 </html>

@@ -3,10 +3,12 @@ const mongoose = require('mongoose');
 const dotenv = require('dotenv');
 const cors = require('cors');
 const authRoute = require('./routes/auth');
+const userRoute = require('./routes/users');
 const eventRoute = require('./routes/events');
 const merchRoute = require('./routes/merch');
 const orderRoute = require('./routes/orders');
 const announcementRoute = require('./routes/announcements');
+const statsRoute = require('./routes/stats');
 
 dotenv.config();
 
@@ -26,10 +28,12 @@ mongoose.connect(process.env.MONGO_URI)
 
 // Routes
 app.use('/auth', authRoute);
+app.use('/users', userRoute);
 app.use('/events', eventRoute);
 app.use('/merch', merchRoute);
 app.use('/orders', orderRoute);
 app.use('/announcements', announcementRoute);
+app.use('/stats', statsRoute);
 
 app.get('/', (req, res) => {
     res.send('UC-Central Backend is running');
