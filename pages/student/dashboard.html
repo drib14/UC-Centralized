@@ -27,6 +27,9 @@
                     <li class="nav-item">
                         <a class="nav-link" href="merch.html">Merch Store</a>
                     </li>
+                     <li class="nav-item">
+                        <a class="nav-link" href="messages.html">Messages</a>
+                    </li>
                 </ul>
                 <ul class="navbar-nav ms-auto align-items-center">
                      <li class="nav-item me-3">
@@ -81,21 +84,7 @@
             <div class="col-lg-8">
                 <h3 class="mb-3 text-success"><i class="fa-solid fa-bullhorn me-2"></i>Announcements</h3>
                 <div id="announcements-feed">
-                    <!-- Mock Announcements -->
-                    <div class="card mb-3">
-                        <div class="card-body">
-                            <h5 class="card-title">Midterm Examination Schedule</h5>
-                            <h6 class="card-subtitle mb-2 text-muted">Posted 2 hours ago by Admin</h6>
-                            <p class="card-text">The midterm examination schedule for the 1st Semester A.Y. 2024-2025 has been released. Please check your respective portals.</p>
-                        </div>
-                    </div>
-                    <div class="card mb-3">
-                        <div class="card-body">
-                            <h5 class="card-title">No Classes - Holiday</h5>
-                            <h6 class="card-subtitle mb-2 text-muted">Posted 1 day ago by Admin</h6>
-                            <p class="card-text">Please be advised that there will be no classes on Monday due to the National Holiday.</p>
-                        </div>
-                    </div>
+                    <!-- JS Populated -->
                 </div>
             </div>
 
@@ -112,14 +101,36 @@
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="../../assets/js/mock-data.js"></script>
+    <script src="../../assets/js/db.js"></script>
     <script src="../../assets/js/auth.js"></script>
     <script src="../../assets/js/main.js"></script>
     <script>
         Auth.requireLogin();
 
-        // Populate Sidebar with Mock Events
+        // Populate Announcements
+        const feed = document.getElementById('announcements-feed');
+        const announcements = DB.getAnnouncements();
+
+        if (announcements.length === 0) {
+            feed.innerHTML = '<p class="text-muted">No announcements yet.</p>';
+        } else {
+            announcements.forEach(ann => {
+                const card = `
+                    <div class="card mb-3">
+                        <div class="card-body">
+                            <h5 class="card-title">${ann.title}</h5>
+                            <h6 class="card-subtitle mb-2 text-muted">Posted on ${ann.date} by ${ann.author || 'Admin'} <span class="badge bg-light text-dark border ms-2">${ann.dept}</span></h6>
+                            <p class="card-text">${ann.message}</p>
+                        </div>
+                    </div>
+                `;
+                feed.innerHTML += card;
+            });
+        }
+
+        // Populate Sidebar with Events from DB
         const sidebar = document.getElementById('upcoming-events-sidebar');
-        const events = window.MockData.events.slice(0, 3); // Top 3
+        const events = DB.getEvents().slice(0, 3); // Top 3
 
         events.forEach(event => {
             const card = `

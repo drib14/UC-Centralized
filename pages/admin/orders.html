@@ -27,7 +27,13 @@
                         <a class="nav-link active" href="orders.html">Orders</a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="events.html">Manage Events</a>
+                        <a class="nav-link" href="events.html">Events</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="merch.html">Merch</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="announcements.html">Announcements</a>
                     </li>
                 </ul>
                 <ul class="navbar-nav ms-auto">
@@ -57,28 +63,7 @@
                             </tr>
                         </thead>
                         <tbody id="orders-table">
-                            <!-- Mock Data Rows -->
-                            <tr>
-                                <td>#ORD-001</td>
-                                <td>John Doe (123456)</td>
-                                <td>CICT Shirt (1)</td>
-                                <td>PHP 350.00</td>
-                                <td><span class="badge bg-warning text-dark">Pending</span></td>
-                                <td>
-                                    <button class="btn btn-sm btn-success" onclick="updateStatus(this, 'Completed')"><i class="fa-solid fa-check"></i> Approve</button>
-                                    <button class="btn btn-sm btn-danger" onclick="updateStatus(this, 'Declined')"><i class="fa-solid fa-xmark"></i> Decline</button>
-                                </td>
-                            </tr>
-                            <tr>
-                                <td>#ORD-004</td>
-                                <td>Alice Wonderland (987654)</td>
-                                <td>UC Lanyard (2)</td>
-                                <td>PHP 300.00</td>
-                                <td><span class="badge bg-info">Processing</span></td>
-                                <td>
-                                    <button class="btn btn-sm btn-success" onclick="updateStatus(this, 'Ready for Pickup')">Ready</button>
-                                </td>
-                            </tr>
+                            <!-- JS Populated -->
                         </tbody>
                     </table>
                 </div>
@@ -89,24 +74,56 @@
     <div class="toast-container position-fixed top-0 end-0 p-3" id="toast-container"></div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="../../assets/js/db.js"></script>
     <script src="../../assets/js/auth.js"></script>
     <script src="../../assets/js/main.js"></script>
     <script>
         Auth.requireAdmin();
 
-        function updateStatus(btn, status) {
-            const row = btn.closest('tr');
-            const badge = row.querySelector('.badge');
+        function renderOrders() {
+            const tbody = document.getElementById('orders-table');
+            tbody.innerHTML = '';
+            const orders = DB.getOrders();
 
-            badge.className = 'badge'; // reset
-            badge.textContent = status;
+            if (orders.length === 0) {
+                 tbody.innerHTML = '<tr><td colspan="6" class="text-center">No orders found.</td></tr>';
+                 return;
+            }
 
-            if (status === 'Completed' || status === 'Ready for Pickup') badge.classList.add('bg-success');
-            else if (status === 'Declined') badge.classList.add('bg-danger');
-            else badge.classList.add('bg-secondary');
+            orders.forEach(order => {
+                let badgeClass = 'bg-secondary';
+                if (order.status === 'Pending') badgeClass = 'bg-warning text-dark';
+                else if (order.status === 'Completed' || order.status === 'Ready for Pickup') badgeClass = 'bg-success';
+                else if (order.status === 'Processing') badgeClass = 'bg-info';
+                else if (order.status === 'Declined') badgeClass = 'bg-danger';
 
-            showToast(`Order status updated to ${status}`, 'success');
+                const itemsSummary = order.items.map(i => `${i.name} (${i.quantity})`).join(', ');
+
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${order.id}</td>
+                    <td>${order.studentName} <br><small class="text-muted">${order.studentId}</small></td>
+                    <td>${itemsSummary}</td>
+                    <td>${formatCurrency(order.total)}</td>
+                    <td><span class="badge ${badgeClass}">${order.status}</span></td>
+                    <td>
+                        <button class="btn btn-sm btn-outline-success" onclick="updateStatus('${order.id}', 'Processing')">Process</button>
+                        <button class="btn btn-sm btn-outline-info" onclick="updateStatus('${order.id}', 'Ready for Pickup')">Ready</button>
+                        <button class="btn btn-sm btn-outline-dark" onclick="updateStatus('${order.id}', 'Completed')">Complete</button>
+                        <button class="btn btn-sm btn-outline-danger" onclick="updateStatus('${order.id}', 'Declined')">Decline</button>
+                    </td>
+                `;
+                tbody.appendChild(row);
+            });
         }
+
+        function updateStatus(orderId, status) {
+            DB.updateOrderStatus(orderId, status);
+            showToast(`Order status updated to ${status}`, 'success');
+            renderOrders();
+        }
+
+        renderOrders();
     </script>
 </body>
 </html>

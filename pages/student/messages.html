@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Messages - UC-Central</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="../../assets/css/styles.css">
+</head>
+<body>
+
+    <nav class="navbar navbar-expand-lg navbar-dark sticky-top">
+        <div class="container">
+            <a class="navbar-brand" href="dashboard.html"><i class="fa-solid fa-school me-2"></i>UC-Central</a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav me-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="dashboard.html">Dashboard</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="events.html">Events</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="merch.html">Merch Store</a>
+                    </li>
+                     <li class="nav-item">
+                        <a class="nav-link active" href="messages.html">Messages</a>
+                    </li>
+                </ul>
+                <ul class="navbar-nav ms-auto align-items-center">
+                    <li class="nav-item me-3">
+                        <a class="nav-link position-relative" href="cart.html">
+                            <i class="fa-solid fa-cart-shopping fa-lg"></i>
+                            <span id="cart-badge" class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger d-none">
+                                0
+                            </span>
+                        </a>
+                    </li>
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" id="userDropdown" role="button" data-bs-toggle="dropdown">
+                            <span id="nav-user-name">Student</span>
+                        </a>
+                        <ul class="dropdown-menu dropdown-menu-end">
+                            <li><a class="dropdown-item" href="profile.html">Profile</a></li>
+                            <li><a class="dropdown-item text-danger" href="#" id="logout-btn">Logout</a></li>
+                        </ul>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container py-4">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h2 class="text-success"><i class="fa-regular fa-envelope me-2"></i>My Inquiries</h2>
+            <button class="btn btn-success" data-bs-toggle="modal" data-bs-target="#msgModal"><i class="fa-solid fa-pen"></i> New Message</button>
+        </div>
+
+        <div class="list-group" id="msg-list">
+            <!-- JS populated -->
+        </div>
+    </div>
+
+    <!-- Message Modal -->
+    <div class="modal fade" id="msgModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header bg-success text-white">
+                    <h5 class="modal-title">Send Inquiry</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="msg-form">
+                        <div class="mb-3">
+                            <label class="form-label">To Department</label>
+                            <select id="msg-dept" class="form-select">
+                                <option value="ADMIN">Admin / Help Desk</option>
+                                <!-- JS Populated -->
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Subject</label>
+                            <input type="text" id="msg-subj" class="form-control" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Message</label>
+                            <textarea id="msg-body" class="form-control" rows="4" required></textarea>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-success" onclick="sendMessage()">Send</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="toast-container position-fixed top-0 end-0 p-3" id="toast-container"></div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="../../assets/js/mock-data.js"></script>
+    <script src="../../assets/js/db.js"></script>
+    <script src="../../assets/js/auth.js"></script>
+    <script src="../../assets/js/main.js"></script>
+    <script>
+        Auth.requireLogin();
+        const currentUser = Auth.getCurrentUser();
+
+        // Populate Departments
+        const deptSelect = document.getElementById('msg-dept');
+        if (window.MockData) {
+            window.MockData.departments.forEach(d => {
+                const opt = document.createElement('option');
+                opt.value = d.id;
+                opt.textContent = d.name;
+                deptSelect.appendChild(opt);
+            });
+        }
+
+        function renderMessages() {
+            const list = document.getElementById('msg-list');
+            list.innerHTML = '';
+            // Filter messages for current user
+            const messages = DB.getMessages().filter(m => m.studentId === currentUser.studentId);
+
+            if (messages.length === 0) {
+                list.innerHTML = '<p class="text-muted text-center py-5">No messages sent yet.</p>';
+                return;
+            }
+
+            messages.forEach(msg => {
+                const item = document.createElement('div');
+                item.className = 'list-group-item';
+                item.innerHTML = `
+                    <div class="d-flex w-100 justify-content-between">
+                        <h5 class="mb-1">${msg.subject}</h5>
+                        <small class="text-muted">${new Date(msg.date).toLocaleDateString()}</small>
+                    </div>
+                    <p class="mb-1">${msg.body}</p>
+                    <small class="text-success">To: ${msg.toDept}</small>
+                `;
+                list.appendChild(item);
+            });
+        }
+
+        function sendMessage() {
+            const toDept = document.getElementById('msg-dept').value;
+            const subject = document.getElementById('msg-subj').value;
+            const body = document.getElementById('msg-body').value;
+
+            if (!subject || !body) {
+                showToast("Please fill all fields", "error");
+                return;
+            }
+
+            DB.addMessage({
+                studentId: currentUser.studentId,
+                toDept,
+                subject,
+                body
+            });
+
+            showToast("Message sent successfully!", "success");
+            bootstrap.Modal.getInstance(document.getElementById('msgModal')).hide();
+            document.getElementById('msg-form').reset();
+            renderMessages();
+        }
+
+        renderMessages();
+    </script>
+</body>
+</html>

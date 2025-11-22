@@ -27,7 +27,13 @@
                         <a class="nav-link" href="orders.html">Orders</a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link active" href="events.html">Manage Events</a>
+                        <a class="nav-link active" href="events.html">Events</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="merch.html">Merch</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="announcements.html">Announcements</a>
                     </li>
                 </ul>
                 <ul class="navbar-nav ms-auto">
@@ -102,6 +108,7 @@
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="../../assets/js/mock-data.js"></script>
+    <script src="../../assets/js/db.js"></script>
     <script src="../../assets/js/auth.js"></script>
     <script src="../../assets/js/main.js"></script>
     <script>
@@ -120,7 +127,8 @@
 
         function renderAdminEvents() {
             grid.innerHTML = '';
-            window.MockData.events.forEach(event => {
+            // Load from DB
+            DB.getEvents().forEach(event => {
                 const col = document.createElement('div');
                 col.className = 'col-md-4 mb-4';
                 col.innerHTML = `
@@ -141,11 +149,39 @@
         }
 
         function createEvent() {
-            // In a real app, gather data and API call
+            // Gather Data
+            const title = document.querySelector('#create-event-form input[type="text"]').value;
+            const date = document.querySelector('#create-event-form input[type="date"]').value;
+            const time = document.querySelector('#create-event-form input[type="time"]').value;
+            const venue = document.querySelectorAll('#create-event-form input[type="text"]')[1].value; // 2nd text input
+            const dept = document.getElementById('event-dept-select').value;
+            const desc = document.querySelector('#create-event-form textarea').value;
+
+            if(!title || !date) {
+                showToast("Please fill all required fields", "error");
+                return;
+            }
+
+            const newEvent = {
+                title,
+                date,
+                time,
+                venue,
+                department: dept,
+                description: desc,
+                image: "https://placehold.co/600x400?text=Event" // Placeholder
+            };
+
+            DB.addEvent(newEvent);
+
             showToast("Event published successfully!", "success");
             const modalEl = document.getElementById('createEventModal');
             const modal = bootstrap.Modal.getInstance(modalEl);
             modal.hide();
+
+            // Clear form (simple)
+            document.getElementById('create-event-form').reset();
+            renderAdminEvents();
         }
 
         renderAdminEvents();

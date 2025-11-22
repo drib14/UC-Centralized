@@ -144,7 +144,19 @@
         }
 
         document.getElementById('checkout-btn').addEventListener('click', () => {
-            if(confirm('Confirm order? This is a mock checkout.')) {
+            if(confirm('Confirm order?')) {
+                const items = Cart.getItems();
+                const total = Cart.getTotal();
+                const user = Auth.getCurrentUser();
+
+                const order = {
+                    studentId: user.studentId,
+                    studentName: `${user.firstName} ${user.lastName}`,
+                    items: items,
+                    total: total
+                };
+
+                DB.addOrder(order);
                 Cart.clear();
                 renderCart();
                 showToast('Order placed successfully!', 'success');
