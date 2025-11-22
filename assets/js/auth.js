@@ -20,10 +20,10 @@ class Auth {
     }
 
     static login(studentId, password) {
-        // Admin backdoor for testing
-        if (studentId === 'admin' && password === 'admin123') {
+        // Admin backdoor for testing (Numeric ID now)
+        if (studentId === '2222' && password === 'admin123') {
             const adminUser = {
-                studentId: 'admin',
+                studentId: '2222',
                 firstName: 'Super',
                 lastName: 'Admin',
                 role: 'admin'
@@ -66,6 +66,25 @@ class Auth {
         if (!user || user.role !== 'admin') {
             window.location.href = '/login.html'; // Or unauthorized page
         }
+    }
+
+    static updateUser(updatedUser) {
+        const users = this.getUsers();
+        const index = users.findIndex(u => u.studentId === updatedUser.studentId);
+        if (index !== -1) {
+            users[index] = updatedUser;
+            localStorage.setItem(this.USERS_KEY, JSON.stringify(users));
+
+            // If updating current user session
+            const current = this.getCurrentUser();
+            if (current && current.studentId === updatedUser.studentId) {
+                // Remove password before session store just in case
+                const { password, ...safeUser } = updatedUser;
+                localStorage.setItem(this.CURRENT_USER_KEY, JSON.stringify(safeUser));
+            }
+            return true;
+        }
+        return false;
     }
 }
 

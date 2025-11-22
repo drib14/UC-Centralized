@@ -18,12 +18,13 @@ function showToast(message, type = 'success') {
 
     const toastId = 'toast-' + Date.now();
     const bgClass = type === 'success' ? 'text-bg-success' : 'text-bg-danger';
+    const icon = type === 'success' ? '<i class="fa-solid fa-circle-check me-2"></i>' : '<i class="fa-solid fa-circle-exclamation me-2"></i>';
 
     const toastHTML = `
-        <div id="${toastId}" class="toast align-items-center ${bgClass} border-0" role="alert" aria-live="assertive" aria-atomic="true">
+        <div id="${toastId}" class="toast align-items-center ${bgClass} border-0" role="alert" aria-live="assertive" aria-atomic="true" data-bs-delay="5000">
             <div class="d-flex">
-                <div class="toast-body">
-                    ${message}
+                <div class="toast-body fs-6">
+                    ${icon} ${message}
                 </div>
                 <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
             </div>
@@ -35,7 +36,7 @@ function showToast(message, type = 'success') {
     container.appendChild(wrapper.firstElementChild);
 
     const toastEl = document.getElementById(toastId);
-    const toast = new bootstrap.Toast(toastEl);
+    const toast = new bootstrap.Toast(toastEl, { delay: 5000 });
     toast.show();
 
     // Cleanup after hide

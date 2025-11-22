@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 512 512%22><path fill=%22%23FFCC00%22 d=%22M256 0c-26.5 0-48 21.5-48 48v24h-16c-26.5 0-48 21.5-48 48v24h-16c-26.5 0-48 21.5-48 48v24H64c-26.5 0-48 21.5-48 48v256h480V264c0-26.5-21.5-48-48-48h-16v-24c0-26.5-21.5-48-48-48h-16v-24c0-26.5-21.5-48-48-48h-16V48c0-26.5-21.5-48-48-48h-48zm0 32h48c8.8 0 16 7.2 16 16v24h-16c-13.3 0-24 10.7-24 24s10.7 24 24 24h16v24h-16c-13.3 0-24 10.7-24 24s10.7 24 24 24h16v24H224v-24h16c13.3 0 24-10.7 24-24s-10.7-24-24-24h-16v-24h16c13.3 0 24-10.7 24-24s-10.7-24-24-24h-16V48c0-8.8 7.2-16 16-16zm-80 80h16c8.8 0 16 7.2 16 16v24h-16c-13.3 0-24 10.7-24 24s10.7 24 24 24h16v24h-16c-13.3 0-24 10.7-24 24s10.7 24 24 24h16v24h-64v-24h16c13.3 0 24-10.7 24-24s-10.7-24-24-24h-16v-24h16c13.3 0 24-10.7 24-24s-10.7-24-24-24h-16v-24c0-8.8 7.2-16 16-16zm-80 80h16c8.8 0 16 7.2 16 16v24h-16c-13.3 0-24 10.7-24 24s10.7 24 24 24h16v24h-16c-13.3 0-24 10.7-24 24s10.7 24 24 24h16v24H16v-24h16c13.3 0 24-10.7 24-24s-10.7-24-24-24H16v-24c0-8.8 7.2-16 16-16zm320-160h16c8.8 0 16 7.2 16 16v24h-16c-13.3 0-24 10.7-24 24s10.7 24 24 24h16v24h-16c-13.3 0-24 10.7-24 24s10.7 24 24 24h16v24h-64V128h16c13.3 0 24-10.7 24-24s-10.7-24-24-24h-16V48c0-8.8 7.2-16 16-16zm80 80h16c8.8 0 16 7.2 16 16v24h-16c-13.3 0-24 10.7-24 24s10.7 24 24 24h16v24h-16c-13.3 0-24 10.7-24 24s10.7 24 24 24h16v24h-64v-24h16c13.3 0 24-10.7 24-24s-10.7-24-24-24h-16v-24c0-8.8 7.2-16 16-16z%22/%3E</svg>">
+    <meta charset="UTF-8">
+    <title>UC-Central</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="../../assets/css/styles.css">
+</head>
+<body>
+
+    <nav class="navbar navbar-expand-lg navbar-dark admin-nav sticky-top">
+        <div class="container">
+            <a class="navbar-brand" href="dashboard.html"><i class="fa-solid fa-shield-halved me-2"></i>UC-Central</a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav me-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="dashboard.html">Overview</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="orders.html">Orders</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="events.html">Events</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="merch.html">Merch</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="announcements.html">Announcements</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="messages.html">Messages</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link active" href="users.html">Users</a>
+                    </li>
+                </ul>
+                <ul class="navbar-nav ms-auto">
+                     <li class="nav-item">
+                        <a class="nav-link" href="#" id="logout-btn">Logout</a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container py-4">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h2>User Management</h2>
+            <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addUserModal"><i class="fa-solid fa-user-plus"></i> Add Admin</button>
+        </div>
+
+        <div class="card">
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Student ID</th>
+                                <th>Name</th>
+                                <th>Department</th>
+                                <th>Role</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="users-table">
+                            <!-- JS Populated -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Admin Modal -->
+    <div class="modal fade" id="addUserModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title">Add New Admin</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="add-user-form">
+                        <div class="mb-3">
+                            <label class="form-label">ID Number (Login)</label>
+                            <input type="number" id="u-id" class="form-control" required>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">First Name</label>
+                                <input type="text" id="u-fname" class="form-control" required>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Last Name</label>
+                                <input type="text" id="u-lname" class="form-control" required>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Password</label>
+                            <input type="password" id="u-pass" class="form-control" required>
+                        </div>
+                        <!-- Role is Admin by default for this modal -->
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary" onclick="addAdminUser()">Create Admin</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit Role Modal -->
+    <div class="modal fade" id="editRoleModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header bg-warning text-dark">
+                    <h5 class="modal-title">Change User Role</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <p>Editing role for: <strong id="edit-role-name"></strong></p>
+                    <select id="edit-role-select" class="form-select">
+                        <option value="student">Student</option>
+                        <option value="admin">Admin</option>
+                    </select>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary" onclick="saveRoleChange()">Save Changes</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="toast-container position-fixed top-0 end-0 p-3" id="toast-container"></div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="../../assets/js/db.js"></script>
+    <script src="../../assets/js/auth.js"></script>
+    <script src="../../assets/js/main.js"></script>
+    <script>
+        Auth.requireAdmin();
+
+        function renderUsers() {
+            const tbody = document.getElementById('users-table');
+            tbody.innerHTML = '';
+            const users = Auth.getUsers();
+
+            users.forEach(user => {
+                const row = document.createElement('tr');
+                const isMe = Auth.getCurrentUser().studentId === user.studentId;
+                const roleBadge = user.role === 'admin' ? 'bg-danger' : 'bg-secondary';
+
+                row.innerHTML = `
+                    <td>${user.studentId}</td>
+                    <td>${user.firstName} ${user.lastName}</td>
+                    <td>${user.department || 'N/A'}</td>
+                    <td><span class="badge ${roleBadge} text-uppercase">${user.role}</span></td>
+                    <td>
+                        <button class="btn btn-sm btn-outline-primary" onclick="openEditRole('${user.studentId}')" ${isMe ? 'disabled' : ''}>
+                            <i class="fa-solid fa-user-gear"></i> Edit Role
+                        </button>
+                    </td>
+                `;
+                tbody.appendChild(row);
+            });
+        }
+
+        function addAdminUser() {
+            const studentId = document.getElementById('u-id').value;
+            const firstName = document.getElementById('u-fname').value;
+            const lastName = document.getElementById('u-lname').value;
+            const password = document.getElementById('u-pass').value;
+
+            if(!studentId || !firstName || !lastName || !password) {
+                showToast("All fields required", "error");
+                return;
+            }
+
+            try {
+                Auth.saveUser({
+                    studentId,
+                    firstName,
+                    lastName,
+                    password,
+                    department: 'ADMIN',
+                    role: 'admin',
+                    year: 'N/A',
+                    program: 'N/A'
+                });
+                showToast("Admin added successfully!", "success");
+                bootstrap.Modal.getInstance(document.getElementById('addUserModal')).hide();
+                renderUsers();
+            } catch (e) {
+                showToast(e.message, "error");
+            }
+        }
+
+        let editingUserId = null;
+
+        function openEditRole(id) {
+            const users = Auth.getUsers();
+            const user = users.find(u => u.studentId === id);
+            if(user) {
+                editingUserId = id;
+                document.getElementById('edit-role-name').textContent = `${user.firstName} ${user.lastName}`;
+                document.getElementById('edit-role-select').value = user.role;
+                new bootstrap.Modal(document.getElementById('editRoleModal')).show();
+            }
+        }
+
+        function saveRoleChange() {
+            if(!editingUserId) return;
+            const newRole = document.getElementById('edit-role-select').value;
+            const users = Auth.getUsers();
+            const user = users.find(u => u.studentId === editingUserId);
+
+            if(user) {
+                user.role = newRole;
+                Auth.updateUser(user);
+                showToast(`User role updated to ${newRole}`, "success");
+                bootstrap.Modal.getInstance(document.getElementById('editRoleModal')).hide();
+                renderUsers();
+            }
+        }
+
+        renderUsers();
+    </script>
+</body>
+</html>
