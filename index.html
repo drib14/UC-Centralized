@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>UC-Central</title>
-    <link rel="shortcut icon" href="/assets/uc-central-logo.png" type="image/x-icon">
+    <link rel="shortcut icon" href="assets/uc-central-logo.png" type="image/x-icon">
     <!-- Bootstrap CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <!-- FontAwesome -->
@@ -17,7 +17,10 @@
     <!-- Navbar -->
     <nav class="navbar navbar-expand-lg">
         <div class="container">
-            <a class="navbar-brand" href="index.html"><i class="fa-solid fa-school me-2"></i>UC-Central</a>
+            <a class="navbar-brand" href="index.html">
+                <img src="assets/uc-central-logo.png" alt="Logo" style="height: 30px;" class="me-2">
+                UC-Central
+            </a>
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
                 <span class="navbar-toggler-icon"></span>
             </button>
@@ -91,6 +94,7 @@
 
     <!-- Scripts -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="assets/js/api.js"></script>
     <script src="assets/js/auth.js"></script>
     <script>
         // Redirect if already logged in

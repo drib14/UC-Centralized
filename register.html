@@ -5,7 +5,7 @@
     <title>UC-Central</title>
     <link
       rel="shortcut icon"
-      href="/assets/uc-central-logo.png"
+      href="assets/uc-central-logo.png"
       type="image/x-icon"
     />
 
@@ -40,6 +40,11 @@
           </div>
 
           <div class="mb-3">
+            <label for="email" class="form-label">Email Address</label>
+            <input type="email" class="form-control" id="email" required />
+          </div>
+
+          <div class="mb-3">
             <label for="studentId" class="form-label">Student ID</label>
             <input type="text" class="form-control" id="studentId" required />
           </div>
@@ -48,8 +53,9 @@
             <div class="col-md-6 mb-3">
               <label for="department" class="form-label">Department</label>
               <select class="form-select" id="department" required>
-                <option value="">Select Department</option>
-                <!-- Populated by JS -->
+                <option value="CCS">College of Computer Studies (CCS)</option>
+                <option value="CBA">College of Business Administration (CBA)</option>
+                <option value="CAS">College of Arts and Sciences (CAS)</option>
               </select>
             </div>
             <div class="col-md-6 mb-3">
@@ -118,25 +124,14 @@
     ></div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="assets/js/mock-data.js"></script>
+    <script src="assets/js/api.js"></script>
     <script src="assets/js/auth.js"></script>
     <script src="assets/js/main.js"></script>
     <script>
-      // Populate Departments
-      const deptSelect = document.getElementById("department");
-      if (window.MockData && window.MockData.departments) {
-        window.MockData.departments.forEach((dept) => {
-          const option = document.createElement("option");
-          option.value = dept.id;
-          option.textContent = dept.name;
-          deptSelect.appendChild(option);
-        });
-      }
-
       // Handle Register
       document
         .getElementById("register-form")
-        .addEventListener("submit", function (e) {
+        .addEventListener("submit", async function (e) {
           e.preventDefault();
 
           const password = document.getElementById("password").value;
@@ -150,17 +145,15 @@
 
           const user = {
             studentId: document.getElementById("studentId").value,
-            firstName: document.getElementById("firstName").value,
-            lastName: document.getElementById("lastName").value,
+            email: document.getElementById("email").value,
+            name: document.getElementById("firstName").value + " " + document.getElementById("lastName").value,
             department: document.getElementById("department").value,
-            year: document.getElementById("year").value,
-            program: document.getElementById("program").value,
-            password: password, // In a real app, hash this!
+            password: password,
             role: "student",
           };
 
           try {
-            Auth.saveUser(user);
+            await Auth.register(user);
             showToast("Registration successful! Please login.", "success");
             setTimeout(() => {
               window.location.href = "login.html";

@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 512 512%22><path fill=%22%23FFCC00%22 d=%22M256 0c-26.5 0-48 21.5-48 48v24h-16c-26.5 0-48 21.5-48 48v24h-16c-26.5 0-48 21.5-48 48v24H64c-26.5 0-48 21.5-48 48v256h480V264c0-26.5-21.5-48-48-48h-16v-24c0-26.5-21.5-48-48-48h-16v-24c0-26.5-21.5-48-48-48h-16V48c0-26.5-21.5-48-48-48h-48zm0 32h48c8.8 0 16 7.2 16 16v24h-16c-13.3 0-24 10.7-24 24s10.7 24 24 24h16v24h-16c-13.3 0-24 10.7-24 24s10.7 24 24 24h16v24H224v-24h16c13.3 0 24-10.7 24-24s-10.7-24-24-24h-16v-24h16c13.3 0 24-10.7 24-24s-10.7-24-24-24h-16V48c0-8.8 7.2-16 16-16zm-80 80h16c8.8 0 16 7.2 16 16v24h-16c-13.3 0-24 10.7-24 24s10.7 24 24 24h16v24h-16c-13.3 0-24 10.7-24 24s10.7 24 24 24h16v24h-64v-24h16c13.3 0 24-10.7 24-24s-10.7-24-24-24h-16v-24h16c13.3 0 24-10.7 24-24s-10.7-24-24-24h-16v-24c0-8.8 7.2-16 16-16zm-80 80h16c8.8 0 16 7.2 16 16v24h-16c-13.3 0-24 10.7-24 24s10.7 24 24 24h16v24h-16c-13.3 0-24 10.7-24 24s10.7 24 24 24h16v24H16v-24h16c13.3 0 24-10.7 24-24s-10.7-24-24-24H16v-24c0-8.8 7.2-16 16-16zm320-160h16c8.8 0 16 7.2 16 16v24h-16c-13.3 0-24 10.7-24 24s10.7 24 24 24h16v24h-16c-13.3 0-24 10.7-24 24s10.7 24 24 24h16v24h-64V128h16c13.3 0 24-10.7 24-24s-10.7-24-24-24h-16V48c0-8.8 7.2-16 16-16zm80 80h16c8.8 0 16 7.2 16 16v24h-16c-13.3 0-24 10.7-24 24s10.7 24 24 24h16v24h-16c-13.3 0-24 10.7-24 24s10.7 24 24 24h16v24h-64v-24h16c13.3 0 24-10.7 24-24s-10.7-24-24-24h-16v-24c0-8.8 7.2-16 16-16z%22/%3E</svg>">
+    <link rel="icon" href="/assets/uc-central-logo.png" type="image/x-icon">
     <meta charset="UTF-8">
     <title>UC-Central</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
@@ -80,7 +80,7 @@
                                 <input type="number" id="m-price" class="form-control" required>
                             </div>
                             <div class="col-md-6 mb-3">
-                                <label class="form-label">Category</label>
+                                <label class="form-label">Category (Description)</label>
                                 <select id="m-cat" class="form-select">
                                     <option value="Shirt">Shirt</option>
                                     <option value="Hoodie">Hoodie</option>
@@ -97,8 +97,12 @@
                             </select>
                         </div>
                         <div class="mb-3">
-                            <label class="form-label">Image URL</label>
-                            <input type="text" id="m-img" class="form-control" placeholder="https://..." value="https://placehold.co/300x300?text=Product">
+                            <label class="form-label">Image</label>
+                            <input type="file" id="m-image-file" class="form-control" accept="image/*">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Detailed Description</label>
+                            <textarea id="m-desc" class="form-control" rows="2"></textarea>
                         </div>
                     </form>
                 </div>
@@ -113,40 +117,54 @@
     <div class="toast-container position-fixed top-0 end-0 p-3" id="toast-container"></div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="../../assets/js/mock-data.js"></script>
-    <script src="../../assets/js/db.js"></script>
+    <script src="../../assets/js/api.js"></script>
     <script src="../../assets/js/auth.js"></script>
     <script src="../../assets/js/main.js"></script>
     <script>
-        Auth.requireAdmin();
-
-        // Populate Dept
         const deptSelect = document.getElementById('m-dept');
-        if(window.MockData) { // Fallback/Init check
-            window.MockData.departments.forEach(d => {
+        const departments = [
+            {id: 'CCS', name: 'College of Computer Studies'},
+            {id: 'CBA', name: 'College of Business Administration'},
+            {id: 'CAS', name: 'College of Arts and Sciences'},
+            {id: 'ALL', name: 'All Departments'}
+        ];
+
+        departments.forEach(d => {
+            if(d.id !== 'ALL') {
                 const opt = document.createElement('option');
                 opt.value = d.id;
                 opt.textContent = d.name;
                 deptSelect.appendChild(opt);
-            });
+            }
+        });
+
+        async function fetchMerch() {
+            try {
+                const items = await API.getMerch();
+                renderMerch(items);
+            } catch (e) {
+                showToast("Failed to load merch", "error");
+            }
         }
 
-        function renderMerch() {
+        function renderMerch(items) {
             const list = document.getElementById('merch-list');
             list.innerHTML = '';
-            const items = DB.getMerch();
 
             items.forEach(item => {
                 const col = document.createElement('div');
                 col.className = 'col-md-3 mb-4';
                 col.innerHTML = `
                     <div class="card h-100">
-                        <img src="${item.image}" class="card-img-top" style="height: 150px; object-fit: cover;">
+                        <img src="${item.image || 'https://via.placeholder.com/300'}" class="card-img-top" style="height: 150px; object-fit: cover;">
                         <div class="card-body">
                             <h6 class="card-title">${item.name}</h6>
                             <div class="d-flex justify-content-between">
                                 <span class="text-success fw-bold">${formatCurrency(item.price)}</span>
                                 <small class="text-muted">${item.department}</small>
+                            </div>
+                            <div class="mt-2">
+                                <button class="btn btn-sm btn-outline-danger w-100" onclick="deleteMerch('${item._id}')">Delete</button>
                             </div>
                         </div>
                     </div>
@@ -155,31 +173,57 @@
             });
         }
 
-        function saveMerch() {
+        window.deleteMerch = async function(id) {
+             if(confirm("Are you sure you want to delete this item?")) {
+                try {
+                    await API.deleteMerch(id);
+                    showToast("Item deleted", "success");
+                    fetchMerch();
+                } catch(e) {
+                    showToast("Failed to delete item", "error");
+                }
+            }
+        }
+
+        window.saveMerch = async function() {
             const name = document.getElementById('m-name').value;
-            const price = parseFloat(document.getElementById('m-price').value);
+            const price = document.getElementById('m-price').value;
             const category = document.getElementById('m-cat').value;
             const dept = document.getElementById('m-dept').value;
-            const image = document.getElementById('m-img').value;
+            const desc = document.getElementById('m-desc').value || category;
+            const imageFile = document.getElementById('m-image-file').files[0];
 
             if(!name || !price) {
                 showToast('Please fill required fields', 'error');
                 return;
             }
 
-            DB.addMerch({ name, price, category, department: dept, image });
-            showToast('Product added successfully!', 'success');
+            const formData = new FormData();
+            formData.append('name', name);
+            formData.append('price', price);
+            formData.append('description', desc);
+            formData.append('department', dept);
+            if (imageFile) {
+                formData.append('image', imageFile);
+            }
 
-            const modalEl = document.getElementById('addMerchModal');
-            const modal = bootstrap.Modal.getInstance(modalEl);
-            modal.hide();
+            try {
+                await API.createMerch(formData);
+                showToast('Product added successfully!', 'success');
 
-            // Clear form
-            document.getElementById('add-merch-form').reset();
-            renderMerch();
+                const modalEl = document.getElementById('addMerchModal');
+                const modal = bootstrap.Modal.getInstance(modalEl);
+                modal.hide();
+
+                // Clear form
+                document.getElementById('add-merch-form').reset();
+                fetchMerch();
+            } catch (e) {
+                showToast(e.message, "error");
+            }
         }
 
-        renderMerch();
+        fetchMerch();
     </script>
 </body>
 </html>

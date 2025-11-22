@@ -98,57 +98,74 @@
     ></div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="../../assets/js/mock-data.js"></script>
+    <script src="../../assets/js/api.js"></script>
     <script src="../../assets/js/auth.js"></script>
     <script src="../../assets/js/main.js"></script>
     <script>
-      Auth.requireLogin();
-
       const grid = document.getElementById("merch-grid");
       const user = Auth.getCurrentUser();
 
-      // Simple recommendation logic: Show User's Dept merch first, or highlight it
-      // For now, just listing all
+      let allMerch = [];
 
-      window.MockData.merch.forEach((item) => {
-        const col = document.createElement("div");
-        col.className = "col-md-3 col-sm-6 mb-4";
+      async function fetchMerch() {
+          try {
+              allMerch = await API.getMerch();
+              renderMerch(allMerch);
+          } catch (err) {
+              showToast("Failed to load merch", "error");
+          }
+      }
 
-        const isMyDept = item.department === user.department;
-        const badge = isMyDept
-          ? '<span class="position-absolute top-0 end-0 badge bg-warning text-dark m-2">For You</span>'
-          : "";
+      function renderMerch(merchList) {
+        grid.innerHTML = "";
+        if (merchList.length === 0) {
+             grid.innerHTML = '<div class="col-12 text-center"><p class="text-muted">No merchandise available.</p></div>';
+             return;
+        }
 
-        col.innerHTML = `
-                <div class="card h-100 position-relative">
-                    ${badge}
-                    <img src="${item.image}" class="card-img-top" alt="${
-          item.name
-        }" style="height: 250px; object-fit: cover;">
-                    <div class="card-body d-flex flex-column">
-                        <h5 class="card-title fs-6">${item.name}</h5>
-                        <p class="text-success fw-bold mb-1">${formatCurrency(
-                          item.price
-                        )}</p>
-                        <p class="small text-muted mb-3">${item.department}</p>
-                        <button class="btn btn-primary w-100 mt-auto" onclick="addToCart(${
-                          item.id
-                        })">
-                            <i class="fa-solid fa-cart-plus me-1"></i> Add to Cart
-                        </button>
+        merchList.forEach((item) => {
+            const col = document.createElement("div");
+            col.className = "col-md-3 col-sm-6 mb-4";
+
+            const isMyDept = user.department && item.department === user.department;
+            const badge = isMyDept
+            ? '<span class="position-absolute top-0 end-0 badge bg-warning text-dark m-2">For You</span>'
+            : "";
+
+            col.innerHTML = `
+                    <div class="card h-100 position-relative">
+                        ${badge}
+                        <img src="${item.image || 'https://via.placeholder.com/300'}" class="card-img-top" alt="${
+            item.name
+            }" style="height: 250px; object-fit: cover;">
+                        <div class="card-body d-flex flex-column">
+                            <h5 class="card-title fs-6">${item.name}</h5>
+                            <p class="text-success fw-bold mb-1">${formatCurrency(
+                            item.price
+                            )}</p>
+                            <p class="small text-muted mb-3">${item.department || 'General'}</p>
+                            <button class="btn btn-primary w-100 mt-auto" onclick="addToCart('${
+                            item._id
+                            }')">
+                                <i class="fa-solid fa-cart-plus me-1"></i> Add to Cart
+                            </button>
+                        </div>
                     </div>
-                </div>
-            `;
-        grid.appendChild(col);
-      });
+                `;
+            grid.appendChild(col);
+        });
+      }
 
-      function addToCart(id) {
-        const item = window.MockData.merch.find((i) => i.id === id);
+      window.addToCart = function(id) {
+        const item = allMerch.find((i) => i._id === id);
         if (item) {
-          Cart.addItem(item);
+          const cartItem = { ...item, id: item._id };
+          Cart.addItem(cartItem);
           showToast(`Added ${item.name} to cart!`, "success");
         }
       }
+
+      fetchMerch();
     </script>
   </body>
 </html>

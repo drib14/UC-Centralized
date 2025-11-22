@@ -19,7 +19,7 @@
     <link rel="stylesheet" href="../../assets/css/styles.css" />
   </head>
   <body>
-    <!-- Nav (Could be modularized, but copy-pasting for Vanilla JS simplicity per plan) -->
+    <!-- Nav -->
     <nav class="navbar navbar-expand-lg navbar-dark sticky-top">
       <div class="container">
         <a class="navbar-brand" href="dashboard.html"
@@ -155,7 +155,6 @@
             <button
               type="button"
               class="btn btn-success"
-              onclick="showToast('Successfully registered for event!', 'success');"
               data-bs-dismiss="modal"
             >
               Register / RSVP
@@ -171,28 +170,42 @@
     ></div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="../../assets/js/mock-data.js"></script>
-    <script src="../../assets/js/db.js"></script>
+    <script src="../../assets/js/api.js"></script>
     <script src="../../assets/js/auth.js"></script>
     <script src="../../assets/js/main.js"></script>
     <script>
-      Auth.requireLogin();
-      const currentUser = Auth.getCurrentUser();
-
       const grid = document.getElementById("events-grid");
       const deptFilter = document.getElementById("dept-filter");
 
-      // Populate Filters
-      window.MockData.departments.forEach((dept) => {
-        const option = document.createElement("option");
-        option.value = dept.id;
-        option.textContent = dept.name;
-        deptFilter.appendChild(option);
+      // Departments
+      const departments = [
+          {id: 'CCS', name: 'College of Computer Studies'},
+          {id: 'CBA', name: 'College of Business Administration'},
+          {id: 'CAS', name: 'College of Arts and Sciences'}
+      ];
+
+      departments.forEach((dept) => {
+            const option = document.createElement("option");
+            option.value = dept.id;
+            option.textContent = dept.name;
+            deptFilter.appendChild(option);
       });
+
+      let allEvents = [];
+
+      async function fetchEvents() {
+          try {
+              allEvents = await API.getEvents();
+              renderEvents(deptFilter.value);
+          } catch (err) {
+              console.error(err);
+              showToast("Failed to load events", "error");
+          }
+      }
 
       function renderEvents(filterDept = "ALL") {
         grid.innerHTML = "";
-        let events = DB.getEvents();
+        let events = allEvents;
 
         if (filterDept !== "ALL") {
           events = events.filter(
@@ -200,18 +213,28 @@
           );
         }
 
+        const user = Auth.getCurrentUser();
+
+        if (events.length === 0) {
+            grid.innerHTML = '<div class="col-12 text-center mt-5"><p class="text-muted">No events found.</p></div>';
+            return;
+        }
+
         events.forEach((event) => {
-          const isRegistered = DB.hasRSVPd(currentUser.studentId, event.id);
+          const isRegistered = event.attendees && event.attendees.includes(user._id);
           const btnClass = isRegistered
             ? "btn-secondary"
             : "btn-outline-success";
           const btnText = isRegistered ? "Registered" : "View Details";
 
+          const venue = event.location || "TBA";
+          const time = event.time || "";
+
           const col = document.createElement("div");
           col.className = "col-md-4 mb-4";
           col.innerHTML = `
                     <div class="card h-100">
-                        <img src="${event.image}" class="card-img-top" alt="${
+                        <img src="${event.image || 'https://via.placeholder.com/300'}" class="card-img-top" alt="${
             event.title
           }" style="height: 200px; object-fit: cover;">
                         <div class="card-body d-flex flex-column">
@@ -219,15 +242,16 @@
                             <p class="card-text text-muted small mb-2">
                                 <i class="fa-regular fa-calendar"></i> ${
                                   event.date
-                                } | ${event.department}
+                                } ${time ? '| ' + time : ''} <br>
+                                ${event.department}
                             </p>
                             <p class="card-text flex-grow-1">${event.description.substring(
                               0,
                               80
                             )}...</p>
-                            <button class="btn ${btnClass} w-100 mt-auto" onclick="openEventModal(${
-            event.id
-          })">${btnText}</button>
+                            <button class="btn ${btnClass} w-100 mt-auto" onclick="openEventModal('${
+            event._id
+          }')">${btnText}</button>
                         </div>
                     </div>
                 `;
@@ -237,21 +261,22 @@
 
       let currentEventId = null;
 
-      function openEventModal(id) {
-        const event = DB.getEvents().find((e) => e.id === id);
+      window.openEventModal = function(id) {
+        const event = allEvents.find((e) => e._id === id);
         if (!event) return;
         currentEventId = id;
+        const user = Auth.getCurrentUser();
 
         document.getElementById("modalTitle").textContent = event.title;
-        document.getElementById("modalImage").src = event.image;
+        document.getElementById("modalImage").src = event.image || 'https://via.placeholder.com/300';
         document.getElementById("modalDate").textContent = event.date;
-        document.getElementById("modalTime").textContent = event.time;
-        document.getElementById("modalVenue").textContent = event.venue;
+        document.getElementById("modalTime").textContent = event.time || '';
+        document.getElementById("modalVenue").textContent = event.location;
         document.getElementById("modalDesc").textContent = event.description;
 
         // Update Modal Button State
         const modalBtn = document.querySelector("#eventModal .btn-success");
-        const isRegistered = DB.hasRSVPd(currentUser.studentId, id);
+        const isRegistered = event.attendees && event.attendees.includes(user._id);
 
         if (isRegistered) {
           modalBtn.textContent = "Already Registered";
@@ -266,14 +291,14 @@
         new bootstrap.Modal(document.getElementById("eventModal")).show();
       }
 
-      function handleRSVP() {
+      async function handleRSVP() {
         if (currentEventId) {
-          const success = DB.addRSVP(currentUser.studentId, currentEventId);
-          if (success) {
-            showToast("Successfully registered for event!", "success");
-            renderEvents(deptFilter.value); // Re-render to show "Registered" on card
-          } else {
-            showToast("Already registered.", "info");
+          try {
+              await API.rsvpEvent(currentEventId);
+              showToast("Successfully registered for event!", "success");
+              await fetchEvents(); // Reload to update UI
+          } catch (err) {
+              showToast(err.message, "error");
           }
         }
       }
@@ -283,7 +308,7 @@
       );
 
       // Initial Render
-      renderEvents();
+      document.addEventListener('DOMContentLoaded', fetchEvents);
     </script>
   </body>
 </html>
