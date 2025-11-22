@@ -1,0 +1,110 @@
+/* UC-Central Styles */
+
+:root {
+    /* Mint Green Palette */
+    --primary-mint: #98ff98; /* Mint Green */
+    --primary-dark-mint: #2e8b57; /* Sea Green */
+    --primary-light-mint: #e0ffe0;
+    --accent-color: #ffffff;
+    --text-dark: #333333;
+
+    /* Bootstrap Overrides map */
+    --bs-primary: #2e8b57; /* Use darker mint for primary buttons/text for contrast */
+    --bs-primary-rgb: 46, 139, 87;
+    --bs-body-bg: #f8fdf8;
+}
+
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background-color: var(--bs-body-bg);
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+}
+
+main {
+    flex: 1;
+}
+
+/* Navbar */
+.navbar {
+    background-color: var(--primary-dark-mint) !important;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.navbar-brand, .nav-link {
+    color: white !important;
+}
+
+.nav-link:hover {
+    color: var(--primary-mint) !important;
+}
+
+/* Buttons */
+.btn-primary {
+    background-color: var(--primary-dark-mint);
+    border-color: var(--primary-dark-mint);
+}
+
+.btn-primary:hover {
+    background-color: #246b42;
+    border-color: #246b42;
+}
+
+.btn-outline-primary {
+    color: var(--primary-dark-mint);
+    border-color: var(--primary-dark-mint);
+}
+
+.btn-outline-primary:hover {
+    background-color: var(--primary-dark-mint);
+    color: white;
+}
+
+/* Cards */
+.card {
+    border: none;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+    transition: transform 0.2s;
+}
+
+.card:hover {
+    transform: translateY(-5px);
+}
+
+.card-header {
+    background-color: var(--primary-light-mint);
+    color: var(--primary-dark-mint);
+    font-weight: bold;
+    border-bottom: none;
+}
+
+/* Auth Forms */
+.auth-container {
+    max-width: 400px;
+    margin: 2rem auto;
+    padding: 2rem;
+    background: white;
+    border-radius: 10px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+
+.auth-header {
+    text-align: center;
+    color: var(--primary-dark-mint);
+    margin-bottom: 1.5rem;
+}
+
+/* Footer */
+footer {
+    background-color: var(--primary-dark-mint);
+    color: white;
+    padding: 1rem 0;
+    text-align: center;
+    margin-top: auto;
+}
+
+/* Toast Position */
+.toast-container {
+    z-index: 1055;
+}

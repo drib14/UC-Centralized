@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Login - UC-Central</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="assets/css/styles.css">
+</head>
+<body>
+
+    <div class="container d-flex align-items-center justify-content-center" style="min-height: 100vh;">
+        <div class="auth-container w-100">
+            <div class="auth-header">
+                <h2><i class="fa-solid fa-school me-2"></i>UC-Central</h2>
+                <p class="text-muted">Sign in to your account</p>
+            </div>
+
+            <form id="login-form">
+                <div class="mb-3">
+                    <label for="studentId" class="form-label">Student ID</label>
+                    <div class="input-group">
+                        <span class="input-group-text"><i class="fa-solid fa-id-card"></i></span>
+                        <input type="text" class="form-control" id="studentId" placeholder="e.g., 12345678" required>
+                    </div>
+                </div>
+                <div class="mb-3">
+                    <label for="password" class="form-label">Password</label>
+                    <div class="input-group">
+                        <span class="input-group-text"><i class="fa-solid fa-lock"></i></span>
+                        <input type="password" class="form-control" id="password" placeholder="********" required>
+                    </div>
+                </div>
+                <div class="d-grid gap-2">
+                    <button type="submit" class="btn btn-primary">Login</button>
+                </div>
+            </form>
+
+            <div class="mt-3 text-center">
+                <p class="small">Don't have an account? <a href="register.html" class="text-success">Register here</a></p>
+                <p class="small"><a href="index.html" class="text-muted">Back to Home</a></p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Container -->
+    <div class="toast-container position-fixed top-0 end-0 p-3" id="toast-container"></div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="assets/js/auth.js"></script>
+    <script src="assets/js/main.js"></script>
+    <script>
+        document.getElementById('login-form').addEventListener('submit', function(e) {
+            e.preventDefault();
+            const studentId = document.getElementById('studentId').value;
+            const password = document.getElementById('password').value;
+
+            try {
+                const user = Auth.login(studentId, password);
+                showToast('Login successful! Redirecting...', 'success');
+                setTimeout(() => {
+                    if (user.role === 'admin') {
+                        window.location.href = 'pages/admin/dashboard.html';
+                    } else {
+                        window.location.href = 'pages/student/dashboard.html';
+                    }
+                }, 1000);
+            } catch (error) {
+                showToast(error.message, 'error');
+            }
+        });
+    </script>
+</body>
+</html>

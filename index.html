@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>UC-Central - Welcome</title>
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- FontAwesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="assets/css/styles.css">
+</head>
+<body>
+
+    <!-- Navbar -->
+    <nav class="navbar navbar-expand-lg">
+        <div class="container">
+            <a class="navbar-brand" href="index.html"><i class="fa-solid fa-school me-2"></i>UC-Central</a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto" id="auth-links">
+                    <li class="nav-item">
+                        <a class="nav-link" href="login.html">Login</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link btn btn-light text-success ms-2 px-4" href="register.html" style="color: var(--primary-dark-mint) !important; font-weight: bold;">Register</a>
+                    </li>
+                </ul>
+                <ul class="navbar-nav ms-auto d-none" id="user-links">
+                    <li class="nav-item">
+                        <a class="nav-link" href="pages/student/dashboard.html">Dashboard</a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <header class="py-5 text-center text-white" style="background-color: var(--primary-dark-mint);">
+        <div class="container">
+            <h1 class="display-4 fw-bold">Welcome to UC-Central</h1>
+            <p class="lead mb-4">Your one-stop hub for university events, merchandise, and announcements.</p>
+            <a href="register.html" class="btn btn-lg btn-light text-success fw-bold">Get Started</a>
+        </div>
+    </header>
+
+    <!-- Features -->
+    <section class="py-5">
+        <div class="container">
+            <div class="row text-center">
+                <div class="col-md-4 mb-4">
+                    <div class="card h-100 p-4">
+                        <div class="mb-3 text-success">
+                            <i class="fa-solid fa-calendar-days fa-3x"></i>
+                        </div>
+                        <h3>Events</h3>
+                        <p>Stay updated with the latest department and university-wide events.</p>
+                    </div>
+                </div>
+                <div class="col-md-4 mb-4">
+                    <div class="card h-100 p-4">
+                        <div class="mb-3 text-success">
+                            <i class="fa-solid fa-shirt fa-3x"></i>
+                        </div>
+                        <h3>Merch Store</h3>
+                        <p>Order your department shirts, lanyards, and accessories online.</p>
+                    </div>
+                </div>
+                <div class="col-md-4 mb-4">
+                    <div class="card h-100 p-4">
+                        <div class="mb-3 text-success">
+                            <i class="fa-solid fa-bell fa-3x"></i>
+                        </div>
+                        <h3>Notifications</h3>
+                        <p>Get real-time alerts for announcements and order statuses.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <footer>
+        <div class="container">
+            <p class="mb-0">&copy; 2024 UC-Central. All rights reserved.</p>
+        </div>
+    </footer>
+
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="assets/js/auth.js"></script>
+    <script>
+        // Redirect if already logged in
+        if (Auth.getCurrentUser()) {
+            window.location.href = 'pages/student/dashboard.html';
+        }
+    </script>
+</body>
+</html>

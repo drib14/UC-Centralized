@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Shopping Cart - UC-Central</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="../../assets/css/styles.css">
+</head>
+<body>
+
+    <nav class="navbar navbar-expand-lg navbar-dark sticky-top">
+        <div class="container">
+            <a class="navbar-brand" href="dashboard.html"><i class="fa-solid fa-school me-2"></i>UC-Central</a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav me-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="dashboard.html">Dashboard</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="events.html">Events</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="merch.html">Merch Store</a>
+                    </li>
+                </ul>
+                <ul class="navbar-nav ms-auto align-items-center">
+                    <li class="nav-item me-3">
+                        <a class="nav-link active position-relative" href="cart.html">
+                            <i class="fa-solid fa-cart-shopping fa-lg"></i>
+                            <span id="cart-badge" class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger d-none">
+                                0
+                            </span>
+                        </a>
+                    </li>
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" id="userDropdown" role="button" data-bs-toggle="dropdown">
+                            <span id="nav-user-name">Student</span>
+                        </a>
+                        <ul class="dropdown-menu dropdown-menu-end">
+                            <li><a class="dropdown-item" href="profile.html">Profile</a></li>
+                            <li><a class="dropdown-item text-danger" href="#" id="logout-btn">Logout</a></li>
+                        </ul>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container py-4">
+        <h2 class="mb-4 text-success"><i class="fa-solid fa-cart-shopping me-2"></i>Your Cart</h2>
+
+        <div class="row">
+            <div class="col-lg-8">
+                <div class="card mb-4">
+                    <div class="card-body" id="cart-items-container">
+                        <!-- Populated via JS -->
+                        <p class="text-center text-muted py-5">Your cart is empty.</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-4">
+                <div class="card">
+                    <div class="card-header">Order Summary</div>
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between mb-2">
+                            <span>Subtotal</span>
+                            <span id="cart-subtotal">PHP 0.00</span>
+                        </div>
+                        <div class="d-flex justify-content-between mb-3">
+                            <span>Shipping (Pickup)</span>
+                            <span>Free</span>
+                        </div>
+                        <hr>
+                        <div class="d-flex justify-content-between fw-bold fs-5">
+                            <span>Total</span>
+                            <span id="cart-total">PHP 0.00</span>
+                        </div>
+                        <button class="btn btn-success w-100 mt-4" id="checkout-btn" disabled>Proceed to Checkout</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="toast-container position-fixed top-0 end-0 p-3" id="toast-container"></div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="../../assets/js/mock-data.js"></script>
+    <script src="../../assets/js/auth.js"></script>
+    <script src="../../assets/js/main.js"></script>
+    <script>
+        Auth.requireLogin();
+
+        function renderCart() {
+            const container = document.getElementById('cart-items-container');
+            const items = Cart.getItems();
+
+            if (items.length === 0) {
+                container.innerHTML = '<p class="text-center text-muted py-5">Your cart is empty.</p>';
+                document.getElementById('checkout-btn').disabled = true;
+                updateTotals(0);
+                return;
+            }
+
+            document.getElementById('checkout-btn').disabled = false;
+            container.innerHTML = '';
+
+            items.forEach(item => {
+                const row = document.createElement('div');
+                row.className = 'd-flex align-items-center mb-3 pb-3 border-bottom';
+                row.innerHTML = `
+                    <img src="${item.image}" class="rounded me-3" style="width: 80px; height: 80px; object-fit: cover;">
+                    <div class="flex-grow-1">
+                        <h6 class="mb-0">${item.name}</h6>
+                        <small class="text-muted">${item.category}</small>
+                    </div>
+                    <div class="text-end me-4">
+                        <div class="fw-bold">${formatCurrency(item.price)}</div>
+                        <small class="text-muted">x${item.quantity}</small>
+                    </div>
+                    <button class="btn btn-sm btn-outline-danger" onclick="removeFromCart(${item.id})">
+                        <i class="fa-solid fa-trash"></i>
+                    </button>
+                `;
+                container.appendChild(row);
+            });
+
+            updateTotals(Cart.getTotal());
+        }
+
+        function updateTotals(total) {
+            const formatted = formatCurrency(total);
+            document.getElementById('cart-subtotal').textContent = formatted;
+            document.getElementById('cart-total').textContent = formatted;
+        }
+
+        function removeFromCart(id) {
+            Cart.removeItem(id);
+            renderCart();
+        }
+
+        document.getElementById('checkout-btn').addEventListener('click', () => {
+            if(confirm('Confirm order? This is a mock checkout.')) {
+                Cart.clear();
+                renderCart();
+                showToast('Order placed successfully!', 'success');
+            }
+        });
+
+        // Initial Render
+        renderCart();
+    </script>
+</body>
+</html>
