@@ -188,7 +188,7 @@ footer {
 .sidebar .logo-img {
     width: 80px;
     height: 80px;
-    border-radius: 50%;
+    border-radius: 8px;
     object-fit: cover;
     background: white;
     padding: 2px;

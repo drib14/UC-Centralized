@@ -19,156 +19,123 @@
     <link rel="stylesheet" href="../../assets/css/styles.css" />
   </head>
   <body>
-    <nav class="navbar navbar-expand-lg navbar-dark sticky-top">
-      <div class="container">
-        <a class="navbar-brand" href="dashboard.html"
-          ><img src="../../assets/uc-central-logo.png" alt="Logo" style="height: 30px;" class="me-2">UC-Central</a
-        >
-        <button
-          class="navbar-toggler"
-          type="button"
-          data-bs-toggle="collapse"
-          data-bs-target="#navbarNav"
-        >
-          <span class="navbar-toggler-icon"></span>
-        </button>
-        <div class="collapse navbar-collapse" id="navbarNav">
-          <ul class="navbar-nav me-auto">
-            <li class="nav-item">
-              <a class="nav-link" href="dashboard.html"><i class="fa-solid fa-table-columns me-1"></i> Dashboard</a>
-            </li>
-            <li class="nav-item">
-              <a class="nav-link" href="events.html"><i class="fa-solid fa-calendar-days me-1"></i> Events</a>
-            </li>
-            <li class="nav-item">
-              <a class="nav-link" href="merch.html"><i class="fa-solid fa-shirt me-1"></i> Merch Store</a>
-            </li>
-            <li class="nav-item">
-              <a class="nav-link" href="messages.html"><i class="fa-solid fa-envelope me-1"></i> Messages</a>
-            </li>
-          </ul>
-          <ul class="navbar-nav ms-auto align-items-center">
-            <li class="nav-item me-3">
-              <a class="nav-link position-relative" href="cart.html">
-                <i class="fa-solid fa-cart-shopping fa-lg"></i>
-                <span
-                  id="cart-badge"
-                  class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger d-none"
-                >
-                  0
-                </span>
-              </a>
-            </li>
-            <li class="nav-item dropdown">
-              <a
-                class="nav-link dropdown-toggle active"
-                href="#"
-                id="userDropdown"
-                role="button"
-                data-bs-toggle="dropdown"
-              >
-                <span id="nav-user-name">Student</span>
-              </a>
-              <ul class="dropdown-menu dropdown-menu-end">
-                <li>
-                  <a class="dropdown-item" href="profile.html">Profile</a>
-                </li>
-                <li>
-                  <a class="dropdown-item text-danger" href="#" id="logout-btn"
-                    >Logout</a
-                  >
-                </li>
-              </ul>
-            </li>
-          </ul>
-        </div>
-      </div>
-    </nav>
 
-    <div class="container py-5">
-      <div class="row justify-content-center">
-        <div class="col-md-8">
-          <div class="card">
-            <div class="card-header bg-success text-white">
-              <h4 class="mb-0">
-                <i class="fa-solid fa-user me-2"></i>My Profile
-              </h4>
+    <div id="wrapper">
+        <!-- Sidebar -->
+        <div class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <img src="../../assets/uc-central-logo.png" class="logo-img" alt="Logo">
+                <span class="sidebar-brand-text">UC-Central</span>
             </div>
-            <div class="card-body text-center py-4">
-              <img
-                src=""
-                id="profile-img-display"
-                class="rounded-circle mb-3 border border-4 border-success"
-                width="120"
-                height="120"
-                style="object-fit: cover; display: none;"
-              />
-              <h3 id="p-name" class="fw-bold">Student Name</h3>
-              <p id="p-id" class="text-muted mb-4">ID: 12345678</p>
+            <nav class="nav flex-column mt-3">
+                <a class="nav-link" href="dashboard.html"><i class="fa-solid fa-table-columns"></i> <span>Dashboard</span></a>
+                <a class="nav-link" href="events.html"><i class="fa-solid fa-calendar-days"></i> <span>Events</span></a>
+                <a class="nav-link" href="merch.html"><i class="fa-solid fa-shirt"></i> <span>Merch Store</span></a>
+                <a class="nav-link" href="messages.html"><i class="fa-solid fa-envelope"></i> <span>Messages</span></a>
+                <a class="nav-link" href="cart.html"><i class="fa-solid fa-cart-shopping"></i> <span>Cart</span> <span id="cart-badge" class="badge bg-danger ms-auto d-none">0</span></a>
+                <a class="nav-link active" href="profile.html"><i class="fa-solid fa-user"></i> <span>Profile</span></a>
+            </nav>
+            <div class="sidebar-footer">
+                <a class="nav-link text-danger" href="#" id="logout-btn"><i class="fa-solid fa-right-from-bracket"></i> <span>Logout</span></a>
+            </div>
+        </div>
 
-              <div class="row text-start g-3 justify-content-center">
+        <!-- Content -->
+        <div id="page-content-wrapper">
+            <div class="topbar">
+                <button class="btn btn-light text-primary border-0" onclick="toggleSidebar()"><i class="fa-solid fa-bars fa-lg"></i></button>
+                <div class="d-flex align-items-center">
+                    <span class="me-2 fw-bold text-primary d-none d-md-block" id="nav-user-name">Student</span>
+                    <img src="../../assets/uc-central-logo.png" class="rounded-3 border border-2 border-primary" width="40" height="40">
+                </div>
+            </div>
+
+            <div class="container-fluid">
+              <div class="row justify-content-center">
                 <div class="col-md-8">
-                  <ul class="list-group list-group-flush">
-                    <li class="list-group-item">
-                      <strong>Department:</strong>
-                      <span id="p-dept" class="float-end">BSIT</span>
-                    </li>
-                    <li class="list-group-item">
-                      <strong>Program:</strong>
-                      <span id="p-prog" class="float-end">IT</span>
-                    </li>
-                    <li class="list-group-item">
-                      <strong>Year Level:</strong>
-                      <span id="p-year" class="float-end">3</span>
-                    </li>
-                    <li class="list-group-item">
-                      <strong>Role:</strong>
-                      <span
-                        id="p-role"
-                        class="float-end text-uppercase badge bg-secondary"
-                        >Student</span
+                  <div class="card">
+                    <div class="card-header bg-success text-white">
+                      <h4 class="mb-0">
+                        <i class="fa-solid fa-user me-2"></i>My Profile
+                      </h4>
+                    </div>
+                    <div class="card-body text-center py-4">
+                      <img
+                        src=""
+                        id="profile-img-display"
+                        class="rounded-circle mb-3 border border-4 border-success"
+                        width="120"
+                        height="120"
+                        style="object-fit: cover; display: none;"
+                      />
+                      <h3 id="p-name" class="fw-bold">Student Name</h3>
+                      <p id="p-id" class="text-muted mb-4">ID: 12345678</p>
+
+                      <div class="row text-start g-3 justify-content-center">
+                        <div class="col-md-8">
+                          <ul class="list-group list-group-flush">
+                            <li class="list-group-item">
+                              <strong>Department:</strong>
+                              <span id="p-dept" class="float-end">BSIT</span>
+                            </li>
+                            <li class="list-group-item">
+                              <strong>Program:</strong>
+                              <span id="p-prog" class="float-end">IT</span>
+                            </li>
+                            <li class="list-group-item">
+                              <strong>Year Level:</strong>
+                              <span id="p-year" class="float-end">3</span>
+                            </li>
+                            <li class="list-group-item">
+                              <strong>Role:</strong>
+                              <span
+                                id="p-role"
+                                class="float-end text-uppercase badge bg-secondary"
+                                >Student</span
+                              >
+                            </li>
+                          </ul>
+                        </div>
+                      </div>
+                    </div>
+                    <div class="card-footer text-center">
+                      <button
+                        class="btn btn-outline-secondary btn-sm"
+                        data-bs-toggle="modal"
+                        data-bs-target="#editProfileModal"
                       >
-                    </li>
-                  </ul>
+                        Edit Profile
+                      </button>
+                    </div>
+                  </div>
+
+                  <!-- Activity Tabs -->
+                  <div class="mt-4">
+                        <ul class="nav nav-tabs" id="profileTabs" role="tablist">
+                            <li class="nav-item">
+                                <button class="nav-link active text-success" id="orders-tab" data-bs-toggle="tab" data-bs-target="#orders" type="button">My Orders</button>
+                            </li>
+                            <li class="nav-item">
+                                <button class="nav-link text-success" id="events-tab" data-bs-toggle="tab" data-bs-target="#events" type="button">My Events (RSVP)</button>
+                            </li>
+                        </ul>
+                        <div class="tab-content p-3 border border-top-0 bg-white rounded-bottom shadow-sm">
+                            <div class="tab-pane fade show active" id="orders">
+                                <div id="orders-list" class="list-group list-group-flush">
+                                     <div class="text-center py-3"><div class="spinner-border text-success small"></div></div>
+                                </div>
+                            </div>
+                            <div class="tab-pane fade" id="events">
+                                <div id="events-list" class="list-group list-group-flush">
+                                     <div class="text-center py-3"><div class="spinner-border text-success small"></div></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
               </div>
             </div>
-            <div class="card-footer text-center">
-              <button
-                class="btn btn-outline-secondary btn-sm"
-                data-bs-toggle="modal"
-                data-bs-target="#editProfileModal"
-              >
-                Edit Profile
-              </button>
-            </div>
-          </div>
-
-          <!-- Activity Tabs -->
-          <div class="mt-4">
-                <ul class="nav nav-tabs" id="profileTabs" role="tablist">
-                    <li class="nav-item">
-                        <button class="nav-link active text-success" id="orders-tab" data-bs-toggle="tab" data-bs-target="#orders" type="button">My Orders</button>
-                    </li>
-                    <li class="nav-item">
-                        <button class="nav-link text-success" id="events-tab" data-bs-toggle="tab" data-bs-target="#events" type="button">My Events (RSVP)</button>
-                    </li>
-                </ul>
-                <div class="tab-content p-3 border border-top-0 bg-white rounded-bottom shadow-sm">
-                    <div class="tab-pane fade show active" id="orders">
-                        <div id="orders-list" class="list-group list-group-flush">
-                             <div class="text-center py-3"><div class="spinner-border text-success small"></div></div>
-                        </div>
-                    </div>
-                    <div class="tab-pane fade" id="events">
-                        <div id="events-list" class="list-group list-group-flush">
-                             <div class="text-center py-3"><div class="spinner-border text-success small"></div></div>
-                        </div>
-                    </div>
-                </div>
-            </div>
         </div>
-      </div>
     </div>
 
     <!-- Edit Profile Modal -->
@@ -343,12 +310,10 @@
 
               const allEvents = await API.getEvents();
               // Filter events I RSVPd to
-              // Check if attendees array contains my ID
               const myEvents = allEvents.filter(e => e.attendees && e.attendees.includes(user._id));
               renderEvents(myEvents);
           } catch (e) {
               console.error(e);
-              // showToast("Failed to load activity", "error");
           }
       }
 
