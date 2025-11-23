@@ -183,8 +183,16 @@
 
               // Events
               const events = await API.getEvents();
-              // Sort by date? API might already sort.
-              const recentEvents = events.slice(0, 3);
+              const now = new Date();
+
+              const upcomingEvents = events.filter(event => {
+                  const eventDateStr = event.date;
+                  const eventTimeStr = event.time || '23:59';
+                  const eventDateTime = new Date(`${eventDateStr}T${eventTimeStr}`);
+                  return eventDateTime >= now;
+              });
+
+              const recentEvents = upcomingEvents.slice(0, 3);
               sidebar.innerHTML = '';
               if (recentEvents.length === 0) {
                   sidebar.innerHTML = '<p class="text-muted">No upcoming events.</p>';
