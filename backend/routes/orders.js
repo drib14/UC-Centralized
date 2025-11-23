@@ -47,7 +47,7 @@ router.get('/', verifyToken, async (req, res) => {
     try {
         let orders;
         if (req.user.role === 'admin') {
-            orders = await Order.find().populate('user', 'firstName lastName studentId').populate('items.merch').sort({ createdAt: -1 });
+            orders = await Order.find().populate('user', 'firstName lastName name studentId').populate('items.merch').sort({ createdAt: -1 });
         } else {
             orders = await Order.find({ user: req.user.id }).populate('items.merch').sort({ createdAt: -1 });
         }

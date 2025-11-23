@@ -83,14 +83,18 @@
                                 <input type="number" id="m-price" class="form-control" required>
                             </div>
                             <div class="col-md-6 mb-3">
-                                <label class="form-label">Category (Description)</label>
-                                <select id="m-cat" class="form-select">
-                                    <option value="Shirt">Shirt</option>
-                                    <option value="Hoodie">Hoodie</option>
-                                    <option value="Accessories">Accessories</option>
-                                    <option value="Uniform">Uniform</option>
-                                </select>
+                                <label class="form-label">Stock</label>
+                                <input type="number" id="m-stock" class="form-control" required min="0" value="0">
                             </div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Category (Description)</label>
+                            <select id="m-cat" class="form-select">
+                                <option value="Shirt">Shirt</option>
+                                <option value="Hoodie">Hoodie</option>
+                                <option value="Accessories">Accessories</option>
+                                <option value="Uniform">Uniform</option>
+                            </select>
                         </div>
                         <div class="mb-3">
                             <label class="form-label">Department</label>
@@ -137,14 +141,18 @@
                                 <input type="number" id="edit-m-price" class="form-control" required>
                             </div>
                             <div class="col-md-6 mb-3">
-                                <label class="form-label">Category</label>
-                                <select id="edit-m-cat" class="form-select">
-                                    <option value="Shirt">Shirt</option>
-                                    <option value="Hoodie">Hoodie</option>
-                                    <option value="Accessories">Accessories</option>
-                                    <option value="Uniform">Uniform</option>
-                                </select>
+                                <label class="form-label">Stock</label>
+                                <input type="number" id="edit-m-stock" class="form-control" required min="0">
                             </div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Category</label>
+                            <select id="edit-m-cat" class="form-select">
+                                <option value="Shirt">Shirt</option>
+                                <option value="Hoodie">Hoodie</option>
+                                <option value="Accessories">Accessories</option>
+                                <option value="Uniform">Uniform</option>
+                            </select>
                         </div>
                         <div class="mb-3">
                             <label class="form-label">Department</label>
@@ -279,6 +287,7 @@
         window.saveMerch = async function() {
             const name = document.getElementById('m-name').value;
             const price = document.getElementById('m-price').value;
+            const stock = document.getElementById('m-stock').value;
             const category = document.getElementById('m-cat').value;
             const dept = document.getElementById('m-dept').value;
             const desc = document.getElementById('m-desc').value || category;
@@ -292,6 +301,7 @@
             const formData = new FormData();
             formData.append('name', name);
             formData.append('price', price);
+            formData.append('stock', stock);
             formData.append('description', desc);
             formData.append('department', dept);
             if (imageFile) {
@@ -319,10 +329,9 @@
                 document.getElementById('edit-m-id').value = item._id;
                 document.getElementById('edit-m-name').value = item.name;
                 document.getElementById('edit-m-price').value = item.price;
+                document.getElementById('edit-m-stock').value = item.stock || 0;
                 document.getElementById('edit-m-desc').value = item.description;
                 document.getElementById('edit-m-dept').value = item.department || 'ALL';
-                // category selection might be lossy if not stored separately from description
-                // We'll leave category as is or set default
                 new bootstrap.Modal(document.getElementById('editMerchModal')).show();
             }
         }
@@ -331,6 +340,7 @@
             const id = document.getElementById('edit-m-id').value;
             const name = document.getElementById('edit-m-name').value;
             const price = document.getElementById('edit-m-price').value;
+            const stock = document.getElementById('edit-m-stock').value;
             const desc = document.getElementById('edit-m-desc').value;
             const dept = document.getElementById('edit-m-dept').value;
             const imageFile = document.getElementById('edit-m-image-file').files[0];
@@ -338,6 +348,7 @@
             const formData = new FormData();
             formData.append('name', name);
             formData.append('price', price);
+            formData.append('stock', stock);
             formData.append('description', desc);
             formData.append('department', dept);
             if (imageFile) {
