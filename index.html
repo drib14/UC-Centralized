@@ -15,10 +15,10 @@
 <body>
 
     <!-- Navbar -->
-    <nav class="navbar navbar-expand-lg">
+    <nav class="navbar navbar-expand-lg navbar-dark">
         <div class="container">
             <a class="navbar-brand" href="index.html">
-                <img src="assets/uc-central-logo.png" alt="Logo" style="height: 30px;" class="me-2">
+                <img src="assets/uc-central-logo.png" alt="Logo" style="height: 35px;" class="me-2">
                 UC-Central
             </a>
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
@@ -29,13 +29,13 @@
                     <li class="nav-item">
                         <a class="nav-link" href="login.html">Login</a>
                     </li>
-                    <li class="nav-item">
-                        <a class="nav-link btn btn-light text-success ms-2 px-4" href="register.html" style="color: var(--primary-dark-mint) !important; font-weight: bold;">Register</a>
+                    <li class="nav-item ms-2">
+                        <a class="btn btn-warning text-dark fw-bold px-4" href="register.html">Register</a>
                     </li>
                 </ul>
                 <ul class="navbar-nav ms-auto d-none" id="user-links">
                     <li class="nav-item">
-                        <a class="nav-link" href="pages/student/dashboard.html">Dashboard</a>
+                        <a class="nav-link" href="pages/student/dashboard.html">Go to Dashboard <i class="fa-solid fa-arrow-right ms-1"></i></a>
                     </li>
                 </ul>
             </div>
@@ -43,52 +43,62 @@
     </nav>
 
     <!-- Hero Section -->
-    <header class="py-5 text-center text-white" style="background-color: var(--primary-dark-mint);">
+    <header class="hero-section text-center">
         <div class="container">
-            <h1 class="display-4 fw-bold">Welcome to UC-Central</h1>
-            <p class="lead mb-4">Your one-stop hub for university events, merchandise, and announcements.</p>
-            <a href="register.html" class="btn btn-lg btn-light text-success fw-bold">Get Started</a>
+            <div class="row justify-content-center">
+                <div class="col-lg-8">
+                    <h1 class="display-4 fw-bold mb-4">Your Campus, Connected.</h1>
+                    <p class="lead mb-5 opacity-75">
+                        Welcome to UC-Central, the ultimate hub for students and faculty.
+                        Stay updated with events, grab the latest merch, and never miss an announcement.
+                    </p>
+                    <div class="d-flex justify-content-center gap-3">
+                        <a href="register.html" class="btn btn-lg btn-warning text-dark fw-bold px-5 rounded-pill shadow">Get Started</a>
+                        <a href="login.html" class="btn btn-lg btn-outline-light fw-bold px-5 rounded-pill">Login</a>
+                    </div>
+                </div>
+            </div>
         </div>
     </header>
 
     <!-- Features -->
     <section class="py-5">
-        <div class="container">
-            <div class="row text-center">
-                <div class="col-md-4 mb-4">
-                    <div class="card h-100 p-4">
-                        <div class="mb-3 text-success">
-                            <i class="fa-solid fa-calendar-days fa-3x"></i>
+        <div class="container py-4">
+            <div class="row text-center g-4">
+                <div class="col-md-4">
+                    <div class="card h-100 p-4 border-0 shadow-sm">
+                        <div class="feature-icon">
+                            <i class="fa-solid fa-calendar-days fa-2x"></i>
                         </div>
-                        <h3>Events</h3>
-                        <p>Stay updated with the latest department and university-wide events.</p>
+                        <h3 class="h4 fw-bold">Events</h3>
+                        <p class="text-muted">Discover and RSVP to department activities, seminars, and university-wide celebrations.</p>
                     </div>
                 </div>
-                <div class="col-md-4 mb-4">
-                    <div class="card h-100 p-4">
-                        <div class="mb-3 text-success">
-                            <i class="fa-solid fa-shirt fa-3x"></i>
+                <div class="col-md-4">
+                    <div class="card h-100 p-4 border-0 shadow-sm">
+                        <div class="feature-icon">
+                            <i class="fa-solid fa-shirt fa-2x"></i>
                         </div>
-                        <h3>Merch Store</h3>
-                        <p>Order your department shirts, lanyards, and accessories online.</p>
+                        <h3 class="h4 fw-bold">Merch Store</h3>
+                        <p class="text-muted">Browse and order official uniforms, lanyards, and exclusive department merchandise.</p>
                     </div>
                 </div>
-                <div class="col-md-4 mb-4">
-                    <div class="card h-100 p-4">
-                        <div class="mb-3 text-success">
-                            <i class="fa-solid fa-bell fa-3x"></i>
+                <div class="col-md-4">
+                    <div class="card h-100 p-4 border-0 shadow-sm">
+                        <div class="feature-icon">
+                            <i class="fa-solid fa-bullhorn fa-2x"></i>
                         </div>
-                        <h3>Notifications</h3>
-                        <p>Get real-time alerts for announcements and order statuses.</p>
+                        <h3 class="h4 fw-bold">Announcements</h3>
+                        <p class="text-muted">Stay informed with the latest news, memos, and updates from the administration.</p>
                     </div>
                 </div>
             </div>
         </div>
     </section>
 
-    <footer>
+    <footer class="mt-auto">
         <div class="container">
-            <p class="mb-0">&copy; 2024 UC-Central. All rights reserved.</p>
+            <p class="mb-0 small opacity-75">&copy; 2024 UC-Central. College of Computer Studies.</p>
         </div>
     </footer>
 
@@ -99,7 +109,16 @@
     <script>
         // Redirect if already logged in
         if (Auth.getCurrentUser()) {
-            window.location.href = 'pages/student/dashboard.html';
+            const user = Auth.getCurrentUser();
+            const link = document.getElementById('user-links');
+            const auth = document.getElementById('auth-links');
+            if(link && auth) {
+                link.classList.remove('d-none');
+                auth.classList.add('d-none');
+                // Point to correct dashboard
+                const href = user.role === 'admin' ? 'pages/admin/dashboard.html' : 'pages/student/dashboard.html';
+                link.querySelector('a').href = href;
+            }
         }
     </script>
 </body>

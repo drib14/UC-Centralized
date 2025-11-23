@@ -164,10 +164,11 @@
                 const row = document.createElement('tr');
                 const isMe = currentUser.studentId === user.studentId;
                 const roleBadge = user.role === 'admin' ? 'bg-danger' : 'bg-secondary';
+                const displayName = (user.firstName && user.lastName) ? `${user.firstName} ${user.lastName}` : (user.name || 'Unknown');
 
                 row.innerHTML = `
                     <td>${user.studentId}</td>
-                    <td>${user.firstName} ${user.lastName}</td>
+                    <td>${displayName}</td>
                     <td>${user.department || 'N/A'}</td>
                     <td><span class="badge ${roleBadge} text-uppercase">${user.role}</span></td>
                     <td>

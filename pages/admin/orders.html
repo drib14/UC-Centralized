@@ -113,7 +113,8 @@
                 else if (status === 'processing') badgeClass = 'bg-info text-white';
                 else if (status === 'cancelled') badgeClass = 'bg-danger';
 
-                const user = order.user ? `${order.user.firstName} ${order.user.lastName}` : (order.customerName || 'Walk-in');
+                const u = order.user;
+                const user = u ? ( (u.firstName && u.lastName) ? `${u.firstName} ${u.lastName}` : (u.name || 'Unknown User') ) : (order.customerName || 'Walk-in');
                 const userId = order.user ? order.user.studentId : '-';
                 const itemsSummary = order.items.map(i => i.merch ? `${i.merch.name} (${i.quantity})` : 'Unknown').join(', ');
 

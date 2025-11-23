@@ -175,7 +175,8 @@
                 return;
             }
             orders.forEach(order => {
-                const user = order.user ? `${order.user.firstName} ${order.user.lastName}` : 'Unknown';
+                const u = order.user;
+                const user = u ? ( (u.firstName && u.lastName) ? `${u.firstName} ${u.lastName}` : (u.name || 'Unknown User') ) : (order.customerName || 'Unknown');
                 const statusBadge = getStatusBadge(order.status);
                 const row = `
                     <tr>

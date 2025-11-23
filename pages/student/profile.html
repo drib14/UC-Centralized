@@ -262,9 +262,10 @@
 
       function renderProfile() {
         if (user) {
+          const displayName = (user.firstName && user.lastName) ? `${user.firstName} ${user.lastName}` : (user.name || 'Student');
           document.getElementById(
             "p-name"
-          ).textContent = `${user.firstName} ${user.lastName}`;
+          ).textContent = displayName;
           document.getElementById("p-id").textContent = `ID: ${user.studentId}`;
           document.getElementById("p-dept").textContent = user.department || 'N/A';
           document.getElementById("p-prog").textContent = user.program || 'N/A';
@@ -279,8 +280,8 @@
               if (ph) ph.style.display = 'none';
           } else {
               profileImgEl.style.display = 'none';
-              const fInitial = user.firstName ? user.firstName.charAt(0) : '';
-              const lInitial = user.lastName ? user.lastName.charAt(0) : '';
+              const fInitial = user.firstName ? user.firstName.charAt(0) : (user.name ? user.name.charAt(0) : 'S');
+              const lInitial = user.lastName ? user.lastName.charAt(0) : (user.name && user.name.includes(' ') ? user.name.split(' ').pop().charAt(0) : '');
               const initials = (fInitial + lInitial).toUpperCase();
 
               let placeholder = document.getElementById('profile-placeholder');
@@ -298,8 +299,8 @@
           }
 
           // Pre-fill Edit Form
-          document.getElementById("e-fname").value = user.firstName;
-          document.getElementById("e-lname").value = user.lastName;
+          document.getElementById("e-fname").value = user.firstName || (user.name ? user.name.split(' ')[0] : '');
+          document.getElementById("e-lname").value = user.lastName || (user.name && user.name.includes(' ') ? user.name.split(' ').pop() : '');
           document.getElementById("e-id").value = user.studentId;
           document.getElementById("e-dept").value = user.department || '';
         }
