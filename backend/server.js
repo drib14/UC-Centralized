@@ -32,13 +32,20 @@ const corsOptions = {
 app.use(cors(corsOptions));
 app.options('*', cors(corsOptions)); // Enable pre-flight for all routes
 
+// Health Check (No DB dependency) to verify server status
+app.get('/health', (req, res) => {
+    res.status(200).json({ status: 'ok', message: 'Server is running' });
+});
+
 // Database Connection (Serverless optimized)
 const connectDB = async () => {
     if (mongoose.connection.readyState >= 1) {
         return true;
     }
     try {
-        await mongoose.connect(process.env.MONGO_URI);
+        await mongoose.connect(process.env.MONGO_URI, {
+            serverSelectionTimeoutMS: 5000
+        });
         console.log('MongoDB Connected');
         return true;
     } catch (err) {
