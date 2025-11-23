@@ -1,68 +1,55 @@
-# How to Deploy to Vercel (Frontend + Backend)
+# Deployment Guide: UC-Central
 
-This guide explains how to deploy the **Entire Application** (both Frontend and Backend) to Vercel as a single project.
+This guide explains how to deploy the UC-Central application (React Frontend + Node.js Backend) to Vercel.
 
-**You do NOT need to deploy the backend separately.**
-This project uses a "Monorepo" setup where Vercel serves the HTML files statically *and* runs the Node.js backend as Serverless Functions.
+## Architecture
+- **Frontend:** React (`client/`)
+- **Backend:** Node.js/Express Serverless (`backend/`)
+- **Configuration:** `vercel.json` handles the build and routing for both.
 
 ## Prerequisites
+1.  **Vercel Account:** [Sign up here](https://vercel.com/).
+2.  **GitHub Repository:** Push this code to a GitHub repository.
+3.  **MongoDB Atlas:** A running MongoDB instance.
+4.  **Cloudinary:** Account for image hosting.
 
-1.  A [Vercel](https://vercel.com) account.
-2.  A [MongoDB Atlas](https://www.mongodb.com/atlas) database (Connection String).
-3.  A [Cloudinary](https://cloudinary.com) account (for image uploads).
-4.  This code pushed to a Git provider (GitHub, GitLab, or Bitbucket).
+## Deployment Steps
 
-## Step-by-Step Deployment
+### 1. Push to GitHub
+Ensure your project is pushed to your GitHub repository.
 
-1.  **Import Project**
-    *   Log in to your Vercel Dashboard.
-    *   Click **"Add New..."** > **"Project"**.
-    *   Select your Git repository and click **"Import"**.
+### 2. Import Project to Vercel
+1.  Go to your Vercel Dashboard.
+2.  Click **"Add New..."** -> **"Project"**.
+3.  Import your GitHub repository.
+4.  **Root Directory:** Leave this as `./` (the default). **Do not** change it to `client` or `backend`. Vercel needs to see `vercel.json` in the root.
 
-2.  **Configure Project Settings**
-    *   **Framework Preset**: Select **"Other"** (Vercel will auto-detect the settings).
-    *   **Root Directory**: Leave as `./` (the default).
-    *   **Build Command**: Leave empty.
-    *   **Output Directory**: Leave empty.
+### 3. Configure Environment Variables
+In the "Environment Variables" section of the deployment screen, add the following keys. These are required for the backend to function.
 
-3.  **Set Environment Variables** (Crucial)
-    Expand the **"Environment Variables"** section. You **must** add the following variables for the backend to work.
+| Variable Key | Description |
+| :--- | :--- |
+| `MONGO_URI` | Your MongoDB connection string (e.g., `mongodb+srv://...`). |
+| `ACCESS_TOKEN_SECRET` | A secret string for signing JSON Web Tokens (e.g., `mySuperSecretKey`). |
+| `CLOUDINARY_CLOUD_NAME` | Your Cloudinary Cloud Name. |
+| `CLOUDINARY_API_KEY` | Your Cloudinary API Key. |
+| `CLOUDINARY_API_SECRET` | Your Cloudinary API Secret. |
 
-    *Note: These variables are for the Backend, which runs secretly on Vercel's servers.*
+*(Note: `PORT` is automatically handled by Vercel).*
 
-    | Key | Value Description |
-    | --- | --- |
-    | `MONGO_URI` | Your MongoDB connection string (e.g., `mongodb+srv://user:pass@cluster...`). |
-    | `JWT_SECRET` | A long, random string used to sign authentication tokens. |
-    | `CLOUDINARY_CLOUD_NAME` | Your Cloudinary Cloud Name. |
-    | `CLOUDINARY_API_KEY` | Your Cloudinary API Key. |
-    | `CLOUDINARY_API_SECRET` | Your Cloudinary API Secret. |
-    | `CLIENT_URL` | (Optional) The URL of your deployed site (e.g., `https://my-app.vercel.app`). |
+### 4. Deploy
+Click **"Deploy"**.
 
-    **About `CLIENT_URL`**:
-    *   Since the Frontend and Backend are on the same domain, strictly speaking, you don't need complex Cross-Origin Resource Sharing (CORS) setup.
-    *   However, setting `CLIENT_URL` to your live Vercel URL (e.g., `https://uc-central.vercel.app`) is good practice to prevent other sites from using your API.
-    *   If you leave it blank, the code is configured to allow `*` (all origins) temporarily.
+Vercel will detect the configuration in `vercel.json`:
+- It will build the backend as a Serverless Function (`@vercel/node`).
+- It will build the React frontend (`@vercel/static-build`).
+- It will route `/api/*` requests to the backend and all other requests to the frontend.
 
-4.  **Deploy**
-    *   Click **"Deploy"**.
-    *   Vercel will build the project. It looks at `vercel.json` and `backend/server.js` and automatically configures the backend.
+### 5. Verify
+Once deployed, open your Vercel URL (e.g., `https://uc-central.vercel.app`).
+- Navigate around the site to verify the frontend.
+- Try logging in to verify backend connectivity.
 
-## Verification
-
-Once deployment is complete:
-
-1.  **Frontend**: Click the screenshot or URL provided by Vercel. The Login page should appear.
-2.  **Backend**: Add `/api` to the end of your URL (e.g., `https://your-project.vercel.app/api`).
-    *   You should see the text: `"UC-Central Backend is running (API)"`.
-    *   If you see a 404 or 500 error, check the **Logs** tab in Vercel. It usually means the `MONGO_URI` is missing or incorrect.
-
-## How It Works (Under the Hood)
-
-*   **Frontend**: Vercel serves all files in the root (`index.html`, `pages/`, `assets/`) as a standard static website.
-*   **Backend**: The `vercel.json` file contains a "rewrite" rule:
-    ```json
-    { "source": "/api/:match*", "destination": "/backend/server.js" }
-    ```
-    This tells Vercel: "Any request starting with `/api` should be handled by the Node.js application in `backend/server.js`."
-*   **Communication**: The frontend's `api.js` file automatically detects it is running on the web (not localhost) and sends requests to `/api/...`, which Vercel routes to your backend.
+## Troubleshooting
+- **Backend 404s:** Ensure your environment variables are correct. Check the Vercel Function Logs for connection errors.
+- **Frontend Build Fails:** Check the Build Logs. Ensure dependencies in `client/package.json` are correct.
