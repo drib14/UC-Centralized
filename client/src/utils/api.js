@@ -5,9 +5,6 @@ const API_URL = '/api';
 
 const api = axios.create({
     baseURL: API_URL,
-    headers: {
-        'Content-Type': 'application/json',
-    },
 });
 
 api.interceptors.request.use((config) => {
@@ -21,10 +18,16 @@ api.interceptors.request.use((config) => {
 class API {
     static async request(endpoint, method = 'GET', body = null, isMultipart = false) {
         try {
+            const headers = {};
+            if (isMultipart) {
+                headers['Content-Type'] = 'multipart/form-data';
+            }
+            // Axios automatically sets Content-Type: application/json for objects/JSON
+
             const config = {
                 method,
                 url: endpoint,
-                headers: isMultipart ? { 'Content-Type': 'multipart/form-data' } : {},
+                headers,
                 data: body,
             };
 
