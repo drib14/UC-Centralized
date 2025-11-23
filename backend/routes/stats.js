@@ -24,7 +24,7 @@ router.get('/dashboard', verifyAdmin, async (req, res) => {
         const recentOrders = await Order.find()
             .sort({ createdAt: -1 })
             .limit(5)
-            .populate('user', 'firstName lastName');
+            .populate('user', 'firstName lastName name studentId');
 
         res.status(200).json({
             userCount,
