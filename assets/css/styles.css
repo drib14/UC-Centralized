@@ -304,6 +304,20 @@ footer {
     border-radius: 8px;
 }
 
+.sidebar .nav {
+    flex: 1;
+    overflow-y: auto;
+    overflow-x: hidden;
+}
+
+.sidebar .nav::-webkit-scrollbar {
+    width: 4px;
+}
+.sidebar .nav::-webkit-scrollbar-thumb {
+    background: rgba(255,255,255,0.2);
+    border-radius: 4px;
+}
+
 @media (max-width: 768px) {
     .sidebar {
         margin-left: -250px;
@@ -317,5 +331,21 @@ footer {
     }
     .sidebar.collapsed {
         min-width: 250px; /* Reset width on mobile if class persists */
+    }
+
+    /* Compact Sidebar for Mobile */
+    .sidebar .sidebar-header {
+        padding: 0.5rem;
+    }
+    .sidebar .logo-img {
+        width: 50px;
+        height: 50px;
+        margin-bottom: 5px;
+    }
+    .sidebar .sidebar-brand-text {
+        font-size: 1rem;
+    }
+    .sidebar .nav-link {
+        padding: 0.8rem 1rem;
     }
 }
