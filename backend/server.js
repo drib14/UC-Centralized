@@ -17,17 +17,20 @@ const app = express();
 // Middleware
 app.use(express.json());
 
-// CORS: Allow all origins dynamically to prevent 405/CORS errors on Vercel
-// This is safer than allow '*' with credentials:true which is invalid.
-app.use(cors({
+// CORS Configuration
+const corsOptions = {
     origin: (origin, callback) => {
         // Allow requests with no origin (like mobile apps or curl requests)
         if (!origin) return callback(null, true);
         // Allow any origin
         callback(null, true);
     },
-    credentials: true
-}));
+    credentials: true,
+    optionsSuccessStatus: 200 // some legacy browsers (IE11, various SmartTVs) choke on 204
+};
+
+app.use(cors(corsOptions));
+app.options('*', cors(corsOptions)); // Enable pre-flight for all routes
 
 // Database Connection (Serverless optimized)
 const connectDB = async () => {
