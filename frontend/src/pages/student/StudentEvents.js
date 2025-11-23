@@ -87,22 +87,24 @@ const StudentEvents = () => {
                     filteredEvents.map(event => {
                         const registered = isRegistered(event);
                         const ended = isEnded(event);
-                        const btnClass = ended ? "btn-secondary" : (registered ? "btn-secondary" : "btn-outline-success");
-                        const btnText = ended ? "Event Ended" : (registered ? "Registered" : "View Details");
 
                         return (
                             <div className="col-md-4 mb-4" key={event._id}>
                                 <div className="card h-100">
                                     <img src={event.image || 'https://via.placeholder.com/300'} className="card-img-top" alt={event.title} style={{ height: '200px', objectFit: 'cover' }} />
                                     <div className="card-body d-flex flex-column">
-                                        <h5 className="card-title">{event.title}</h5>
+                                        <h5 className="card-title d-flex justify-content-between align-items-start">
+                                            {event.title}
+                                            {registered && <span className="badge bg-success ms-2" style={{fontSize: '0.7em'}}>Registered</span>}
+                                            {ended && !registered && <span className="badge bg-secondary ms-2" style={{fontSize: '0.7em'}}>Ended</span>}
+                                        </h5>
                                         <p className="card-text text-muted small mb-2">
                                             <FaCalendar /> {event.date} {event.time ? `| ${event.time}` : ''} <br />
                                             {event.department}
                                         </p>
                                         <p className="card-text flex-grow-1">{event.description.substring(0, 80)}...</p>
-                                        <button className={`btn ${btnClass} w-100 mt-auto`} onClick={() => setSelectedEvent(event)}>
-                                            {btnText}
+                                        <button className="btn btn-outline-success w-100 mt-auto" onClick={() => setSelectedEvent(event)}>
+                                            View Details
                                         </button>
                                     </div>
                                 </div>

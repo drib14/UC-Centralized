@@ -1,13 +1,14 @@
 import React, { useEffect, useState } from 'react';
 import API from '../../utils/api';
-import { FaUsers, FaCalendarDays, FaShirt, FaClipboardList } from 'react-icons/fa6';
+import { Link } from 'react-router-dom';
 
 const AdminDashboard = () => {
     const [stats, setStats] = useState({
-        users: 0,
-        events: 0,
-        merch: 0,
-        orders: 0
+        userCount: 0,
+        activeOrders: 0,
+        eventCount: 0,
+        totalSales: 0,
+        recentOrders: []
     });
     const [loading, setLoading] = useState(true);
 
@@ -26,98 +27,118 @@ const AdminDashboard = () => {
         fetchStats();
     }, []);
 
-    if (loading) {
-        return (
-            <div className="text-center my-5">
-                <div className="spinner-border text-primary" role="status">
-                    <span className="visually-hidden">Loading...</span>
-                </div>
-            </div>
-        );
-    }
+    const formatCurrency = (amount) => {
+        return new Intl.NumberFormat('en-PH', { style: 'currency', currency: 'PHP' }).format(amount);
+    };
+
+    const getStatusBadge = (status) => {
+        const map = {
+            'pending': 'bg-warning text-dark',
+            'processing': 'bg-info text-white',
+            'claimed': 'bg-success',
+            'cancelled': 'bg-danger'
+        };
+        return <span className={`badge ${map[status] || 'bg-secondary'}`}>{status.toUpperCase()}</span>;
+    };
+
+    if (loading) return <div className="text-center mt-5"><div className="spinner-border text-primary"></div></div>;
 
     return (
         <div className="container-fluid">
-            <h1 className="h3 mb-4 text-gray-800">Dashboard</h1>
+            <h2 className="mb-4">Admin Dashboard</h2>
 
-            <div className="row">
-                <div className="col-xl-3 col-md-6 mb-4">
-                    <div className="card shadow h-100 py-2 border-primary border-4 border-end-0 border-top-0 border-bottom-0 border-start">
+            <div className="row g-4 mb-4">
+                <div className="col-md-3">
+                    <div className="card bg-primary text-white h-100">
                         <div className="card-body">
-                            <div className="row no-gutters align-items-center">
-                                <div className="col mr-2">
-                                    <div className="text-xs font-weight-bold text-primary text-uppercase mb-1">
-                                        Total Users</div>
-                                    <div className="h5 mb-0 font-weight-bold text-gray-800">{stats.users}</div>
-                                </div>
-                                <div className="col-auto">
-                                    <FaUsers className="text-gray-300 fa-2x opacity-25" />
-                                </div>
-                            </div>
+                            <h6 className="card-title">Total Sales</h6>
+                            <h2 className="fw-bold">{formatCurrency(stats.totalSales)}</h2>
+                            <small>Revenue (Claimed)</small>
                         </div>
                     </div>
                 </div>
-
-                <div className="col-xl-3 col-md-6 mb-4">
-                    <div className="card shadow h-100 py-2 border-success border-4 border-end-0 border-top-0 border-bottom-0 border-start">
+                <div className="col-md-3">
+                    <div className="card bg-success text-white h-100">
                         <div className="card-body">
-                            <div className="row no-gutters align-items-center">
-                                <div className="col mr-2">
-                                    <div className="text-xs font-weight-bold text-success text-uppercase mb-1">
-                                        Total Events</div>
-                                    <div className="h5 mb-0 font-weight-bold text-gray-800">{stats.events}</div>
-                                </div>
-                                <div className="col-auto">
-                                    <FaCalendarDays className="text-gray-300 fa-2x opacity-25" />
-                                </div>
-                            </div>
+                            <h6 className="card-title">Active Orders</h6>
+                            <h2 className="fw-bold">{stats.activeOrders}</h2>
+                            <small>Pending/Processing</small>
                         </div>
                     </div>
                 </div>
-
-                <div className="col-xl-3 col-md-6 mb-4">
-                    <div className="card shadow h-100 py-2 border-info border-4 border-end-0 border-top-0 border-bottom-0 border-start">
+                <div className="col-md-3">
+                    <div className="card bg-warning text-dark h-100">
                         <div className="card-body">
-                            <div className="row no-gutters align-items-center">
-                                <div className="col mr-2">
-                                    <div className="text-xs font-weight-bold text-info text-uppercase mb-1">
-                                        Merch Items</div>
-                                    <div className="h5 mb-0 font-weight-bold text-gray-800">{stats.merch}</div>
-                                </div>
-                                <div className="col-auto">
-                                    <FaShirt className="text-gray-300 fa-2x opacity-25" />
-                                </div>
-                            </div>
+                            <h6 className="card-title">Upcoming Events</h6>
+                            <h2 className="fw-bold">{stats.eventCount}</h2>
+                            <small>Future events</small>
                         </div>
                     </div>
                 </div>
-
-                <div className="col-xl-3 col-md-6 mb-4">
-                    <div className="card shadow h-100 py-2 border-warning border-4 border-end-0 border-top-0 border-bottom-0 border-start">
+                <div className="col-md-3">
+                    <div className="card bg-info text-white h-100">
                         <div className="card-body">
-                            <div className="row no-gutters align-items-center">
-                                <div className="col mr-2">
-                                    <div className="text-xs font-weight-bold text-warning text-uppercase mb-1">
-                                        Pending Orders</div>
-                                    <div className="h5 mb-0 font-weight-bold text-gray-800">{stats.orders}</div>
-                                </div>
-                                <div className="col-auto">
-                                    <FaClipboardList className="text-gray-300 fa-2x opacity-25" />
-                                </div>
-                            </div>
+                            <h6 className="card-title">Registered Users</h6>
+                            <h2 className="fw-bold">{stats.userCount}</h2>
+                            <small>Students enrolled</small>
                         </div>
                     </div>
                 </div>
             </div>
 
-             <div className="row">
-                <div className="col-12">
-                     <div className="card shadow mb-4">
-                        <div className="card-header py-3">
-                            <h6 className="m-0 font-weight-bold text-primary">Admin Controls</h6>
-                        </div>
+            <div className="row">
+                <div className="col-lg-8">
+                    <div className="card">
+                        <div className="card-header bg-light text-dark">Recent Orders</div>
                         <div className="card-body">
-                            <p>Use the sidebar to manage users, events, merchandise, and announcements.</p>
+                            <div className="table-responsive">
+                                <table className="table table-hover">
+                                    <thead>
+                                        <tr>
+                                            <th>Order ID</th>
+                                            <th>Student</th>
+                                            <th>Amount</th>
+                                            <th>Status</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {stats.recentOrders.length === 0 ? (
+                                            <tr><td colSpan="4" className="text-center text-muted">No recent orders</td></tr>
+                                        ) : (
+                                            stats.recentOrders.map(order => {
+                                                const u = order.user;
+                                                const user = u ? ((u.firstName && u.lastName) ? `${u.firstName} ${u.lastName}` : (u.name || 'Unknown User')) : (order.customerName || 'Unknown');
+                                                return (
+                                                    <tr key={order._id}>
+                                                        <td>#{order._id.slice(-6).toUpperCase()}</td>
+                                                        <td>{user}</td>
+                                                        <td>{formatCurrency(order.totalPrice)}</td>
+                                                        <td>{getStatusBadge(order.status)}</td>
+                                                    </tr>
+                                                );
+                                            })
+                                        )}
+                                    </tbody>
+                                </table>
+                            </div>
+                            <Link to="/admin/orders" className="btn btn-sm btn-outline-primary w-100">View All Orders</Link>
+                        </div>
+                    </div>
+                </div>
+                <div className="col-lg-4">
+                    <div className="card">
+                        <div className="card-header bg-light text-dark">System Status</div>
+                        <div className="card-body">
+                            <ul className="list-group list-group-flush">
+                                <li className="list-group-item d-flex justify-content-between align-items-center">
+                                    Server Status
+                                    <span className="badge bg-success rounded-pill">Online</span>
+                                </li>
+                                <li className="list-group-item d-flex justify-content-between align-items-center">
+                                    Database
+                                    <span className="badge bg-success rounded-pill">Connected</span>
+                                </li>
+                            </ul>
                         </div>
                     </div>
                 </div>
