@@ -24,28 +24,28 @@
             <div class="collapse navbar-collapse" id="navbarNav">
                 <ul class="navbar-nav me-auto">
                     <li class="nav-item">
-                        <a class="nav-link" href="dashboard.html">Overview</a>
+                        <a class="nav-link" href="dashboard.html"><i class="fa-solid fa-table-columns me-1"></i> Overview</a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="orders.html">Orders</a>
+                        <a class="nav-link" href="orders.html"><i class="fa-solid fa-list-check me-1"></i> Orders</a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="events.html">Events</a>
+                        <a class="nav-link" href="events.html"><i class="fa-solid fa-calendar-days me-1"></i> Events</a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="merch.html">Merch</a>
+                        <a class="nav-link" href="merch.html"><i class="fa-solid fa-shirt me-1"></i> Merch</a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="announcements.html">Announcements</a>
+                        <a class="nav-link" href="announcements.html"><i class="fa-solid fa-bullhorn me-1"></i> Announcements</a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="messages.html">Messages</a>
+                        <a class="nav-link" href="messages.html"><i class="fa-solid fa-envelope me-1"></i> Messages</a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="users.html">Users</a>
+                        <a class="nav-link" href="users.html"><i class="fa-solid fa-users me-1"></i> Users</a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link active" href="pos.html">POS</a>
+                        <a class="nav-link active" href="pos.html"><i class="fa-solid fa-cash-register me-1"></i> POS</a>
                     </li>
                 </ul>
                 <ul class="navbar-nav ms-auto">
@@ -220,6 +220,7 @@
                 cart = [];
                 document.getElementById('customer-name').value = "";
                 renderCart();
+                init(); // Refresh product list (stock)
             } catch(e) {
                 showToast("Transaction failed: " + e.message, "error");
             }
