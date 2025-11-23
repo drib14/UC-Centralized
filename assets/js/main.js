@@ -168,23 +168,80 @@ window.Cart = Cart;
 window.showToast = showToast;
 window.formatCurrency = formatCurrency;
 
-// Sidebar Toggle
+// Sidebar Toggle Logic
 function toggleSidebar() {
     const sidebar = document.getElementById('sidebar');
     const content = document.getElementById('page-content-wrapper');
+    const isMobile = window.innerWidth <= 768;
+
     if(sidebar && content) {
-        sidebar.classList.toggle('collapsed');
-        content.classList.toggle('collapsed');
-        localStorage.setItem('sidebar_collapsed', sidebar.classList.contains('collapsed'));
+        if (isMobile) {
+            sidebar.classList.toggle('active');
+        } else {
+            sidebar.classList.toggle('collapsed');
+            content.classList.toggle('collapsed');
+            localStorage.setItem('sidebar_collapsed', sidebar.classList.contains('collapsed'));
+        }
+        updateToggleIcon();
     }
 }
 
+function updateToggleIcon() {
+    const sidebar = document.getElementById('sidebar');
+    const btn = document.getElementById('sidebar-toggle');
+    if(!sidebar || !btn) return;
+
+    const isMobile = window.innerWidth <= 768;
+    const icon = btn.querySelector('i');
+    if(!icon) return;
+
+    if (isMobile) {
+        // Mobile: Active means visible (Open). We show Left arrow to close it.
+        // Hidden (Default): We show Right arrow to open it.
+        if (sidebar.classList.contains('active')) {
+            icon.className = 'fa-solid fa-chevron-left';
+        } else {
+            icon.className = 'fa-solid fa-chevron-right';
+        }
+    } else {
+        // Desktop: Collapsed means small. Right arrow to expand.
+        // Expanded: Left arrow to collapse.
+        if (sidebar.classList.contains('collapsed')) {
+            icon.className = 'fa-solid fa-chevron-right';
+        } else {
+            icon.className = 'fa-solid fa-chevron-left';
+        }
+    }
+}
+
+function injectSidebarToggle() {
+    const sidebar = document.getElementById('sidebar');
+    if (!sidebar) return;
+    if (document.getElementById('sidebar-toggle')) return;
+
+    const btn = document.createElement('div');
+    btn.id = 'sidebar-toggle';
+    btn.className = 'sidebar-toggle-btn';
+    btn.onclick = toggleSidebar;
+    btn.innerHTML = '<i class="fa-solid fa-chevron-left"></i>';
+    sidebar.appendChild(btn);
+
+    updateToggleIcon();
+}
+
 document.addEventListener('DOMContentLoaded', () => {
+    injectSidebarToggle();
+
     const isCollapsed = localStorage.getItem('sidebar_collapsed') === 'true';
     const sidebar = document.getElementById('sidebar');
     const content = document.getElementById('page-content-wrapper');
-    if(sidebar && content && isCollapsed) {
+
+    // Apply persisted state only on desktop or verify logic
+    if(sidebar && content && isCollapsed && window.innerWidth > 768) {
         sidebar.classList.add('collapsed');
         content.classList.add('collapsed');
     }
+
+    updateToggleIcon();
+    window.addEventListener('resize', updateToggleIcon);
 });

@@ -17,29 +17,59 @@ const app = express();
 // Middleware
 app.use(express.json());
 app.use(cors({
-    origin: process.env.CLIENT_URL || 'http://127.0.0.1:5500',
+    origin: process.env.CLIENT_URL || '*', // Allow all for demo/Vercel
     credentials: true
 }));
 
-// Database Connection
-mongoose.connect(process.env.MONGO_URI)
-    .then(() => console.log('MongoDB Connected'))
-    .catch(err => console.error('MongoDB Connection Error:', err));
+// Database Connection (Serverless optimized)
+const connectDB = async () => {
+    if (mongoose.connection.readyState >= 1) {
+        return;
+    }
+    try {
+        await mongoose.connect(process.env.MONGO_URI);
+        console.log('MongoDB Connected');
+    } catch (err) {
+        console.error('MongoDB Connection Error:', err);
+    }
+};
 
-// Routes
-app.use('/auth', authRoute);
-app.use('/users', userRoute);
-app.use('/events', eventRoute);
-app.use('/merch', merchRoute);
-app.use('/orders', orderRoute);
-app.use('/announcements', announcementRoute);
-app.use('/stats', statsRoute);
+// Connect DB on every request (cached by Mongoose)
+app.use(async (req, res, next) => {
+    await connectDB();
+    next();
+});
+
+// Routes - Mount on both / and /api to handle local and Vercel paths
+const routes = [
+    { path: '/auth', handler: authRoute },
+    { path: '/users', handler: userRoute },
+    { path: '/events', handler: eventRoute },
+    { path: '/merch', handler: merchRoute },
+    { path: '/orders', handler: orderRoute },
+    { path: '/announcements', handler: announcementRoute },
+    { path: '/stats', handler: statsRoute }
+];
+
+routes.forEach(r => {
+    app.use(r.path, r.handler);
+    app.use(`/api${r.path}`, r.handler);
+});
 
 app.get('/', (req, res) => {
     res.send('UC-Central Backend is running');
 });
-
-const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => {
-    console.log(`Server running on port ${PORT}`);
+app.get('/api', (req, res) => {
+    res.send('UC-Central Backend is running (API)');
 });
+
+// Local Development
+if (require.main === module) {
+    const PORT = process.env.PORT || 5000;
+    app.listen(PORT, () => {
+        console.log(`Server running on port ${PORT}`);
+    });
+}
+
+// Export for Vercel
+module.exports = app;

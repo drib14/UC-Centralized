@@ -35,7 +35,6 @@
         <!-- Content -->
         <div id="page-content-wrapper">
             <div class="topbar">
-                <button class="btn btn-light text-primary border-0" onclick="toggleSidebar()"><i class="fa-solid fa-bars fa-lg"></i></button>
                 <div class="d-flex align-items-center">
                     <span class="me-2 fw-bold text-primary d-none d-md-block">Admin Panel</span>
                     <img src="../../assets/uc-central-logo.png" class="rounded-3 border border-2 border-primary" width="40" height="40">
@@ -89,19 +88,21 @@
                         <div class="card">
                             <div class="card-header bg-light text-dark">Recent Orders</div>
                             <div class="card-body">
-                                <table class="table table-hover">
-                                    <thead>
-                                        <tr>
-                                            <th>Order ID</th>
-                                            <th>Student</th>
-                                            <th>Amount</th>
-                                            <th>Status</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody id="recent-orders-table">
-                                        <tr><td colspan="4" class="text-center text-muted">Loading...</td></tr>
-                                    </tbody>
-                                </table>
+                                <div class="table-responsive">
+                                    <table class="table table-hover">
+                                        <thead>
+                                            <tr>
+                                                <th>Order ID</th>
+                                                <th>Student</th>
+                                                <th>Amount</th>
+                                                <th>Status</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="recent-orders-table">
+                                            <tr><td colspan="4" class="text-center text-muted">Loading...</td></tr>
+                                        </tbody>
+                                    </table>
+                                </div>
                                 <a href="orders.html" class="btn btn-sm btn-outline-primary w-100">View All Orders</a>
                             </div>
                         </div>
