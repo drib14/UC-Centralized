@@ -89,9 +89,9 @@ const Sidebar = () => {
             </nav>
 
             <div className="sidebar-footer">
-                <a href="#" className="nav-link text-danger" onClick={(e) => { e.preventDefault(); logout(); }}>
+                <button className="nav-link text-danger btn btn-link text-start w-100 border-0 bg-transparent" onClick={logout}>
                     <FaRightFromBracket /> <span>Logout</span>
-                </a>
+                </button>
             </div>
         </div>
     );

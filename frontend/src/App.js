@@ -10,12 +10,22 @@ import Layout from './components/Layout';
 import Landing from './pages/Landing';
 import Login from './pages/Login';
 import Register from './pages/Register';
+
 import StudentDashboard from './pages/student/StudentDashboard';
 import StudentEvents from './pages/student/StudentEvents';
 import StudentMerch from './pages/student/StudentMerch';
+import StudentCart from './pages/student/StudentCart';
+import StudentMessages from './pages/student/StudentMessages';
+import StudentProfile from './pages/student/StudentProfile';
+
 import AdminDashboard from './pages/admin/AdminDashboard';
 import AdminEvents from './pages/admin/AdminEvents';
-import Placeholder from './components/Placeholder';
+import AdminMerch from './pages/admin/AdminMerch';
+import AdminAnnouncements from './pages/admin/AdminAnnouncements';
+import AdminUsers from './pages/admin/AdminUsers';
+import AdminOrders from './pages/admin/AdminOrders';
+import AdminPOS from './pages/admin/AdminPOS';
+import AdminMessages from './pages/admin/AdminMessages';
 
 const ProtectedRoute = ({ children, allowedRoles }) => {
     const { user, loading } = useAuth();
@@ -51,22 +61,22 @@ function App() {
                             <Route path="dashboard" element={<StudentDashboard />} />
                             <Route path="events" element={<StudentEvents />} />
                             <Route path="merch" element={<StudentMerch />} />
-                            <Route path="cart" element={<Placeholder title="Cart" />} />
-                            <Route path="messages" element={<Placeholder title="Messages" />} />
-                            <Route path="profile" element={<Placeholder title="Profile" />} />
+                            <Route path="cart" element={<StudentCart />} />
+                            <Route path="messages" element={<StudentMessages />} />
+                            <Route path="profile" element={<StudentProfile />} />
                         </Route>
 
                         {/* Admin Routes */}
                         <Route path="/admin" element={<ProtectedRoute allowedRoles={['admin']}><Layout /></ProtectedRoute>}>
                             <Route index element={<Navigate to="dashboard" replace />} />
                             <Route path="dashboard" element={<AdminDashboard />} />
-                            <Route path="users" element={<Placeholder title="User Management" />} />
+                            <Route path="users" element={<AdminUsers />} />
                             <Route path="events" element={<AdminEvents />} />
-                            <Route path="merch" element={<Placeholder title="Merch Management" />} />
-                            <Route path="announcements" element={<Placeholder title="Announcements" />} />
-                            <Route path="orders" element={<Placeholder title="Orders" />} />
-                            <Route path="pos" element={<Placeholder title="POS" />} />
-                            <Route path="messages" element={<Placeholder title="Messages" />} />
+                            <Route path="merch" element={<AdminMerch />} />
+                            <Route path="announcements" element={<AdminAnnouncements />} />
+                            <Route path="orders" element={<AdminOrders />} />
+                            <Route path="pos" element={<AdminPOS />} />
+                            <Route path="messages" element={<AdminMessages />} />
                         </Route>
 
                          {/* Catch all */}
