@@ -38,6 +38,23 @@ router.delete('/:id', verifyAdmin, async (req, res) => {
     }
 });
 
+// UPDATE
+router.put('/:id', verifyAdmin, parser.single('image'), async (req, res) => {
+    try {
+        const updateData = { ...req.body };
+        if (req.file) updateData.image = req.file.path;
+
+        const updatedEvent = await Event.findByIdAndUpdate(
+            req.params.id,
+            { $set: updateData },
+            { new: true }
+        );
+        res.status(200).json(updatedEvent);
+    } catch (err) {
+        res.status(500).json(err);
+    }
+});
+
 // RSVP
 router.post('/:id/rsvp', verifyToken, async (req, res) => {
     try {

@@ -73,6 +73,10 @@ class API {
         return this.request(`/events/${id}`, 'DELETE');
     }
 
+    static updateEvent(id, formData) {
+        return this.request(`/events/${id}`, 'PUT', formData, true);
+    }
+
     static rsvpEvent(id) {
         return this.request(`/events/${id}/rsvp`, 'POST');
     }
@@ -84,6 +88,10 @@ class API {
 
     static createMerch(formData) {
         return this.request('/merch', 'POST', formData, true);
+    }
+
+    static updateMerch(id, formData) {
+        return this.request(`/merch/${id}`, 'PUT', formData, true);
     }
 
     static deleteMerch(id) {
@@ -110,6 +118,10 @@ class API {
 
     static createAnnouncement(data) {
         return this.request('/announcements', 'POST', data);
+    }
+
+    static deleteAnnouncement(id) {
+        return this.request(`/announcements/${id}`, 'DELETE');
     }
 
     // Admin Stats

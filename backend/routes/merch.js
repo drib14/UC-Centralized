@@ -38,4 +38,21 @@ router.delete('/:id', verifyAdmin, async (req, res) => {
     }
 });
 
+// UPDATE
+router.put('/:id', verifyAdmin, parser.single('image'), async (req, res) => {
+    try {
+        const updateData = { ...req.body };
+        if (req.file) updateData.image = req.file.path;
+
+        const updatedMerch = await Merch.findByIdAndUpdate(
+            req.params.id,
+            { $set: updateData },
+            { new: true }
+        );
+        res.status(200).json(updatedMerch);
+    } catch (err) {
+        res.status(500).json(err);
+    }
+});
+
 module.exports = router;

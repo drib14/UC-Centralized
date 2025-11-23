@@ -19,28 +19,28 @@
             <div class="collapse navbar-collapse" id="navbarNav">
                 <ul class="navbar-nav me-auto">
                     <li class="nav-item">
-                        <a class="nav-link" href="dashboard.html">Overview</a>
+                        <a class="nav-link" href="dashboard.html"><i class="fa-solid fa-table-columns me-1"></i> Overview</a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link active" href="orders.html">Orders</a>
+                        <a class="nav-link active" href="orders.html"><i class="fa-solid fa-list-check me-1"></i> Orders</a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="events.html">Events</a>
+                        <a class="nav-link" href="events.html"><i class="fa-solid fa-calendar-days me-1"></i> Events</a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="merch.html">Merch</a>
+                        <a class="nav-link" href="merch.html"><i class="fa-solid fa-shirt me-1"></i> Merch</a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="announcements.html">Announcements</a>
+                        <a class="nav-link" href="announcements.html"><i class="fa-solid fa-bullhorn me-1"></i> Announcements</a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="messages.html">Messages</a>
+                        <a class="nav-link" href="messages.html"><i class="fa-solid fa-envelope me-1"></i> Messages</a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="users.html">Users</a>
+                        <a class="nav-link" href="users.html"><i class="fa-solid fa-users me-1"></i> Users</a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="pos.html">POS</a>
+                        <a class="nav-link" href="pos.html"><i class="fa-solid fa-cash-register me-1"></i> POS</a>
                     </li>
                 </ul>
                 <ul class="navbar-nav ms-auto">
@@ -78,6 +78,53 @@
         </div>
     </div>
 
+    <!-- View Order Modal -->
+    <div class="modal fade" id="viewOrderModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header bg-info text-white">
+                    <h5 class="modal-title">Order Details</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" id="vo-oid">
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <h6>Customer Info</h6>
+                            <p id="vo-customer" class="mb-1 fw-bold"></p>
+                            <small id="vo-id" class="text-muted"></small>
+                        </div>
+                        <div class="col-md-6 text-end">
+                            <h6>Order Info</h6>
+                            <p id="vo-order-id" class="mb-1 font-monospace"></p>
+                            <p id="vo-date" class="small text-muted"></p>
+                        </div>
+                    </div>
+                    <h6 class="mb-2">Items</h6>
+                    <table class="table table-sm table-bordered mb-3">
+                        <thead class="table-light"><tr><th>Item</th><th>Qty</th><th class="text-end">Price</th></tr></thead>
+                        <tbody id="vo-items"></tbody>
+                        <tfoot><tr><th colspan="2" class="text-end">Total</th><th class="text-end" id="vo-total"></th></tr></tfoot>
+                    </table>
+
+                    <div class="bg-light p-3 rounded">
+                        <label class="form-label fw-bold me-2">Update Status:</label>
+                        <select id="vo-status" class="form-select w-auto d-inline-block">
+                            <option value="pending">Pending</option>
+                            <option value="processing">Processing</option>
+                            <option value="claimed">Claimed/Completed</option>
+                            <option value="cancelled">Cancelled</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    <button type="button" class="btn btn-primary" onclick="saveOrderStatus()">Update Status</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <div class="toast-container position-fixed top-0 end-0 p-3" id="toast-container"></div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
@@ -87,10 +134,12 @@
     <script>
         Auth.checkSession();
 
+        let allOrders = [];
+
         async function fetchOrders() {
             try {
-                const orders = await API.getOrders();
-                renderOrders(orders);
+                allOrders = await API.getOrders();
+                renderOrders(allOrders);
             } catch(e) {
                 showToast("Failed to load orders", "error");
             }
@@ -126,21 +175,56 @@
                     <td>${formatCurrency(order.totalPrice)}</td>
                     <td><span class="badge ${badgeClass}">${status.toUpperCase()}</span></td>
                     <td>
-                        <div class="btn-group btn-group-sm">
-                            <button class="btn btn-outline-info" onclick="updateStatus('${order._id}', 'processing')">Process</button>
-                            <button class="btn btn-outline-success" onclick="updateStatus('${order._id}', 'claimed')">Claimed</button>
-                            <button class="btn btn-outline-danger" onclick="updateStatus('${order._id}', 'cancelled')">Cancel</button>
-                        </div>
+                        <button class="btn btn-sm btn-outline-primary" onclick="openViewOrder('${order._id}')">
+                            <i class="fa-solid fa-eye"></i> View / Update
+                        </button>
                     </td>
                 `;
                 tbody.appendChild(row);
             });
         }
 
-        async function updateStatus(orderId, status) {
+        window.openViewOrder = function(id) {
+            const order = allOrders.find(o => o._id === id);
+            if(order) {
+                const u = order.user;
+                const user = u ? ( (u.firstName && u.lastName) ? `${u.firstName} ${u.lastName}` : (u.name || 'Unknown User') ) : (order.customerName || 'Walk-in');
+                const userId = order.user ? order.user.studentId : 'N/A';
+
+                document.getElementById('vo-oid').value = order._id;
+                document.getElementById('vo-customer').textContent = user;
+                document.getElementById('vo-id').textContent = `ID: ${userId}`;
+                document.getElementById('vo-order-id').textContent = `#${order._id.toUpperCase()}`;
+                document.getElementById('vo-date').textContent = new Date(order.createdAt).toLocaleString();
+                document.getElementById('vo-total').textContent = formatCurrency(order.totalPrice);
+                document.getElementById('vo-status').value = order.status;
+
+                const tbody = document.getElementById('vo-items');
+                tbody.innerHTML = '';
+                order.items.forEach(item => {
+                    const name = item.merch ? item.merch.name : 'Deleted Item';
+                    const price = item.merch ? item.merch.price : 0;
+                    tbody.innerHTML += `
+                        <tr>
+                            <td>${name}</td>
+                            <td>${item.quantity}</td>
+                            <td class="text-end">${formatCurrency(price * item.quantity)}</td>
+                        </tr>
+                    `;
+                });
+
+                new bootstrap.Modal(document.getElementById('viewOrderModal')).show();
+            }
+        }
+
+        window.saveOrderStatus = async function() {
+            const orderId = document.getElementById('vo-oid').value;
+            const status = document.getElementById('vo-status').value;
+
             try {
                 await API.updateOrderStatus(orderId, status);
                 showToast(`Order status updated to ${status}`, 'success');
+                bootstrap.Modal.getInstance(document.getElementById('viewOrderModal')).hide();
                 fetchOrders();
             } catch(e) {
                 showToast(e.message, "error");
