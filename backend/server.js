@@ -16,8 +16,16 @@ const app = express();
 
 // Middleware
 app.use(express.json());
+
+// CORS: Allow all origins dynamically to prevent 405/CORS errors on Vercel
+// This is safer than allow '*' with credentials:true which is invalid.
 app.use(cors({
-    origin: process.env.CLIENT_URL || '*', // Allow all for demo/Vercel
+    origin: (origin, callback) => {
+        // Allow requests with no origin (like mobile apps or curl requests)
+        if (!origin) return callback(null, true);
+        // Allow any origin
+        callback(null, true);
+    },
     credentials: true
 }));
 
@@ -34,33 +42,33 @@ const connectDB = async () => {
     }
 };
 
-// Connect DB on every request (cached by Mongoose)
+// Connect DB on every request
 app.use(async (req, res, next) => {
     await connectDB();
     next();
 });
 
-// Routes - Mount on both / and /api to handle local and Vercel paths
-const routes = [
-    { path: '/auth', handler: authRoute },
-    { path: '/users', handler: userRoute },
-    { path: '/events', handler: eventRoute },
-    { path: '/merch', handler: merchRoute },
-    { path: '/orders', handler: orderRoute },
-    { path: '/announcements', handler: announcementRoute },
-    { path: '/stats', handler: statsRoute }
-];
-
-routes.forEach(r => {
-    app.use(r.path, r.handler);
-    app.use(`/api${r.path}`, r.handler);
+// URL Normalization for Vercel
+// Vercel rewrites /api/... to this file, but sometimes req.url retains the /api prefix.
+// We strip it to ensure standard routing works for both Localhost and Vercel.
+app.use((req, res, next) => {
+    if (req.url.startsWith('/api')) {
+        req.url = req.url.replace('/api', '');
+    }
+    next();
 });
+
+// Routes
+app.use('/auth', authRoute);
+app.use('/users', userRoute);
+app.use('/events', eventRoute);
+app.use('/merch', merchRoute);
+app.use('/orders', orderRoute);
+app.use('/announcements', announcementRoute);
+app.use('/stats', statsRoute);
 
 app.get('/', (req, res) => {
     res.send('UC-Central Backend is running');
-});
-app.get('/api', (req, res) => {
-    res.send('UC-Central Backend is running (API)');
 });
 
 // Local Development
