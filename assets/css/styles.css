@@ -160,7 +160,8 @@ footer {
     max-width: 250px;
     background-color: var(--primary-uc-blue);
     color: white;
-    min-height: 100vh;
+    height: 100vh; /* Fallback */
+    height: 100dvh; /* Dynamic Viewport Height for mobile */
     transition: all 0.3s ease;
     display: flex;
     flex-direction: column;
