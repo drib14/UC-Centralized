@@ -39,7 +39,17 @@ const AdminOrders = () => {
                             <thead><tr><th>ID</th><th>Date</th><th>Customer</th><th>Items</th><th>Total</th><th>Status</th><th>Action</th></tr></thead>
                             <tbody>
                                 {orders.map(o => {
-                                    const cName = o.customerName || (o.user ? `${o.user.firstName} ${o.user.lastName}` : (o.user?.name || 'Unknown'));
+                                    let cName = 'Unknown';
+                                    if (o.customerName) {
+                                        cName = o.customerName;
+                                    } else if (o.user) {
+                                        if (o.user.firstName && o.user.lastName) {
+                                            cName = `${o.user.firstName} ${o.user.lastName}`;
+                                        } else {
+                                            cName = o.user.name || 'Unknown User';
+                                        }
+                                    }
+
                                     return (
                                         <tr key={o._id}>
                                             <td>{o._id.slice(-6).toUpperCase()}</td>

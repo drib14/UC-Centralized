@@ -54,7 +54,7 @@ const AdminUsers = () => {
                                  {users.map(u => (
                                      <tr key={u._id}>
                                          <td>{u.studentId}</td>
-                                         <td>{u.firstName} {u.lastName}</td>
+                                         <td>{(u.firstName && u.lastName) ? `${u.firstName} ${u.lastName}` : (u.name || 'N/A')}</td>
                                          <td>{u.email}</td>
                                          <td>{u.role}</td>
                                          <td>{u.department}</td>
