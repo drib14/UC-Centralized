@@ -135,6 +135,7 @@
                         <img src="${p.image || 'https://via.placeholder.com/150'}" class="card-img-top" style="height: 120px; object-fit: cover;">
                         <div class="card-body p-2 text-center">
                             <h6 class="card-title mb-1 small text-truncate">${p.name}</h6>
+                            <div class="text-muted small mb-1">Stock: ${p.stock}</div>
                             <div class="fw-bold text-success">${formatCurrency(p.price)}</div>
                         </div>
                     </div>

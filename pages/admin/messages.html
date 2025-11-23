@@ -1,15 +1,12 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 512 512%22><path fill=%22%23FFCC00%22 d=%22M256 0c-26.5 0-48 21.5-48 48v24h-16c-26.5 0-48 21.5-48 48v24h-16c-26.5 0-48 21.5-48 48v24H64c-26.5 0-48 21.5-48 48v256h480V264c0-26.5-21.5-48-48-48h-16v-24c0-26.5-21.5-48-48-48h-16v-24c0-26.5-21.5-48-48-48h-16V48c0-26.5-21.5-48-48-48h-48zm0 32h48c8.8 0 16 7.2 16 16v24h-16c-13.3 0-24 10.7-24 24s10.7 24 24 24h16v24h-16c-13.3 0-24 10.7-24 24s10.7 24 24 24h16v24H224v-24h16c13.3 0 24-10.7 24-24s-10.7-24-24-24h-16v-24h16c13.3 0 24-10.7 24-24s-10.7-24-24-24h-16V48c0-8.8 7.2-16 16-16zm-80 80h16c8.8 0 16 7.2 16 16v24h-16c-13.3 0-24 10.7-24 24s10.7 24 24 24h16v24h-16c-13.3 0-24 10.7-24 24s10.7 24 24 24h16v24h-64v-24h16c13.3 0 24-10.7 24-24s-10.7-24-24-24h-16v-24h16c13.3 0 24-10.7 24-24s-10.7-24-24-24h-16v-24c0-8.8 7.2-16 16-16zm-80 80h16c8.8 0 16 7.2 16 16v24h-16c-13.3 0-24 10.7-24 24s10.7 24 24 24h16v24h-16c-13.3 0-24 10.7-24 24s10.7 24 24 24h16v24H16v-24h16c13.3 0 24-10.7 24-24s-10.7-24-24-24H16v-24c0-8.8 7.2-16 16-16zm320-160h16c8.8 0 16 7.2 16 16v24h-16c-13.3 0-24 10.7-24 24s10.7 24 24 24h16v24h-16c-13.3 0-24 10.7-24 24s10.7 24 24 24h16v24h-64V128h16c13.3 0 24-10.7 24-24s-10.7-24-24-24h-16V48c0-8.8 7.2-16 16-16zm80 80h16c8.8 0 16 7.2 16 16v24h-16c-13.3 0-24 10.7-24 24s10.7 24 24 24h16v24h-16c-13.3 0-24 10.7-24 24s10.7 24 24 24h16v24h-64v-24h16c13.3 0 24-10.7 24-24s-10.7-24-24-24h-16v-24c0-8.8 7.2-16 16-16z%22/%3E</svg>">
+    <link rel="icon" href="/assets/uc-central-logo.png" type="image/x-icon">
     <meta charset="UTF-8">
     <title>UC-Central</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="../../assets/css/styles.css">
-    <style>
-        .admin-nav { background-color: #002266 !important; }
-    </style>
 </head>
 <body>
 
@@ -105,16 +102,21 @@
     <div class="toast-container position-fixed top-0 end-0 p-3" id="toast-container"></div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="../../assets/js/db.js"></script>
+    <script src="../../assets/js/api.js"></script>
     <script src="../../assets/js/auth.js"></script>
     <script src="../../assets/js/main.js"></script>
     <script>
-        Auth.requireAdmin();
+        Auth.checkSession();
+
+        const MESSAGES_KEY = 'ucc_messages_local';
+        function getLocalMessages() {
+            return JSON.parse(localStorage.getItem(MESSAGES_KEY) || '[]');
+        }
 
         function renderMessages() {
             const tbody = document.getElementById('messages-table');
             tbody.innerHTML = '';
-            const messages = DB.getMessages();
+            const messages = getLocalMessages();
 
             if (messages.length === 0) {
                  tbody.innerHTML = '<tr><td colspan="6" class="text-center">No messages found.</td></tr>';
@@ -139,13 +141,13 @@
             });
         }
 
-        function openReply(student, subject) {
+        window.openReply = function(student, subject) {
             document.getElementById('reply-student').textContent = student;
             document.getElementById('reply-subject').textContent = "Re: " + subject;
             new bootstrap.Modal(document.getElementById('replyModal')).show();
         }
 
-        function sendReply() {
+        window.sendReply = function() {
             showToast('Reply sent successfully!', 'success');
             bootstrap.Modal.getInstance(document.getElementById('replyModal')).hide();
         }
