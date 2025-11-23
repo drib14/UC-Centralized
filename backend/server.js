@@ -35,19 +35,24 @@ app.options('*', cors(corsOptions)); // Enable pre-flight for all routes
 // Database Connection (Serverless optimized)
 const connectDB = async () => {
     if (mongoose.connection.readyState >= 1) {
-        return;
+        return true;
     }
     try {
         await mongoose.connect(process.env.MONGO_URI);
         console.log('MongoDB Connected');
+        return true;
     } catch (err) {
         console.error('MongoDB Connection Error:', err);
+        return false;
     }
 };
 
 // Connect DB on every request
 app.use(async (req, res, next) => {
-    await connectDB();
+    const isConnected = await connectDB();
+    if (!isConnected) {
+        return res.status(500).json({ message: 'Database connection failed. Check server logs.' });
+    }
     next();
 });
 
