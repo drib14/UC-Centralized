@@ -167,3 +167,24 @@ function updateCartBadge() {
 window.Cart = Cart;
 window.showToast = showToast;
 window.formatCurrency = formatCurrency;
+
+// Sidebar Toggle
+function toggleSidebar() {
+    const sidebar = document.getElementById('sidebar');
+    const content = document.getElementById('page-content-wrapper');
+    if(sidebar && content) {
+        sidebar.classList.toggle('collapsed');
+        content.classList.toggle('collapsed');
+        localStorage.setItem('sidebar_collapsed', sidebar.classList.contains('collapsed'));
+    }
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    const isCollapsed = localStorage.getItem('sidebar_collapsed') === 'true';
+    const sidebar = document.getElementById('sidebar');
+    const content = document.getElementById('page-content-wrapper');
+    if(sidebar && content && isCollapsed) {
+        sidebar.classList.add('collapsed');
+        content.classList.add('collapsed');
+    }
+});

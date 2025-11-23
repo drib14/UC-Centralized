@@ -10,69 +10,61 @@
 </head>
 <body>
 
-    <nav class="navbar navbar-expand-lg navbar-dark admin-nav sticky-top">
-        <div class="container">
-            <a class="navbar-brand" href="dashboard.html"><img src="../../assets/uc-central-logo.png" alt="Logo" style="height: 30px;" class="me-2">UC-Central</a>
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
-                <span class="navbar-toggler-icon"></span>
-            </button>
-            <div class="collapse navbar-collapse" id="navbarNav">
-                <ul class="navbar-nav me-auto">
-                    <li class="nav-item">
-                        <a class="nav-link" href="dashboard.html"><i class="fa-solid fa-table-columns me-1"></i> Overview</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link active" href="orders.html"><i class="fa-solid fa-list-check me-1"></i> Orders</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="events.html"><i class="fa-solid fa-calendar-days me-1"></i> Events</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="merch.html"><i class="fa-solid fa-shirt me-1"></i> Merch</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="announcements.html"><i class="fa-solid fa-bullhorn me-1"></i> Announcements</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="messages.html"><i class="fa-solid fa-envelope me-1"></i> Messages</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="users.html"><i class="fa-solid fa-users me-1"></i> Users</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="pos.html"><i class="fa-solid fa-cash-register me-1"></i> POS</a>
-                    </li>
-                </ul>
-                <ul class="navbar-nav ms-auto">
-                     <li class="nav-item">
-                        <a class="nav-link" href="#" id="logout-btn">Logout</a>
-                    </li>
-                </ul>
+    <div id="wrapper">
+        <!-- Sidebar -->
+        <div class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <img src="../../assets/uc-central-logo.png" class="logo-img" alt="Logo">
+                <span class="sidebar-brand-text">UC-Central</span>
+            </div>
+            <nav class="nav flex-column mt-3">
+                <a class="nav-link" href="dashboard.html"><i class="fa-solid fa-table-columns"></i> <span>Overview</span></a>
+                <a class="nav-link active" href="orders.html"><i class="fa-solid fa-list-check"></i> <span>Orders</span></a>
+                <a class="nav-link" href="events.html"><i class="fa-solid fa-calendar-days"></i> <span>Events</span></a>
+                <a class="nav-link" href="merch.html"><i class="fa-solid fa-shirt"></i> <span>Merch</span></a>
+                <a class="nav-link" href="announcements.html"><i class="fa-solid fa-bullhorn"></i> <span>Announcements</span></a>
+                <a class="nav-link" href="messages.html"><i class="fa-solid fa-envelope"></i> <span>Messages</span></a>
+                <a class="nav-link" href="users.html"><i class="fa-solid fa-users"></i> <span>Users</span></a>
+                <a class="nav-link" href="pos.html"><i class="fa-solid fa-cash-register"></i> <span>POS</span></a>
+            </nav>
+            <div class="sidebar-footer">
+                <a class="nav-link text-danger" href="#" id="logout-btn"><i class="fa-solid fa-right-from-bracket"></i> <span>Logout</span></a>
             </div>
         </div>
-    </nav>
 
-    <div class="container py-4">
-        <h2 class="mb-4">Order Management</h2>
+        <!-- Content -->
+        <div id="page-content-wrapper">
+            <div class="topbar">
+                <button class="btn btn-light text-primary border-0" onclick="toggleSidebar()"><i class="fa-solid fa-bars fa-lg"></i></button>
+                <div class="d-flex align-items-center">
+                    <span class="me-2 fw-bold text-primary d-none d-md-block">Admin Panel</span>
+                    <img src="../../assets/uc-central-logo.png" class="rounded-circle border border-2 border-primary" width="40" height="40">
+                </div>
+            </div>
 
-        <div class="card">
-            <div class="card-body">
-                <div class="table-responsive">
-                    <table class="table table-bordered align-middle">
-                        <thead class="table-light">
-                            <tr>
-                                <th>ID</th>
-                                <th>Customer</th>
-                                <th>Items</th>
-                                <th>Total</th>
-                                <th>Status</th>
-                                <th>Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody id="orders-table">
-                            <!-- JS Populated -->
-                        </tbody>
-                    </table>
+            <div class="container-fluid">
+                <h2 class="mb-4">Order Management</h2>
+
+                <div class="card">
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-bordered align-middle">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>ID</th>
+                                        <th>Customer</th>
+                                        <th>Items</th>
+                                        <th>Total</th>
+                                        <th>Status</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="orders-table">
+                                    <!-- JS Populated -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
