@@ -44,6 +44,16 @@ router.post('/:id/rsvp', verifyToken, async (req, res) => {
         const event = await Event.findById(req.params.id);
         if (!event) return res.status(404).json("Event not found");
 
+        // Check Expiry
+        const now = new Date();
+        const eventDateStr = event.date instanceof Date ? event.date.toISOString().split('T')[0] : event.date;
+        const eventTimeStr = event.time || '23:59';
+        const eventDateTime = new Date(`${eventDateStr}T${eventTimeStr}`);
+
+        if (now > eventDateTime) {
+            return res.status(400).json("Event has already ended");
+        }
+
         if (!event.attendees.includes(req.user.id)) {
             await event.updateOne({ $push: { attendees: req.user.id } });
             res.status(200).json("The event has been RSVP'd");
@@ -51,6 +61,7 @@ router.post('/:id/rsvp', verifyToken, async (req, res) => {
             res.status(403).json("You already RSVP'd to this event");
         }
     } catch (err) {
+        console.log(err);
         res.status(500).json(err);
     }
 });

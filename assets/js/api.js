@@ -122,6 +122,10 @@ class API {
         return this.request('/users');
     }
 
+    static updateUser(id, data) {
+        return this.request(`/users/${id}`, 'PUT', data);
+    }
+
     static deleteUser(id) {
         return this.request(`/users/${id}`, 'DELETE');
     }

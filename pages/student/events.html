@@ -225,10 +225,15 @@
 
         events.forEach((event) => {
           const isRegistered = event.attendees && event.attendees.includes(user._id);
-          const btnClass = isRegistered
-            ? "btn-secondary"
-            : "btn-outline-success";
-          const btnText = isRegistered ? "Registered" : "View Details";
+
+          // Check Expiry
+          const eventDateStr = event.date; // Assuming String from API
+          const eventTimeStr = event.time || '23:59';
+          const eventDateTime = new Date(`${eventDateStr}T${eventTimeStr}`);
+          const isEnded = new Date() > eventDateTime;
+
+          const btnClass = isEnded ? "btn-secondary" : (isRegistered ? "btn-secondary" : "btn-outline-success");
+          const btnText = isEnded ? "Event Ended" : (isRegistered ? "Registered" : "View Details");
 
           const venue = event.location || "TBA";
           const time = event.time || "";
@@ -281,14 +286,29 @@
         const modalBtn = document.querySelector("#eventModal .btn-success");
         const isRegistered = event.attendees && event.attendees.includes(user._id);
 
-        if (isRegistered) {
+        const eventDateStr = event.date;
+        const eventTimeStr = event.time || '23:59';
+        const eventDateTime = new Date(`${eventDateStr}T${eventTimeStr}`);
+        const isEnded = new Date() > eventDateTime;
+
+        if (isEnded) {
+            modalBtn.textContent = "Event Ended";
+            modalBtn.disabled = true;
+            modalBtn.onclick = null;
+            modalBtn.classList.remove('btn-success');
+            modalBtn.classList.add('btn-secondary');
+        } else if (isRegistered) {
           modalBtn.textContent = "Already Registered";
           modalBtn.disabled = true;
           modalBtn.onclick = null;
+          modalBtn.classList.remove('btn-success');
+          modalBtn.classList.add('btn-secondary');
         } else {
           modalBtn.textContent = "Register / RSVP";
           modalBtn.disabled = false;
           modalBtn.onclick = handleRSVP;
+          modalBtn.classList.remove('btn-secondary');
+          modalBtn.classList.add('btn-success');
         }
 
         new bootstrap.Modal(document.getElementById("eventModal")).show();
