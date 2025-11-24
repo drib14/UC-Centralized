@@ -14,7 +14,7 @@ const AdminEvents = () => {
 
     // Form Data
     const [formData, setFormData] = useState({
-        title: '', date: '', time: '', location: '', department: 'ALL', description: '', image: null
+        title: '', date: '', time: '', endDate: '', endTime: '', location: '', department: 'ALL', description: '', image: null
     });
     const [editData, setEditData] = useState(null);
     const [deleteId, setDeleteId] = useState(null);
@@ -52,7 +52,7 @@ const AdminEvents = () => {
             await API.createEvent(form);
             toast.success("Event created");
             setShowCreateModal(false);
-            setFormData({ title: '', date: '', time: '', location: '', department: 'ALL', description: '', image: null });
+            setFormData({ title: '', date: '', time: '', endDate: '', endTime: '', location: '', department: 'ALL', description: '', image: null });
             fetchEvents();
         } catch (error) {
             toast.error(error.message || "Failed to create event");
@@ -120,7 +120,11 @@ const AdminEvents = () => {
                             )}
                             <div className="card-body">
                                 <h5 className="card-title">{event.title}</h5>
-                                <p className="text-muted small mb-1">{event.date} | {event.department}</p>
+                                <p className="text-muted small mb-1">
+                                    Start: {event.date} {event.time}<br/>
+                                    {event.endDate && `End: ${event.endDate} ${event.endTime || ''}`}<br/>
+                                    {event.department}
+                                </p>
                                 <p className="small mb-2 text-primary fw-bold">
                                     <FaUsers className="me-1" />
                                     Total Joined: {event.attendees ? event.attendees.length : 0}
@@ -143,7 +147,7 @@ const AdminEvents = () => {
             {/* Create Modal */}
             {showCreateModal && (
                 <div className="modal fade show d-block" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>
-                    <div className="modal-dialog">
+                    <div className="modal-dialog modal-lg">
                         <div className="modal-content">
                             <div className="modal-header bg-primary text-white">
                                 <h5 className="modal-title">Create New Event</h5>
@@ -151,10 +155,24 @@ const AdminEvents = () => {
                             </div>
                             <div className="modal-body">
                                 <input className="form-control mb-3" placeholder="Title" value={formData.title} onChange={e => setFormData({...formData, title: e.target.value})} />
+
                                 <div className="row mb-3">
-                                    <div className="col"><input type="date" className="form-control" value={formData.date} onChange={e => setFormData({...formData, date: e.target.value})} /></div>
-                                    <div className="col"><input type="time" className="form-control" value={formData.time} onChange={e => setFormData({...formData, time: e.target.value})} /></div>
+                                    <div className="col-md-6">
+                                        <label className="form-label small">Start</label>
+                                        <div className="d-flex gap-2">
+                                            <input type="date" className="form-control" value={formData.date} onChange={e => setFormData({...formData, date: e.target.value})} />
+                                            <input type="time" className="form-control" value={formData.time} onChange={e => setFormData({...formData, time: e.target.value})} />
+                                        </div>
+                                    </div>
+                                    <div className="col-md-6">
+                                        <label className="form-label small">End</label>
+                                        <div className="d-flex gap-2">
+                                            <input type="date" className="form-control" value={formData.endDate} onChange={e => setFormData({...formData, endDate: e.target.value})} />
+                                            <input type="time" className="form-control" value={formData.endTime} onChange={e => setFormData({...formData, endTime: e.target.value})} />
+                                        </div>
+                                    </div>
                                 </div>
+
                                 <input className="form-control mb-3" placeholder="Venue" value={formData.location} onChange={e => setFormData({...formData, location: e.target.value})} />
                                 <select className="form-select mb-3" value={formData.department} onChange={e => setFormData({...formData, department: e.target.value})}>
                                     <option value="ALL">All Departments</option>
@@ -177,7 +195,7 @@ const AdminEvents = () => {
             {/* Edit Modal */}
             {showEditModal && editData && (
                 <div className="modal fade show d-block" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>
-                    <div className="modal-dialog">
+                    <div className="modal-dialog modal-lg">
                         <div className="modal-content">
                             <div className="modal-header bg-warning text-dark">
                                 <h5 className="modal-title">Edit Event</h5>
@@ -185,10 +203,24 @@ const AdminEvents = () => {
                             </div>
                             <div className="modal-body">
                                 <input className="form-control mb-3" placeholder="Title" value={editData.title} onChange={e => setEditData({...editData, title: e.target.value})} />
+
                                 <div className="row mb-3">
-                                    <div className="col"><input type="date" className="form-control" value={editData.date} onChange={e => setEditData({...editData, date: e.target.value})} /></div>
-                                    <div className="col"><input type="time" className="form-control" value={editData.time} onChange={e => setEditData({...editData, time: e.target.value})} /></div>
+                                    <div className="col-md-6">
+                                        <label className="form-label small">Start</label>
+                                        <div className="d-flex gap-2">
+                                            <input type="date" className="form-control" value={editData.date} onChange={e => setEditData({...editData, date: e.target.value})} />
+                                            <input type="time" className="form-control" value={editData.time} onChange={e => setEditData({...editData, time: e.target.value})} />
+                                        </div>
+                                    </div>
+                                    <div className="col-md-6">
+                                        <label className="form-label small">End</label>
+                                        <div className="d-flex gap-2">
+                                            <input type="date" className="form-control" value={editData.endDate || ''} onChange={e => setEditData({...editData, endDate: e.target.value})} />
+                                            <input type="time" className="form-control" value={editData.endTime || ''} onChange={e => setEditData({...editData, endTime: e.target.value})} />
+                                        </div>
+                                    </div>
                                 </div>
+
                                 <input className="form-control mb-3" placeholder="Venue" value={editData.location} onChange={e => setEditData({...editData, location: e.target.value})} />
                                 <select className="form-select mb-3" value={editData.department} onChange={e => setEditData({...editData, department: e.target.value})}>
                                     <option value="ALL">All Departments</option>

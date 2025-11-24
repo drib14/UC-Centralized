@@ -61,11 +61,13 @@ router.post('/:id/rsvp', verifyToken, async (req, res) => {
         const event = await Event.findById(req.params.id);
         if (!event) return res.status(404).json("Event not found");
 
-        // Check Expiry
+        // Check Expiry (Use End Date/Time if available, else Start)
         const now = new Date();
-        const eventDateStr = event.date instanceof Date ? event.date.toISOString().split('T')[0] : event.date;
-        const eventTimeStr = event.time || '23:59';
-        const eventDateTime = new Date(`${eventDateStr}T${eventTimeStr}`);
+        const dateStr = event.endDate || event.date;
+        const timeStr = event.endTime || event.time || '23:59';
+
+        const eventDateStr = dateStr instanceof Date ? dateStr.toISOString().split('T')[0] : dateStr;
+        const eventDateTime = new Date(`${eventDateStr}T${timeStr}`);
 
         if (now > eventDateTime) {
             return res.status(400).json("Event has already ended");

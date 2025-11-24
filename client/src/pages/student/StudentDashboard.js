@@ -42,20 +42,34 @@ const StudentDashboard = () => {
                     const past = [];
 
                     eventData.forEach(event => {
-                        const eventDateStr = event.date; // Assuming YYYY-MM-DD
+                        const eventDateStr = event.date; // Start Date
                         if (!eventDateStr) return;
 
-                        // Compare dates
-                        if (eventDateStr === todayStr) {
+                        // Construct Event Range
+                        const startDate = new Date(event.date);
+                        const endDate = event.endDate ? new Date(event.endDate) : new Date(event.date);
+
+                        // Add time to start/end for precise check
+                        const startTimeParts = (event.time || '00:00').split(':');
+                        startDate.setHours(startTimeParts[0], startTimeParts[1]);
+
+                        const endTimeParts = (event.endTime || '23:59').split(':');
+                        endDate.setHours(endTimeParts[0], endTimeParts[1]);
+
+                        // Classification Logic
+                        if (now >= startDate && now <= endDate) {
+                            // Happening Now (Today/Range)
                             todayEvents.push(event);
-                        } else if (eventDateStr > todayStr) {
+                        } else if (now < startDate) {
+                            // Upcoming
                             upcoming.push(event);
                         } else {
+                            // Past
                             past.push(event);
                         }
                     });
 
-                    // "Latest Event" is specifically Today's event
+                    // "Latest Event" is specifically Happening Now/Today
                     setLatestEvent(todayEvents.length > 0 ? todayEvents[0] : null);
                     setUpcomingEvents(upcoming.sort((a,b) => a.date.localeCompare(b.date))); // Ascending
                     setRecentEvents(past.sort((a,b) => b.date.localeCompare(a.date)).slice(0, 5)); // Descending, top 5
@@ -246,7 +260,7 @@ const StudentDashboard = () => {
                 </div>
 
                 <div className="col-lg-4">
-                    {/* Latest Event (Today) */}
+                    {/* Latest Event (Happening Now) */}
                     <h4 className="mb-3 text-warning"><FaCalendar className="me-2" />Happening Today</h4>
                     {latestEvent ? (
                         <div className="card border-warning mb-4 shadow-sm">
@@ -261,7 +275,7 @@ const StudentDashboard = () => {
                             </div>
                         </div>
                     ) : (
-                        <p className="text-muted mb-4">No events scheduled for today.</p>
+                        <p className="text-muted mb-4">No events happening right now.</p>
                     )}
 
                     {/* Upcoming Events */}

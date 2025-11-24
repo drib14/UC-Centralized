@@ -12,6 +12,9 @@ const StudentEvents = () => {
     const [loading, setLoading] = useState(true);
     const [selectedEvent, setSelectedEvent] = useState(null);
 
+    // Calendar State
+    const [currentDate, setCurrentDate] = useState(new Date());
+
     // Departments
     const departments = [
         {id: 'CCS', name: 'College of Computer Studies'},
@@ -57,16 +60,13 @@ const StudentEvents = () => {
     const isRegistered = (event) => event.attendees && event.attendees.includes(user?._id);
 
     const isEnded = (event) => {
-         if (!event.date) return false;
-         const eventDateStr = event.date;
-         const eventTimeStr = event.time || '23:59';
-
-         // Construct ISO string: YYYY-MM-DDTHH:mm
-         // Assuming date is YYYY-MM-DD from backend
-         const eventDateTime = new Date(`${eventDateStr}T${eventTimeStr}`);
          const now = new Date();
+         const endDate = event.endDate ? new Date(event.endDate) : new Date(event.date);
+         const endTimeStr = event.endTime || event.time || '23:59';
+         const [h, m] = endTimeStr.split(':');
+         endDate.setHours(h, m);
 
-         return now > eventDateTime;
+         return now > endDate;
     };
 
     const formatTime = (timeStr) => {
@@ -83,13 +83,104 @@ const StudentEvents = () => {
         return `${formattedHour}:${formattedMinute} ${ampm}`;
     };
 
-    if (loading) return <div className="text-center mt-5"><div className="spinner-border text-success"></div></div>;
+    // Calendar Helper
+    const renderCalendar = () => {
+        const today = new Date();
+        const year = currentDate.getFullYear();
+        const month = currentDate.getMonth();
+
+        const firstDay = new Date(year, month, 1).getDay();
+        const daysInMonth = new Date(year, month + 1, 0).getDate();
+
+        const days = [];
+        for (let i = 0; i < firstDay; i++) days.push(<div key={`empty-${i}`} className="calendar-day empty"></div>);
+
+        for (let d = 1; d <= daysInMonth; d++) {
+            const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+
+            // Find events for this date (checking range)
+            const dayEvents = events.filter(e => {
+                const start = new Date(e.date);
+                const end = e.endDate ? new Date(e.endDate) : new Date(e.date);
+                // Normalize current day check
+                const currentCheck = new Date(dateStr);
+                // Reset times for strict date check
+                start.setHours(0,0,0,0);
+                end.setHours(23,59,59,999);
+                currentCheck.setHours(12,0,0,0); // Midday to avoid boundary issues
+                return currentCheck >= start && currentCheck <= end;
+            });
+
+            const isToday = d === today.getDate() && month === today.getMonth() && year === today.getFullYear();
+            const hasEvent = dayEvents.length > 0;
+
+            // Styling Classes
+            let classes = "calendar-day p-2 border text-center position-relative ";
+            let style = { minHeight: '80px', cursor: 'pointer' };
+            let title = "";
+
+            if (isToday && hasEvent) {
+                // Split Highlight (Gradient)
+                style.background = "linear-gradient(135deg, #0d6efd 50%, #ffc107 50%)";
+                classes += "text-white fw-bold";
+                title = `Today is ${dayEvents[0].title} Day!`;
+            } else if (isToday) {
+                classes += "bg-primary text-white fw-bold";
+                title = "Date Today";
+            } else if (hasEvent) {
+                classes += "bg-warning text-dark fw-bold";
+                // Check if it's culminating (end date)
+                const evt = dayEvents[0];
+                if (evt.endDate === dateStr) {
+                    title = `Culminating of ${evt.title}`;
+                } else {
+                    title = evt.title; // Or "Event Day"
+                }
+            } else {
+                classes += "bg-light";
+            }
+
+            days.push(
+                <div key={d} className={classes} style={style} title={title}>
+                    <div>{d}</div>
+                    {hasEvent && <small className="d-block text-truncate" style={{fontSize:'0.6rem'}}>{dayEvents[0].title}</small>}
+                </div>
+            );
+        }
+
+        return (
+            <div className="calendar-container mb-4">
+                <div className="d-flex justify-content-between align-items-center mb-2">
+                    <button className="btn btn-sm btn-outline-secondary" onClick={() => setCurrentDate(new Date(year, month - 1))}>Prev</button>
+                    <h5 className="mb-0">{currentDate.toLocaleString('default', { month: 'long', year: 'numeric' })}</h5>
+                    <button className="btn btn-sm btn-outline-secondary" onClick={() => setCurrentDate(new Date(year, month + 1))}>Next</button>
+                </div>
+                <div className="d-grid" style={{ gridTemplateColumns: 'repeat(7, 1fr)', gap: '5px' }}>
+                    {['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].map(day => (
+                        <div key={day} className="text-center fw-bold small">{day}</div>
+                    ))}
+                    {days}
+                </div>
+            </div>
+        );
+    };
 
     return (
         <div className="container-fluid">
             <h2 className="mb-4 text-success">
                 <FaCalendar className="me-2" />Events & Activities
             </h2>
+
+            {/* Calendar Section */}
+            <div className="row mb-4">
+                <div className="col-12">
+                    <div className="card shadow-sm">
+                        <div className="card-body">
+                            {renderCalendar()}
+                        </div>
+                    </div>
+                </div>
+            </div>
 
             <div className="row mb-4">
                 <div className="col-md-4">
@@ -120,6 +211,9 @@ const StudentEvents = () => {
                                         </h5>
                                         <p className="card-text text-muted small mb-2">
                                             <FaCalendar /> {event.date} {event.time ? `| ${formatTime(event.time)}` : ''} <br />
+                                            {event.endDate && (
+                                                <>To: {event.endDate} {event.endTime ? `| ${formatTime(event.endTime)}` : ''} <br/></>
+                                            )}
                                             {event.department}
                                         </p>
                                         <p className="card-text small text-primary fw-bold mb-2">
@@ -151,12 +245,16 @@ const StudentEvents = () => {
                                 <img src={selectedEvent.image || 'https://via.placeholder.com/300'} className="img-fluid rounded mb-3 w-100" style={{ maxHeight: '300px', objectFit: 'cover' }} alt="Event" />
                                 <div className="row mb-2">
                                     <div className="col-md-6">
-                                        <strong><FaCalendar className="me-2" />Date:</strong>
-                                        <span>{selectedEvent.date}</span>
+                                        <strong><FaCalendar className="me-2" />Start:</strong>
+                                        <span>{selectedEvent.date} {selectedEvent.time ? `@ ${formatTime(selectedEvent.time)}` : ''}</span>
                                     </div>
                                     <div className="col-md-6">
-                                        <strong><FaClock className="me-2" />Time:</strong>
-                                        <span>{formatTime(selectedEvent.time)}</span>
+                                        {selectedEvent.endDate && (
+                                            <>
+                                            <strong><FaCalendar className="me-2" />End:</strong>
+                                            <span>{selectedEvent.endDate} {selectedEvent.endTime ? `@ ${formatTime(selectedEvent.endTime)}` : ''}</span>
+                                            </>
+                                        )}
                                     </div>
                                 </div>
                                 <p>
