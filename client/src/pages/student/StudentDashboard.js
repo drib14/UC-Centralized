@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import API from '../../utils/api';
-import { FaBullhorn, FaCalendar, FaShirt } from 'react-icons/fa6';
+import { FaBullhorn, FaCalendar, FaTshirt } from 'react-icons/fa';
 import { Link } from 'react-router-dom';
 import { toast } from 'react-toastify';
 
@@ -164,7 +164,7 @@ const StudentDashboard = () => {
                     </div>
 
                     {/* Latest Merch Section */}
-                    <h4 className="mb-3 text-success"><FaShirt className="me-2" />Fresh Merch (This Week)</h4>
+                    <h4 className="mb-3 text-success"><FaTshirt className="me-2" />Fresh Merch (This Week)</h4>
                     <div className="row mb-5">
                         {merch.length === 0 ? <p className="text-muted ms-3">No new merch this week.</p> : (
                             merch.map(item => (

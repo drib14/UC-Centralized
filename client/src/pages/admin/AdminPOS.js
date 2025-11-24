@@ -1,8 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import API from '../../utils/api';
 import { toast } from 'react-toastify';
-import { FaBasketShopping, FaCashRegister, FaSearch } from 'react-icons/fa';
-import { FaUser } from 'react-icons/fa6';
+import { FaShoppingBasket, FaCashRegister, FaSearch, FaUser } from 'react-icons/fa';
 
 const AdminPOS = () => {
     const [merch, setMerch] = useState([]);
@@ -245,7 +244,7 @@ const AdminPOS = () => {
                             <div className="flex-grow-1 overflow-auto mb-3" style={{maxHeight: '300px'}}>
                                 {cart.length === 0 ? (
                                     <div className="text-center text-muted mt-5">
-                                        <FaBasketShopping className="fa-3x mb-3" />
+                                        <FaShoppingBasket className="fa-3x mb-3" />
                                         <p>Cart is empty</p>
                                     </div>
                                 ) : (

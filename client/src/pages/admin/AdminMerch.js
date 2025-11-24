@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import API from '../../utils/api';
 import { toast } from 'react-toastify';
-import { FaPlus, FaPen, FaTrash } from 'react-icons/fa6';
+import { FaPlus, FaPen, FaTrash } from 'react-icons/fa';
 
 const AdminMerch = () => {
     const [merch, setMerch] = useState([]);
