@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useSearchParams, useNavigate, Link } from 'react-router-dom';
 import API from '../../utils/api';
 import { useCart } from '../../context/CartContext';
-import { FaCheckCircle, FaTimesCircle, FaSpinner } from 'react-icons/fa6';
+import { FaCircleCheck, FaCircleXmark, FaSpinner } from 'react-icons/fa6';
 
 const PaymentSuccess = () => {
     const [searchParams] = useSearchParams();
@@ -93,7 +93,7 @@ const PaymentSuccess = () => {
                 )}
                 {status === 'success' && (
                     <>
-                        <FaCheckCircle className="fa-4x text-success mb-4" />
+                        <FaCircleCheck className="fa-4x text-success mb-4" />
                         <h2 className="text-success">Payment Successful!</h2>
                         <p className="lead">Your order has been placed successfully.</p>
                         <Link to="/student/dashboard" className="btn btn-primary mt-3 me-2">Go to Dashboard</Link>
@@ -102,7 +102,7 @@ const PaymentSuccess = () => {
                 )}
                 {status === 'error' && (
                     <>
-                        <FaTimesCircle className="fa-4x text-danger mb-4" />
+                        <FaCircleXmark className="fa-4x text-danger mb-4" />
                         <h2 className="text-danger">Payment Failed</h2>
                         <p className="text-muted">{message}</p>
                         <Link to="/student/cart" className="btn btn-warning mt-3">Return to Cart</Link>
