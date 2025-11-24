@@ -34,9 +34,6 @@ const StudentCart = () => {
         const currentSize = type === 'size' ? value : item.variant.size;
         const currentColor = type === 'color' ? value : item.variant.color;
 
-        // If changing size, and current color is not valid for new size, reset color (or select first available)
-        // But we need to find the exact variant object.
-
         let newVariant;
         if (type === 'size') {
             // Find variants with new size
@@ -82,27 +79,42 @@ const StudentCart = () => {
                                     <img src={item.image || 'https://via.placeholder.com/80'} className="rounded me-3" style={{ width: '80px', height: '80px', objectFit: 'cover' }} alt={item.name} />
                                     <div className="flex-grow-1">
                                         <h6 className="mb-1">{item.name}</h6>
-                                        {/* Display Variant Dropdowns if variants exist */}
+
+                                        {/* Variant Selection (Clickable Boxes) */}
                                         {item.variants && item.variants.length > 0 && item.variant ? (
-                                            <div className="d-flex gap-2 mb-2">
-                                                <select className="form-select form-select-sm" style={{width: 'auto'}}
-                                                        value={item.variant.size}
-                                                        onChange={(e) => handleVariantChange(item, 'size', e.target.value)}>
+                                            <div className="mb-2">
+                                                {/* Sizes */}
+                                                <div className="d-flex flex-wrap gap-1 mb-1">
                                                     {[...new Set(item.variants.map(v => v.size))].map(s => (
-                                                        <option key={s} value={s}>{s}</option>
+                                                        <button
+                                                            key={s}
+                                                            className={`btn btn-sm ${item.variant.size === s ? 'btn-dark' : 'btn-outline-secondary'}`}
+                                                            style={{minWidth: '30px', padding: '0.1rem 0.4rem', fontSize: '0.75rem'}}
+                                                            onClick={() => handleVariantChange(item, 'size', s)}
+                                                        >
+                                                            {s}
+                                                        </button>
                                                     ))}
-                                                </select>
-                                                <select className="form-select form-select-sm" style={{width: 'auto'}}
-                                                        value={item.variant.color}
-                                                        onChange={(e) => handleVariantChange(item, 'color', e.target.value)}>
+                                                </div>
+
+                                                {/* Colors */}
+                                                <div className="d-flex flex-wrap gap-1">
                                                     {[...new Set(item.variants.filter(v => v.size === item.variant.size).map(v => v.color))].map(c => (
-                                                        <option key={c} value={c}>{c}</option>
+                                                        <button
+                                                            key={c}
+                                                            className={`btn btn-sm ${item.variant.color === c ? 'btn-success' : 'btn-outline-secondary'}`}
+                                                            style={{padding: '0.1rem 0.4rem', fontSize: '0.75rem'}}
+                                                            onClick={() => handleVariantChange(item, 'color', c)}
+                                                        >
+                                                            {c}
+                                                        </button>
                                                     ))}
-                                                </select>
+                                                </div>
                                             </div>
                                         ) : (
                                             <small className="text-muted d-block mb-1">{item.category}</small>
                                         )}
+
                                         <div className="text-muted small">Unit Price: ₱{item.price}</div>
                                     </div>
                                     <div className="text-end me-4 d-flex align-items-center">
