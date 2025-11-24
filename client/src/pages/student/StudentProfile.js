@@ -2,14 +2,14 @@ import React, { useState, useEffect, useCallback } from 'react';
 import API from '../../utils/api';
 import { useAuth } from '../../context/AuthContext';
 import { toast } from 'react-toastify';
-import { FaUser, FaPen, FaCartShopping } from 'react-icons/fa6';
+import { FaUser, FaPen, FaCartShopping } from 'react-icons/fa';
 
 const StudentProfile = () => {
     const { user, syncSession } = useAuth();
     const [orders, setOrders] = useState([]);
     const [myEvents, setMyEvents] = useState([]);
     const [showEdit, setShowEdit] = useState(false);
-    const [editForm, setEditForm] = useState({ firstName: '', lastName: '', password: '' });
+    const [editForm, setEditForm] = useState({ firstName: '', lastName: '', password: '', image: null });
 
     const loadActivity = useCallback(async () => {
         try {
@@ -30,7 +30,8 @@ const StudentProfile = () => {
             setEditForm({
                 firstName: user.firstName || (user.name ? user.name.split(' ')[0] : ''),
                 lastName: user.lastName || (user.name ? user.name.split(' ').pop() : ''),
-                password: ''
+                password: '',
+                image: null
             });
             loadActivity();
         }
@@ -38,9 +39,13 @@ const StudentProfile = () => {
 
     const handleSave = async () => {
         try {
-            const updateData = { firstName: editForm.firstName, lastName: editForm.lastName };
-            if (editForm.password) updateData.password = editForm.password;
-            await API.updateProfile(updateData);
+            const formData = new FormData();
+            formData.append('firstName', editForm.firstName);
+            formData.append('lastName', editForm.lastName);
+            if (editForm.password) formData.append('password', editForm.password);
+            if (editForm.image) formData.append('image', editForm.image);
+
+            await API.updateProfile(formData);
             await syncSession();
             toast.success("Profile updated");
             setShowEdit(false);
@@ -50,12 +55,27 @@ const StudentProfile = () => {
     };
 
     const getInitials = () => {
-        const f = user.firstName ? user.firstName.charAt(0) : (user.name ? user.name.charAt(0) : 'S');
+        if (!user) return 'U';
+        const f = user.firstName ? user.firstName.charAt(0) : (user.name ? user.name.charAt(0) : '');
         const l = user.lastName ? user.lastName.charAt(0) : (user.name && user.name.includes(' ') ? user.name.split(' ').pop().charAt(0) : '');
-        return (f + l).toUpperCase();
+        return (f + l).toUpperCase() || 'U';
+    };
+
+    // Helper to get all merch images from orders
+    const getPurchasedMerch = () => {
+        const merchList = [];
+        orders.forEach(o => {
+            o.items.forEach(i => {
+                if (i.merch) merchList.push({ ...i.merch, orderDate: o.createdAt || o.orderDate });
+            });
+        });
+        // Sort by date desc
+        return merchList.sort((a,b) => new Date(b.orderDate) - new Date(a.orderDate));
     };
 
     if (!user) return null;
+
+    const boughtMerch = getPurchasedMerch();
 
     return (
         <div className="container-fluid">
@@ -86,40 +106,44 @@ const StudentProfile = () => {
                 </div>
 
                 <div className="col-lg-8">
+                    {/* Merch History */}
                     <div className="card mb-4">
-                        <div className="card-header bg-success text-white"><FaCartShopping className="me-2" />Recent Orders</div>
-                        <div className="card-body p-0">
-                            <div className="list-group list-group-flush">
-                                {orders.length === 0 ? <p className="text-center p-3 text-muted">No orders found.</p> : orders.map(o => (
-                                    <div className="list-group-item" key={o._id}>
-                                        <div className="d-flex justify-content-between align-items-center">
-                                            <div>
-                                                <h6 className="mb-1">Order #{o._id.slice(-6).toUpperCase()}</h6>
-                                                <small className="text-muted">{new Date(o.createdAt || o.orderDate).toLocaleDateString()} | {o.items.length} Items</small>
+                        <div className="card-header bg-success text-white"><FaCartShopping className="me-2" />Recently Bought Merch</div>
+                        <div className="card-body">
+                            {boughtMerch.length === 0 ? <p className="text-center text-muted">No merch purchased yet.</p> : (
+                                <div className="d-flex overflow-auto pb-2" style={{gap: '15px'}}>
+                                    {boughtMerch.map((item, idx) => (
+                                        <div key={idx} className="text-center" style={{minWidth: '100px'}}>
+                                            <div className="border rounded p-1 mb-2">
+                                                <img src={item.image || 'https://via.placeholder.com/80'}
+                                                     alt={item.name}
+                                                     style={{width:'80px', height:'80px', objectFit:'cover'}}
+                                                     className="rounded" />
                                             </div>
-                                            <div className="text-end">
-                                                <div className="fw-bold">₱{o.totalPrice.toFixed(2)}</div>
-                                                <span className={`badge ${o.status === 'pending' ? 'bg-warning text-dark' : (o.status === 'claimed' ? 'bg-success' : 'bg-danger')}`}>
-                                                    {o.status.toUpperCase()}
-                                                </span>
-                                            </div>
+                                            <small className="d-block text-truncate" style={{maxWidth: '100px'}} title={item.name}>{item.name}</small>
                                         </div>
-                                    </div>
-                                ))}
-                            </div>
+                                    ))}
+                                </div>
+                            )}
                         </div>
                     </div>
 
+                    {/* Events History */}
                     <div className="card">
                          <div className="card-header bg-primary text-white"><FaUser className="me-2" />My Events</div>
                          <div className="card-body p-0">
                              <div className="list-group list-group-flush">
                                  {myEvents.length === 0 ? <p className="text-center p-3 text-muted">No RSVP'd events.</p> : myEvents.map(e => (
                                      <div className="list-group-item" key={e._id}>
-                                         <div className="d-flex justify-content-between align-items-center">
-                                             <div>
+                                         <div className="d-flex align-items-center">
+                                             <img src={e.image || 'https://via.placeholder.com/60'}
+                                                  alt={e.title}
+                                                  className="rounded me-3"
+                                                  style={{width:'60px', height:'60px', objectFit:'cover'}} />
+                                             <div className="flex-grow-1">
                                                  <h6 className="mb-1">{e.title}</h6>
-                                                 <small className="text-muted">{e.date} | {e.location}</small>
+                                                 <small className="text-muted"><i className="fa fa-map-marker me-1"></i>{e.location}</small>
+                                                 <div className="small text-muted"><i className="fa fa-calendar me-1"></i>{e.date}</div>
                                              </div>
                                              <span className="badge bg-primary">Going</span>
                                          </div>
@@ -141,6 +165,10 @@ const StudentProfile = () => {
                                 <button className="btn-close btn-close-white" onClick={() => setShowEdit(false)}></button>
                             </div>
                             <div className="modal-body">
+                                <div className="text-center mb-3">
+                                    <label className="d-block mb-2 fw-bold">Profile Picture</label>
+                                    <input type="file" className="form-control" onChange={e => setEditForm({...editForm, image: e.target.files[0]})} />
+                                </div>
                                 <div className="row mb-3">
                                     <div className="col"><label>First Name</label><input className="form-control" value={editForm.firstName} onChange={e => setEditForm({...editForm, firstName: e.target.value})} /></div>
                                     <div className="col"><label>Last Name</label><input className="form-control" value={editForm.lastName} onChange={e => setEditForm({...editForm, lastName: e.target.value})} /></div>

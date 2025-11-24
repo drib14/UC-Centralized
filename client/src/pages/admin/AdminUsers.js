@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import API from '../../utils/api';
 import { toast } from 'react-toastify';
-import { FaPen, FaTrash } from 'react-icons/fa6';
+import { FaPen, FaTrash } from 'react-icons/fa';
 
 const AdminUsers = () => {
     const [users, setUsers] = useState([]);
@@ -56,7 +56,9 @@ const AdminUsers = () => {
                                          <td className="text-center">
                                              {u.profileImage ?
                                                  <img src={u.profileImage} alt="User" className="rounded-circle" style={{width:'40px', height:'40px', objectFit:'cover'}} />
-                                                 : <div className="rounded-circle bg-secondary text-white d-flex justify-content-center align-items-center mx-auto" style={{width:'40px', height:'40px'}}>{u.firstName ? u.firstName[0] : 'U'}</div>
+                                                 : <div className="rounded-circle bg-secondary text-white d-flex justify-content-center align-items-center mx-auto" style={{width:'40px', height:'40px'}}>
+                                                    {((u.firstName ? u.firstName[0] : '') + (u.lastName ? u.lastName[0] : '')).toUpperCase() || 'U'}
+                                                   </div>
                                              }
                                          </td>
                                          <td>{u.studentId}</td>

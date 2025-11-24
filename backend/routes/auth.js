@@ -3,6 +3,7 @@ const User = require('../models/User');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const { verifyToken } = require('../middleware/auth');
+const parser = require('../config/cloudinary');
 
 // REGISTER
 router.post('/register', async (req, res) => {
@@ -71,16 +72,24 @@ router.get('/me', verifyToken, async (req, res) => {
 });
 
 // UPDATE PROFILE
-router.put('/profile', verifyToken, async (req, res) => {
+router.put('/profile', verifyToken, parser.single('image'), async (req, res) => {
     try {
-        if (req.body.password) {
+        const updateData = { ...req.body };
+
+        if (updateData.password) {
             const salt = await bcrypt.genSalt(10);
-            req.body.password = await bcrypt.hash(req.body.password, salt);
+            updateData.password = await bcrypt.hash(updateData.password, salt);
+        } else {
+            delete updateData.password;
+        }
+
+        if (req.file) {
+            updateData.profileImage = req.file.path;
         }
 
         const updatedUser = await User.findByIdAndUpdate(
             req.user.id,
-            { $set: req.body },
+            { $set: updateData },
             { new: true }
         );
         const { password, ...others } = updatedUser._doc;
