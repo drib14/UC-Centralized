@@ -236,6 +236,9 @@ const StudentDashboard = () => {
                     <h4 className="mb-3 text-warning"><FaCalendar className="me-2" />Happening Today</h4>
                     {latestEvent ? (
                         <div className="card border-warning mb-4 shadow-sm">
+                            {latestEvent.image && (
+                                <img src={latestEvent.image} className="card-img-top" alt={latestEvent.title} style={{ height: '180px', objectFit: 'cover' }} />
+                            )}
                             <div className="card-body">
                                 <h5 className="card-title fw-bold">{latestEvent.title}</h5>
                                 <p className="card-text text-muted mb-1"><i className="fa-regular fa-clock me-1"></i>{latestEvent.time || 'All Day'}</p>
@@ -252,10 +255,18 @@ const StudentDashboard = () => {
                     <div className="mb-4">
                         {upcomingEvents.length === 0 ? <p className="text-muted">No upcoming events.</p> : (
                             upcomingEvents.map((ev, i) => (
-                                <div className="card mb-2 border-start border-4 border-primary" key={i}>
-                                    <div className="card-body py-2">
-                                        <h6 className="fw-bold mb-1">{ev.title}</h6>
-                                        <small className="text-muted">{ev.date} @ {ev.location}</small>
+                                <div className="card mb-3 border-0 shadow-sm" key={i}>
+                                    <div className="row g-0">
+                                        <div className="col-4">
+                                            <img src={ev.image || 'https://via.placeholder.com/100'} className="img-fluid rounded-start h-100" style={{objectFit:'cover', minHeight:'80px'}} alt={ev.title} />
+                                        </div>
+                                        <div className="col-8">
+                                            <div className="card-body py-2 px-3">
+                                                <h6 className="fw-bold mb-1 small">{ev.title}</h6>
+                                                <small className="text-muted d-block" style={{fontSize:'0.75rem'}}>{ev.date}</small>
+                                                <small className="text-muted" style={{fontSize:'0.75rem'}}>{ev.location}</small>
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
                             ))
@@ -267,10 +278,17 @@ const StudentDashboard = () => {
                     <div>
                         {recentEvents.length === 0 ? <p className="text-muted">No recent events.</p> : (
                             recentEvents.map((ev, i) => (
-                                <div className="card mb-2 bg-light" key={i}>
-                                    <div className="card-body py-2">
-                                        <h6 className="fw-bold mb-1 text-muted">{ev.title}</h6>
-                                        <small className="text-muted">Ended on {ev.date}</small>
+                                <div className="card mb-3 border-0 bg-light" key={i}>
+                                    <div className="row g-0">
+                                        <div className="col-4">
+                                            <img src={ev.image || 'https://via.placeholder.com/100'} className="img-fluid rounded-start h-100" style={{objectFit:'cover', minHeight:'80px', filter: 'grayscale(100%)'}} alt={ev.title} />
+                                        </div>
+                                        <div className="col-8">
+                                            <div className="card-body py-2 px-3">
+                                                <h6 className="fw-bold mb-1 small text-muted">{ev.title}</h6>
+                                                <small className="text-muted d-block" style={{fontSize:'0.75rem'}}>Ended: {ev.date}</small>
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
                             ))
