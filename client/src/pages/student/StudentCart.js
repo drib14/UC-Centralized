@@ -5,7 +5,7 @@ import { toast } from 'react-toastify';
 import { FaShoppingCart, FaTrash } from 'react-icons/fa';
 
 const StudentCart = () => {
-    const { cart, updateQuantity, removeItem, clearCart, getTotal } = useCart();
+    const { cart, updateQuantity, removeItem, updateItemVariant, clearCart, getTotal } = useCart();
     const [showConfirm, setShowConfirm] = useState(false);
 
     const handleCheckout = async () => {
@@ -27,6 +27,33 @@ const StudentCart = () => {
             toast.success("Order placed successfully!");
         } catch (error) {
             toast.error(error.message || "Order failed");
+        }
+    };
+
+    const handleVariantChange = (item, type, value) => {
+        const currentSize = type === 'size' ? value : item.variant.size;
+        const currentColor = type === 'color' ? value : item.variant.color;
+
+        // If changing size, and current color is not valid for new size, reset color (or select first available)
+        // But we need to find the exact variant object.
+
+        let newVariant;
+        if (type === 'size') {
+            // Find variants with new size
+            const sizeVariants = item.variants.filter(v => v.size === value);
+            // Try to keep color if exists
+            newVariant = sizeVariants.find(v => v.color === currentColor);
+            // If not found, default to first color of new size
+            if (!newVariant && sizeVariants.length > 0) newVariant = sizeVariants[0];
+        } else {
+            // Change color (size stays same)
+            newVariant = item.variants.find(v => v.size === currentSize && v.color === value);
+        }
+
+        if (newVariant) {
+            if (newVariant.stock <= 0) return toast.error("Selected variant is out of stock");
+            const success = updateItemVariant(item.cartId, item, newVariant);
+            if (!success) toast.error("Could not update variant (Stock or limit issue)");
         }
     };
 
@@ -54,16 +81,29 @@ const StudentCart = () => {
                                 <div className="d-flex align-items-center mb-3 pb-3 border-bottom" key={item.cartId}>
                                     <img src={item.image || 'https://via.placeholder.com/80'} className="rounded me-3" style={{ width: '80px', height: '80px', objectFit: 'cover' }} alt={item.name} />
                                     <div className="flex-grow-1">
-                                        <h6 className="mb-0">{item.name}</h6>
-                                        {/* Display Variant Info */}
-                                        {item.variant ? (
-                                            <small className="text-muted d-block">
-                                                Size: {item.variant.size} | Color: {item.variant.color}
-                                            </small>
+                                        <h6 className="mb-1">{item.name}</h6>
+                                        {/* Display Variant Dropdowns if variants exist */}
+                                        {item.variants && item.variants.length > 0 && item.variant ? (
+                                            <div className="d-flex gap-2 mb-2">
+                                                <select className="form-select form-select-sm" style={{width: 'auto'}}
+                                                        value={item.variant.size}
+                                                        onChange={(e) => handleVariantChange(item, 'size', e.target.value)}>
+                                                    {[...new Set(item.variants.map(v => v.size))].map(s => (
+                                                        <option key={s} value={s}>{s}</option>
+                                                    ))}
+                                                </select>
+                                                <select className="form-select form-select-sm" style={{width: 'auto'}}
+                                                        value={item.variant.color}
+                                                        onChange={(e) => handleVariantChange(item, 'color', e.target.value)}>
+                                                    {[...new Set(item.variants.filter(v => v.size === item.variant.size).map(v => v.color))].map(c => (
+                                                        <option key={c} value={c}>{c}</option>
+                                                    ))}
+                                                </select>
+                                            </div>
                                         ) : (
-                                            <small className="text-muted">{item.category}</small>
+                                            <small className="text-muted d-block mb-1">{item.category}</small>
                                         )}
-                                        <small className="text-muted">₱{item.price}</small>
+                                        <div className="text-muted small">Unit Price: ₱{item.price}</div>
                                     </div>
                                     <div className="text-end me-4 d-flex align-items-center">
                                         <div className="fw-bold me-3">₱{(item.price * item.quantity).toFixed(2)}</div>

@@ -34,7 +34,6 @@ export const CartProvider = ({ children }) => {
             // Check stock limit before adding
             const limit = variant ? variant.stock : product.stock;
             if (existing.quantity + 1 > limit) {
-                // Return false or throw error if we want to notify UI, for now just don't add
                 return false;
             }
             newCart = cart.map(i => i.cartId === cartId ? { ...i, quantity: i.quantity + 1 } : i);
@@ -64,13 +63,49 @@ export const CartProvider = ({ children }) => {
                 if (i.cartId === cartId) {
                     // Stock validation
                     const limit = i.variant ? i.variant.stock : i.stock;
-                    if (quantity > limit) return i; // Do nothing if exceeds stock
+                    if (quantity > limit) return i;
                     return { ...i, quantity: parseInt(quantity) };
                 }
                 return i;
             });
         }
         saveCart(newCart);
+    };
+
+    // Helper to change variant of an item in cart
+    const updateItemVariant = (oldCartId, product, newVariant) => {
+        // Find current item
+        const currentItem = cart.find(i => i.cartId === oldCartId);
+        if (!currentItem) return false;
+
+        const qty = currentItem.quantity;
+        const newCartId = getCartId(product, newVariant);
+
+        // Check if target variant already exists
+        const existingTarget = cart.find(i => i.cartId === newCartId && i.cartId !== oldCartId);
+
+        const limit = newVariant.stock;
+        const totalNewQty = existingTarget ? existingTarget.quantity + qty : qty;
+
+        if (totalNewQty > limit) return false; // Exceeds stock
+
+        let newCart;
+        if (existingTarget) {
+            // Merge: Remove old, update existing
+            newCart = cart
+                .filter(i => i.cartId !== oldCartId) // Remove old
+                .map(i => i.cartId === newCartId ? { ...i, quantity: totalNewQty } : i); // Update target
+        } else {
+            // Replace: Update cartId and variant of the current item
+            newCart = cart.map(i => {
+                if (i.cartId === oldCartId) {
+                    return { ...i, cartId: newCartId, variant: newVariant };
+                }
+                return i;
+            });
+        }
+        saveCart(newCart);
+        return true;
     };
 
     const clearCart = () => {
@@ -90,6 +125,7 @@ export const CartProvider = ({ children }) => {
         addItem,
         removeItem,
         updateQuantity,
+        updateItemVariant,
         clearCart,
         getCount,
         getTotal
