@@ -15,6 +15,7 @@ import StudentDashboard from './pages/student/StudentDashboard';
 import StudentEvents from './pages/student/StudentEvents';
 import StudentMerch from './pages/student/StudentMerch';
 import StudentCart from './pages/student/StudentCart';
+import PaymentSuccess from './pages/student/PaymentSuccess';
 import StudentMessages from './pages/student/StudentMessages';
 import StudentProfile from './pages/student/StudentProfile';
 

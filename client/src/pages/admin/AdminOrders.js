@@ -79,6 +79,20 @@ const AdminOrders = () => {
                                     <div className="col-md-6"><p><strong>Order ID:</strong> {selectedOrder._id}</p></div>
                                     <div className="col-md-6"><p><strong>Date:</strong> {new Date(selectedOrder.createdAt || selectedOrder.orderDate).toLocaleString()}</p></div>
                                 </div>
+                                <div className="row mb-3 border p-2 rounded bg-light">
+                                    <div className="col-md-6">
+                                        <p className="mb-1"><strong>Payment Method:</strong> {selectedOrder.paymentMethod || 'cash'}</p>
+                                    </div>
+                                    <div className="col-md-6">
+                                        <p className="mb-1">
+                                            <strong>Payment Status:</strong>
+                                            <span className={`badge ms-2 ${selectedOrder.paymentStatus === 'paid' ? 'bg-success' : 'bg-warning text-dark'}`}>
+                                                {(selectedOrder.paymentStatus || 'unpaid').toUpperCase()}
+                                            </span>
+                                        </p>
+                                    </div>
+                                    {selectedOrder.paymentId && <div className="col-12"><small className="text-muted">Ref: {selectedOrder.paymentId}</small></div>}
+                                </div>
                                 <h6>Items:</h6>
                                 <ul className="list-group mb-3">
                                     {selectedOrder.items.map((i, idx) => (

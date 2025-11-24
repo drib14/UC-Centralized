@@ -9,6 +9,7 @@ const merchRoute = require('./routes/merch');
 const orderRoute = require('./routes/orders');
 const announcementRoute = require('./routes/announcements');
 const statsRoute = require('./routes/stats');
+const paymentRoute = require('./routes/payments');
 
 dotenv.config();
 
@@ -81,6 +82,7 @@ app.use('/merch', merchRoute);
 app.use('/orders', orderRoute);
 app.use('/announcements', announcementRoute);
 app.use('/stats', statsRoute);
+app.use('/payments', paymentRoute);
 
 app.get('/', (req, res) => {
     res.send('UC-Central Backend is running');

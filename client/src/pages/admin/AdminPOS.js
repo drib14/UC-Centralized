@@ -1,21 +1,56 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import API from '../../utils/api';
 import { toast } from 'react-toastify';
-import { FaBasketShopping, FaCashRegister } from 'react-icons/fa6';
+import { FaBasketShopping, FaCashRegister, FaUser } from 'react-icons/fa6';
+import { FaSearch } from 'react-icons/fa';
 
 const AdminPOS = () => {
     const [merch, setMerch] = useState([]);
     const [cart, setCart] = useState([]);
     const [loading, setLoading] = useState(true);
-    const [customerName, setCustomerName] = useState('');
+    const [users, setUsers] = useState([]);
+    const [filteredUsers, setFilteredUsers] = useState([]);
+    const [selectedUser, setSelectedUser] = useState(null);
+    const [userSearch, setUserSearch] = useState('');
+    const [showUserDropdown, setShowUserDropdown] = useState(false);
+    const searchRef = useRef(null);
 
     useEffect(() => { loadData(); }, []);
 
+    useEffect(() => {
+        // Filter users
+        if (!userSearch) {
+            setFilteredUsers([]);
+            return;
+        }
+        const term = userSearch.toLowerCase();
+        const results = users.filter(u =>
+            (u.firstName + ' ' + u.lastName).toLowerCase().includes(term) ||
+            u.studentId.includes(term)
+        ).slice(0, 5); // Limit to 5 results
+        setFilteredUsers(results);
+    }, [userSearch, users]);
+
+    // Click outside to close dropdown
+    useEffect(() => {
+        function handleClickOutside(event) {
+            if (searchRef.current && !searchRef.current.contains(event.target)) {
+                setShowUserDropdown(false);
+            }
+        }
+        document.addEventListener("mousedown", handleClickOutside);
+        return () => document.removeEventListener("mousedown", handleClickOutside);
+    }, [searchRef]);
+
     const loadData = async () => {
         try {
-            const data = await API.getMerch();
-            setMerch(data);
-        } catch (e) { toast.error("Failed to load products"); }
+            const [merchData, usersData] = await Promise.all([
+                API.getMerch(),
+                API.getUsers()
+            ]);
+            setMerch(merchData);
+            setUsers(usersData);
+        } catch (e) { toast.error("Failed to load data"); }
         finally { setLoading(false); }
     };
 
@@ -46,21 +81,38 @@ const AdminPOS = () => {
 
     const handleCheckout = async () => {
         if (cart.length === 0) return toast.error("Cart is empty");
+        if (!selectedUser) {
+             if (!window.confirm("No student selected. Process as Walk-in?")) return;
+        }
 
         const orderData = {
             items: cart.map(i => ({ merch: i._id, quantity: i.quantity })),
             totalPrice: getTotal(),
-            customerName: customerName || "Walk-in Customer",
-            status: 'claimed'
+            status: 'claimed',
+            paymentMethod: 'cash',
+            paymentStatus: 'paid'
         };
+
+        if (selectedUser) {
+            orderData.userId = selectedUser._id;
+        } else {
+            orderData.customerName = "Walk-in Customer";
+        }
 
         try {
             await API.createOrder(orderData);
             toast.success("Transaction completed!");
             setCart([]);
-            setCustomerName('');
+            setSelectedUser(null);
+            setUserSearch('');
             loadData(); // Refresh stock
         } catch(e) { toast.error("Transaction failed: " + e.message); }
+    };
+
+    const selectUser = (user) => {
+        setSelectedUser(user);
+        setUserSearch('');
+        setShowUserDropdown(false);
     };
 
     if (loading) return <div className="text-center mt-5"><div className="spinner-border text-primary"></div></div>;
@@ -95,7 +147,59 @@ const AdminPOS = () => {
                             <span className="badge bg-primary">{cart.reduce((s,i)=>s+i.quantity,0)} Items</span>
                         </div>
                         <div className="card-body d-flex flex-column">
-                            <div className="flex-grow-1 overflow-auto mb-3" style={{maxHeight: '400px'}}>
+
+                            {/* Student Selection */}
+                            <div className="mb-3 position-relative" ref={searchRef}>
+                                <label className="form-label small fw-bold">Select Student</label>
+                                {selectedUser ? (
+                                    <div className="border rounded p-2 d-flex align-items-center bg-light">
+                                        <img
+                                            src={selectedUser.profileImage || `https://ui-avatars.com/api/?name=${selectedUser.firstName}+${selectedUser.lastName}&background=random`}
+                                            className="rounded-circle me-3"
+                                            width="40" height="40"
+                                            alt="Profile"
+                                        />
+                                        <div className="flex-grow-1 overflow-hidden">
+                                            <div className="fw-bold small text-truncate">{selectedUser.firstName} {selectedUser.lastName}</div>
+                                            <div className="small text-muted text-truncate">{selectedUser.studentId} | {selectedUser.year} - {selectedUser.program || selectedUser.department}</div>
+                                        </div>
+                                        <button className="btn btn-sm btn-close ms-2" onClick={() => setSelectedUser(null)}></button>
+                                    </div>
+                                ) : (
+                                    <>
+                                        <div className="input-group">
+                                            <span className="input-group-text bg-white border-end-0"><FaSearch className="text-muted" /></span>
+                                            <input
+                                                type="text"
+                                                className="form-control border-start-0"
+                                                placeholder="Search Name or ID..."
+                                                value={userSearch}
+                                                onChange={e => { setUserSearch(e.target.value); setShowUserDropdown(true); }}
+                                                onFocus={() => setShowUserDropdown(true)}
+                                            />
+                                        </div>
+                                        {showUserDropdown && userSearch && (
+                                            <div className="list-group position-absolute w-100 shadow" style={{zIndex: 1000, maxHeight: '200px', overflowY: 'auto'}}>
+                                                {filteredUsers.length > 0 ? filteredUsers.map(u => (
+                                                    <button key={u._id} className="list-group-item list-group-item-action" onClick={() => selectUser(u)}>
+                                                        <div className="d-flex w-100 justify-content-between">
+                                                            <h6 className="mb-1 small fw-bold">{u.firstName} {u.lastName}</h6>
+                                                            <small>{u.studentId}</small>
+                                                        </div>
+                                                        <small className="text-muted">{u.program || u.department}</small>
+                                                    </button>
+                                                )) : (
+                                                    <div className="list-group-item text-muted small">No students found</div>
+                                                )}
+                                            </div>
+                                        )}
+                                    </>
+                                )}
+                            </div>
+
+                            <hr className="my-2"/>
+
+                            <div className="flex-grow-1 overflow-auto mb-3" style={{maxHeight: '300px'}}>
                                 {cart.length === 0 ? (
                                     <div className="text-center text-muted mt-5">
                                         <FaBasketShopping className="fa-3x mb-3" />
@@ -120,10 +224,6 @@ const AdminPOS = () => {
                             </div>
 
                             <div className="mt-auto">
-                                <div className="mb-3">
-                                    <label className="form-label small">Customer Name</label>
-                                    <input type="text" className="form-control" placeholder="Walk-in Customer" value={customerName} onChange={e => setCustomerName(e.target.value)} />
-                                </div>
                                 <div className="d-flex justify-content-between align-items-center mb-3 fw-bold fs-4">
                                     <span>Total</span>
                                     <span>₱{getTotal().toFixed(2)}</span>

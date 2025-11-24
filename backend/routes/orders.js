@@ -23,14 +23,27 @@ router.post('/', verifyToken, async (req, res) => {
         const orderData = {
             items: req.body.items,
             totalPrice: req.body.totalPrice,
-            status: req.body.status || 'pending'
+            status: req.body.status || 'pending',
+            paymentMethod: req.body.paymentMethod || 'cash',
+            paymentStatus: req.body.paymentStatus || 'unpaid',
+            paymentId: req.body.paymentId
         };
 
-        if (req.body.customerName) {
+        if (req.body.userId && req.user.role === 'admin') {
+             orderData.user = req.body.userId;
+        } else if (req.body.customerName) {
             orderData.customerName = req.body.customerName;
             orderData.user = null;
         } else {
             orderData.user = req.user.id;
+        }
+
+        // Prevent duplicate payment records
+        if (orderData.paymentId) {
+             const existingOrder = await Order.findOne({ paymentId: orderData.paymentId });
+             if (existingOrder) {
+                 return res.status(200).json(existingOrder); // Return existing instead of creating new
+             }
         }
 
         const newOrder = new Order(orderData);

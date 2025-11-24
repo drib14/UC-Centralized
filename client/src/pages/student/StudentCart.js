@@ -4,28 +4,40 @@ import { useCart } from '../../context/CartContext';
 import { toast } from 'react-toastify';
 import { FaCartShopping, FaTrash } from 'react-icons/fa6';
 
+// Icons/Assets (Using placeholders or text for now if not available)
+// Ideally, import { SiGcash, SiPaymaya, SiGrab } from 'react-icons/si'; if available in react-icons
+// Checking if they exist in standard react-icons, SiGcash might not.
+// I will use text buttons with generic icons or just colored buttons for now to be safe.
+
 const StudentCart = () => {
     const { cart, updateQuantity, removeItem, clearCart, getTotal } = useCart();
     const [showConfirm, setShowConfirm] = useState(false);
+    const [loading, setLoading] = useState(false);
 
-    const handleCheckout = async () => {
+    const handlePayment = async (methodType) => {
+        setLoading(true);
         const orderItems = cart.map(i => ({
             merch: i._id,
             quantity: i.quantity
         }));
 
-        const orderData = {
-            items: orderItems,
-            totalPrice: getTotal()
-        };
-
         try {
-            await API.createOrder(orderData);
-            clearCart();
-            setShowConfirm(false);
-            toast.success("Order placed successfully!");
+            const sessionData = {
+                items: orderItems,
+                payment_method_types: [methodType]
+            };
+            const response = await API.createCheckoutSession(sessionData);
+
+            // Redirect to PayMongo Checkout
+            if (response.attributes && response.attributes.checkout_url) {
+                window.location.href = response.attributes.checkout_url;
+            } else {
+                toast.error("Failed to initialize payment gateway.");
+                setLoading(false);
+            }
         } catch (error) {
-            toast.error(error.message || "Order failed");
+            toast.error(error.message || "Payment initiation failed");
+            setLoading(false);
         }
     };
 
@@ -89,32 +101,55 @@ const StudentCart = () => {
                                 <span>Total</span>
                                 <span>₱{getTotal().toFixed(2)}</span>
                             </div>
-                            <button className="btn btn-success w-100 mt-4" onClick={() => setShowConfirm(true)}>Proceed to Checkout</button>
+                            <button className="btn btn-success w-100 mt-4" onClick={() => setShowConfirm(true)}>Proceed to Payment</button>
                         </div>
                     </div>
                 </div>
             </div>
 
-            {/* Confirm Modal */}
+            {/* Payment Method Selection Modal */}
             {showConfirm && (
                 <div className="modal fade show d-block" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>
                     <div className="modal-dialog">
                         <div className="modal-content">
                             <div className="modal-header bg-success text-white">
-                                <h5 className="modal-title">Confirm Order</h5>
+                                <h5 className="modal-title">Select Payment Method</h5>
                                 <button className="btn-close btn-close-white" onClick={() => setShowConfirm(false)}></button>
                             </div>
                             <div className="modal-body">
-                                <p>Are you sure you want to place this order?</p>
-                                <div className="d-flex justify-content-between fw-bold fs-5 border-top pt-2">
-                                    <span>Total:</span>
+                                <p className="mb-3">Choose how you want to pay:</p>
+                                {loading ? (
+                                    <div className="text-center py-3">
+                                        <div className="spinner-border text-primary" role="status"></div>
+                                        <p className="mt-2">Redirecting to secure checkout...</p>
+                                    </div>
+                                ) : (
+                                    <div className="d-grid gap-2">
+                                        <button className="btn btn-primary btn-lg d-flex justify-content-between align-items-center" onClick={() => handlePayment('gcash')}>
+                                            <span>GCash</span>
+                                            {/* Using generic text or colored badges for now as specific SVG logos might need imports */}
+                                            <span className="badge bg-light text-primary">E-Wallet</span>
+                                        </button>
+                                        <button className="btn btn-success btn-lg d-flex justify-content-between align-items-center" onClick={() => handlePayment('grab_pay')}>
+                                            <span>GrabPay</span>
+                                            <span className="badge bg-light text-success">E-Wallet</span>
+                                        </button>
+                                        <button className="btn btn-dark btn-lg d-flex justify-content-between align-items-center" onClick={() => handlePayment('paymaya')}>
+                                            <span>Maya</span>
+                                            <span className="badge bg-light text-dark">E-Wallet</span>
+                                        </button>
+                                    </div>
+                                )}
+                                <div className="mt-3 pt-2 border-top d-flex justify-content-between fw-bold">
+                                    <span>Total to Pay:</span>
                                     <span>₱{getTotal().toFixed(2)}</span>
                                 </div>
                             </div>
-                            <div className="modal-footer">
-                                <button className="btn btn-secondary" onClick={() => setShowConfirm(false)}>Cancel</button>
-                                <button className="btn btn-success" onClick={handleCheckout}>Place Order</button>
-                            </div>
+                            {!loading && (
+                                <div className="modal-footer">
+                                    <button className="btn btn-secondary" onClick={() => setShowConfirm(false)}>Cancel</button>
+                                </div>
+                            )}
                         </div>
                     </div>
                 </div>

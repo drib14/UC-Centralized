@@ -136,6 +136,15 @@ class API {
         return this.request('/users');
     }
 
+    // Payments
+    static createCheckoutSession(data) {
+        return this.request('/payments/create-checkout-session', 'POST', data);
+    }
+
+    static retrieveCheckoutSession(sessionId) {
+        return this.request(`/payments/retrieve-session/${sessionId}`);
+    }
+
     static updateUser(id, data) {
         return this.request(`/users/${id}`, 'PUT', data);
     }
