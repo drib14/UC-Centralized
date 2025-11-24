@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import API from '../../utils/api';
 import { useAuth } from '../../context/AuthContext';
 import { toast } from 'react-toastify';
-import { FaCalendarDays, FaCalendar, FaClock, FaLocationDot } from 'react-icons/fa6';
+import { FaCalendar, FaClock, FaMapMarker, FaUsers } from 'react-icons/fa';
 
 const StudentEvents = () => {
     const { user } = useAuth();
@@ -68,7 +68,7 @@ const StudentEvents = () => {
     return (
         <div className="container-fluid">
             <h2 className="mb-4 text-success">
-                <FaCalendarDays className="me-2" />Events & Activities
+                <FaCalendar className="me-2" />Events & Activities
             </h2>
 
             <div className="row mb-4">
@@ -101,6 +101,10 @@ const StudentEvents = () => {
                                         <p className="card-text text-muted small mb-2">
                                             <FaCalendar /> {event.date} {event.time ? `| ${event.time}` : ''} <br />
                                             {event.department}
+                                        </p>
+                                        <p className="card-text small text-primary fw-bold mb-2">
+                                            <FaUsers className="me-1" />
+                                            {event.attendees ? event.attendees.length : 0} Joined
                                         </p>
                                         <p className="card-text flex-grow-1">{event.description.substring(0, 80)}...</p>
                                         <button className="btn btn-outline-success w-100 mt-auto" onClick={() => setSelectedEvent(event)}>
@@ -136,8 +140,12 @@ const StudentEvents = () => {
                                     </div>
                                 </div>
                                 <p>
-                                    <strong><FaLocationDot className="me-2" />Venue:</strong>
+                                    <strong><FaMapMarker className="me-2" />Venue:</strong>
                                     <span>{selectedEvent.location || 'TBA'}</span>
+                                </p>
+                                <p className="text-primary fw-bold">
+                                    <FaUsers className="me-2" />
+                                    Total Students Joined: {selectedEvent.attendees ? selectedEvent.attendees.length : 0}
                                 </p>
                                 <hr />
                                 <p>{selectedEvent.description}</p>

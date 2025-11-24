@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import API from '../../utils/api';
 import { toast } from 'react-toastify';
-import { FaPlus, FaPen, FaTrash } from 'react-icons/fa6';
+import { FaPlus, FaPen, FaTrash, FaUsers } from 'react-icons/fa';
 
 const AdminEvents = () => {
     const [events, setEvents] = useState([]);
@@ -115,11 +115,18 @@ const AdminEvents = () => {
                 {events.map(event => (
                     <div className="col-md-4 mb-4" key={event._id}>
                         <div className="card h-100">
+                            {event.image && (
+                                <img src={event.image} alt={event.title} className="card-img-top" style={{height: '200px', objectFit: 'cover'}} />
+                            )}
                             <div className="card-body">
                                 <h5 className="card-title">{event.title}</h5>
-                                <p className="text-muted small">{event.date} | {event.department}</p>
+                                <p className="text-muted small mb-1">{event.date} | {event.department}</p>
+                                <p className="small mb-2 text-primary fw-bold">
+                                    <FaUsers className="me-1" />
+                                    Total Joined: {event.attendees ? event.attendees.length : 0}
+                                </p>
                                 <p className="small">{event.description.substring(0, 100)}...</p>
-                                <div className="d-flex justify-content-end gap-2">
+                                <div className="d-flex justify-content-end gap-2 mt-auto">
                                     <button className="btn btn-sm btn-outline-primary w-50" onClick={() => openEdit(event)}>
                                         <FaPen className="me-1" /> Edit
                                     </button>
