@@ -1,10 +1,12 @@
 import React, { useEffect, useState } from 'react';
 import API from '../../utils/api';
+import { useCart } from '../../context/CartContext';
 import { FaBullhorn, FaCalendar, FaTshirt } from 'react-icons/fa';
 import { Link } from 'react-router-dom';
 import { toast } from 'react-toastify';
 
 const StudentDashboard = () => {
+    const { addItem } = useCart();
     const [announcements, setAnnouncements] = useState([]);
     // Event Categories
     const [latestEvent, setLatestEvent] = useState(null); // Today
@@ -43,7 +45,7 @@ const StudentDashboard = () => {
                         const eventDateStr = event.date; // Assuming YYYY-MM-DD
                         if (!eventDateStr) return;
 
-                        // Compare dates (simple string comparison works for YYYY-MM-DD)
+                        // Compare dates
                         if (eventDateStr === todayStr) {
                             todayEvents.push(event);
                         } else if (eventDateStr > todayStr) {
@@ -53,7 +55,7 @@ const StudentDashboard = () => {
                         }
                     });
 
-                    // "Latest Event" is specifically Today's event (taking the first one if multiple)
+                    // "Latest Event" is specifically Today's event
                     setLatestEvent(todayEvents.length > 0 ? todayEvents[0] : null);
                     setUpcomingEvents(upcoming.sort((a,b) => a.date.localeCompare(b.date))); // Ascending
                     setRecentEvents(past.sort((a,b) => b.date.localeCompare(a.date)).slice(0, 5)); // Descending, top 5
@@ -66,8 +68,10 @@ const StudentDashboard = () => {
                     oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
 
                     const newMerch = allMerch.filter(m => {
-                        const created = new Date(m.createdAt || m.updatedAt); // Use updatedAt to capture restocks/updates too? Prompt said "latest", usually implies creation.
-                        return created >= oneWeekAgo;
+                        // Use updatedAt to capture restocks/updates too, as requested
+                        const created = new Date(m.createdAt);
+                        const updated = new Date(m.updatedAt);
+                        return created >= oneWeekAgo || updated >= oneWeekAgo;
                     });
 
                     setMerch(newMerch.slice(0, 4)); // Top 4
@@ -84,14 +88,15 @@ const StudentDashboard = () => {
     }, []);
 
     const handleSelectionChange = (itemId, field, value) => {
-        setSelections(prev => ({
-            ...prev,
-            [itemId]: { ...prev[itemId], [field]: value }
-        }));
+        setSelections(prev => {
+            // If changing size, reset color to ensure valid combo
+            const newItemState = { ...prev[itemId], [field]: value };
+            if (field === 'size') newItemState.color = '';
+            return { ...prev, [itemId]: newItemState };
+        });
     };
 
     const addToCart = (item) => {
-        // Validation logic for wearables
         if (item.category === 'wearable' && item.variants && item.variants.length > 0) {
             const sel = selections[item._id] || {};
             if (!sel.size || !sel.color) return toast.error("Please select size and color");
@@ -99,16 +104,14 @@ const StudentDashboard = () => {
             const variant = item.variants.find(v => v.size === sel.size && v.color === sel.color);
             if (!variant || variant.stock <= 0) return toast.error("Selected item out of stock");
 
-            // Add logic - Since we don't have a direct 'addToCart' API exposed here that handles session cart without auth context sometimes,
-            // I'll assume we use a local cart or API. Assuming API.addToCart exists or similar.
-            // Wait, StudentCart.js usually uses localStorage or API.
-            // I'll use a toast to simulate success for now as the prompt didn't specify rewriting the whole Cart context.
-            // *Correction*: Prompt said "Quantity buttons". It implies I should be able to increment/decrement and add.
-
-            toast.success(`Added ${item.name} (${sel.size}, ${sel.color}) to cart!`);
+            const success = addItem(item, variant);
+            if (success) toast.success(`Added ${item.name} (${sel.size}, ${sel.color}) to cart!`);
+            else toast.error("Could not add to cart (Stock limit reached)");
         } else {
             if (item.stock <= 0) return toast.error("Out of stock");
-            toast.success(`Added ${item.name} to cart!`);
+            const success = addItem(item, null);
+            if (success) toast.success(`Added ${item.name} to cart!`);
+            else toast.error("Could not add to cart (Stock limit reached)");
         }
     };
 
@@ -116,9 +119,20 @@ const StudentDashboard = () => {
     const getVariantStock = (item) => {
         if (item.category !== 'wearable') return item.stock;
         const sel = selections[item._id];
-        if (!sel || !sel.size || !sel.color) return null; // Don't show if not selected
+        if (!sel || !sel.size || !sel.color) return null;
         const v = item.variants.find(varItem => varItem.size === sel.size && varItem.color === sel.color);
         return v ? v.stock : 0;
+    };
+
+    // Helper to get available colors based on size selection
+    const getAvailableColors = (item) => {
+        const sel = selections[item._id] || {};
+        if (!sel.size) {
+            // If no size selected, show ALL unique colors available for this item
+            return [...new Set(item.variants.map(v => v.color))];
+        }
+        // If size selected, show colors for that size
+        return item.variants.filter(v => v.size === sel.size).map(v => v.color);
     };
 
     if (loading) {
@@ -193,7 +207,7 @@ const StudentDashboard = () => {
                                                                         onChange={(e) => handleSelectionChange(item._id, 'color', e.target.value)}
                                                                         value={selections[item._id]?.color || ''}>
                                                                     <option value="">Color</option>
-                                                                    {[...new Set(item.variants.filter(v => v.size === (selections[item._id]?.size || '')).map(v => v.color))].map(c => <option key={c} value={c}>{c}</option>)}
+                                                                    {getAvailableColors(item).map(c => <option key={c} value={c}>{c}</option>)}
                                                                 </select>
                                                             </div>
                                                             {selections[item._id]?.size && selections[item._id]?.color && (

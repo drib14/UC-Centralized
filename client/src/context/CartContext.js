@@ -19,31 +19,56 @@ export const CartProvider = ({ children }) => {
         localStorage.setItem('ucc_cart', JSON.stringify(newCart));
     };
 
-    const getId = (item) => item._id || item.id;
+    // Helper to generate a unique ID for cart items (Product ID + Variant)
+    const getCartId = (item, variant) => {
+        if (!variant) return item._id;
+        return `${item._id}-${variant.size}-${variant.color}`;
+    };
 
-    const addItem = (product) => {
-        const pId = getId(product);
-        const existing = cart.find(i => getId(i) === pId);
+    const addItem = (product, variant = null) => {
+        const cartId = getCartId(product, variant);
+        const existing = cart.find(i => i.cartId === cartId);
+
         let newCart;
         if (existing) {
-            newCart = cart.map(i => getId(i) === pId ? { ...i, quantity: i.quantity + 1 } : i);
+            // Check stock limit before adding
+            const limit = variant ? variant.stock : product.stock;
+            if (existing.quantity + 1 > limit) {
+                // Return false or throw error if we want to notify UI, for now just don't add
+                return false;
+            }
+            newCart = cart.map(i => i.cartId === cartId ? { ...i, quantity: i.quantity + 1 } : i);
         } else {
-            newCart = [...cart, { ...product, quantity: 1 }];
+            newCart = [...cart, {
+                ...product,
+                cartId,
+                variant,
+                quantity: 1
+            }];
         }
         saveCart(newCart);
+        return true;
     };
 
-    const removeItem = (productId) => {
-        const newCart = cart.filter(i => getId(i) !== productId);
+    const removeItem = (cartId) => {
+        const newCart = cart.filter(i => i.cartId !== cartId);
         saveCart(newCart);
     };
 
-    const updateQuantity = (productId, quantity) => {
+    const updateQuantity = (cartId, quantity) => {
         let newCart;
         if (quantity <= 0) {
-            newCart = cart.filter(i => getId(i) !== productId);
+            newCart = cart.filter(i => i.cartId !== cartId);
         } else {
-            newCart = cart.map(i => getId(i) === productId ? { ...i, quantity: parseInt(quantity) } : i);
+            newCart = cart.map(i => {
+                if (i.cartId === cartId) {
+                    // Stock validation
+                    const limit = i.variant ? i.variant.stock : i.stock;
+                    if (quantity > limit) return i; // Do nothing if exceeds stock
+                    return { ...i, quantity: parseInt(quantity) };
+                }
+                return i;
+            });
         }
         saveCart(newCart);
     };

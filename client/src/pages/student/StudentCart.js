@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import API from '../../utils/api';
 import { useCart } from '../../context/CartContext';
 import { toast } from 'react-toastify';
-import { FaCartShopping, FaTrash } from 'react-icons/fa6';
+import { FaShoppingCart, FaTrash } from 'react-icons/fa';
 
 const StudentCart = () => {
     const { cart, updateQuantity, removeItem, clearCart, getTotal } = useCart();
@@ -11,7 +11,8 @@ const StudentCart = () => {
     const handleCheckout = async () => {
         const orderItems = cart.map(i => ({
             merch: i._id,
-            quantity: i.quantity
+            quantity: i.quantity,
+            variant: i.variant // Pass variant info to backend
         }));
 
         const orderData = {
@@ -32,7 +33,7 @@ const StudentCart = () => {
     if (cart.length === 0) {
          return (
              <div className="container-fluid">
-                 <h2 className="mb-4 text-success"><FaCartShopping className="me-2" />Your Cart</h2>
+                 <h2 className="mb-4 text-success"><FaShoppingCart className="me-2" />Your Cart</h2>
                  <div className="card mb-4">
                      <div className="card-body text-center py-5">
                          <p className="text-muted">Your cart is empty.</p>
@@ -44,27 +45,35 @@ const StudentCart = () => {
 
     return (
         <div className="container-fluid">
-            <h2 className="mb-4 text-success"><FaCartShopping className="me-2" />Your Cart</h2>
+            <h2 className="mb-4 text-success"><FaShoppingCart className="me-2" />Your Cart</h2>
             <div className="row">
                 <div className="col-lg-8">
                     <div className="card mb-4">
                         <div className="card-body">
                             {cart.map(item => (
-                                <div className="d-flex align-items-center mb-3 pb-3 border-bottom" key={item._id}>
+                                <div className="d-flex align-items-center mb-3 pb-3 border-bottom" key={item.cartId}>
                                     <img src={item.image || 'https://via.placeholder.com/80'} className="rounded me-3" style={{ width: '80px', height: '80px', objectFit: 'cover' }} alt={item.name} />
                                     <div className="flex-grow-1">
                                         <h6 className="mb-0">{item.name}</h6>
-                                        <small className="text-muted">{item.category || item.description}</small>
+                                        {/* Display Variant Info */}
+                                        {item.variant ? (
+                                            <small className="text-muted d-block">
+                                                Size: {item.variant.size} | Color: {item.variant.color}
+                                            </small>
+                                        ) : (
+                                            <small className="text-muted">{item.category}</small>
+                                        )}
+                                        <small className="text-muted">₱{item.price}</small>
                                     </div>
                                     <div className="text-end me-4 d-flex align-items-center">
-                                        <div className="fw-bold me-3">₱{(item.price).toFixed(2)}</div>
+                                        <div className="fw-bold me-3">₱{(item.price * item.quantity).toFixed(2)}</div>
                                         <div className="btn-group btn-group-sm me-2">
-                                            <button className="btn btn-outline-secondary" onClick={() => updateQuantity(item._id, item.quantity - 1)}>-</button>
+                                            <button className="btn btn-outline-secondary" onClick={() => updateQuantity(item.cartId, item.quantity - 1)}>-</button>
                                             <span className="btn btn-light disabled text-dark border-secondary" style={{ width: '40px' }}>{item.quantity}</span>
-                                            <button className="btn btn-outline-secondary" onClick={() => updateQuantity(item._id, item.quantity + 1)}>+</button>
+                                            <button className="btn btn-outline-secondary" onClick={() => updateQuantity(item.cartId, item.quantity + 1)}>+</button>
                                         </div>
                                     </div>
-                                    <button className="btn btn-sm btn-outline-danger" onClick={() => removeItem(item._id)}>
+                                    <button className="btn btn-sm btn-outline-danger" onClick={() => removeItem(item.cartId)}>
                                         <FaTrash />
                                     </button>
                                 </div>

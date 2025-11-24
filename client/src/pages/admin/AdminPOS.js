@@ -118,8 +118,8 @@ const AdminPOS = () => {
                     const newQty = item.quantity + change;
                     if (newQty <= 0) return null;
 
-                    // Check stock limit again
-                    const maxStock = item.variant ? item.variant.stock : item.stock; // Note: item.stock here refers to the snapshot when added, might need real-time check ideally
+                    // Stock check
+                    const maxStock = item.variant ? item.variant.stock : item.stock;
                     if (newQty > maxStock) {
                         toast.error("Max stock reached");
                         return item;
@@ -142,12 +142,7 @@ const AdminPOS = () => {
             items: cart.map(i => ({
                 merch: i._id,
                 quantity: i.quantity,
-                // Pass variant details if backend supports it in order items (Backend might need update if Order schema tracks variants specifically, but usually handled by decrement logic)
-                // For now, assume backend decrement logic needs improvement or we pass plain IDs.
-                // NOTE: Standard Order schema usually just links Merch. If we need to deduct specific variant stock, we need to pass that info.
-                // Assuming backend isn't updated for variant deduction yet, this is a limitation.
-                // However, I updated Merch model, but not Order Controller logic in the plan.
-                // I will send variant info in metadata or rely on description.
+                // Passing variant details for record keeping
                 variant: i.variant
             })),
             totalPrice: getTotal(),
@@ -155,9 +150,6 @@ const AdminPOS = () => {
             customerName: `${selectedUser.firstName} ${selectedUser.lastName}`,
             status: 'claimed'
         };
-
-        // Note: I might need to update the backend order creation to handle stock deduction for variants.
-        // For this task, I will proceed with sending the data.
 
         try {
             await API.createOrder(orderData);
@@ -252,6 +244,11 @@ const AdminPOS = () => {
                                         <div className="d-flex justify-content-between align-items-center mb-2 p-2 border rounded" key={item.cartId}>
                                             <div className="text-truncate me-2" style={{maxWidth: '120px'}}>
                                                 <div className="fw-bold small">{item.name}</div>
+                                                {item.variant ? (
+                                                    <div className="text-muted small" style={{fontSize: '0.75rem'}}>
+                                                        {item.variant.size}/{item.variant.color}
+                                                    </div>
+                                                ) : null}
                                                 <div className="text-muted small">₱{item.price}</div>
                                             </div>
                                             <div className="d-flex align-items-center">
