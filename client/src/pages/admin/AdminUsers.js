@@ -49,10 +49,16 @@ const AdminUsers = () => {
                  <div className="card-body">
                      <div className="table-responsive">
                          <table className="table table-bordered" width="100%" cellSpacing="0">
-                             <thead><tr><th>ID</th><th>Name</th><th>Email</th><th>Role</th><th>Dept</th><th>Action</th></tr></thead>
+                             <thead><tr><th>User</th><th>ID</th><th>Name</th><th>Email</th><th>Role</th><th>Dept</th><th>Action</th></tr></thead>
                              <tbody>
                                  {users.map(u => (
                                      <tr key={u._id}>
+                                         <td className="text-center">
+                                             {u.profileImage ?
+                                                 <img src={u.profileImage} alt="User" className="rounded-circle" style={{width:'40px', height:'40px', objectFit:'cover'}} />
+                                                 : <div className="rounded-circle bg-secondary text-white d-flex justify-content-center align-items-center mx-auto" style={{width:'40px', height:'40px'}}>{u.firstName ? u.firstName[0] : 'U'}</div>
+                                             }
+                                         </td>
                                          <td>{u.studentId}</td>
                                          <td>{(u.firstName && u.lastName) ? `${u.firstName} ${u.lastName}` : (u.name || 'N/A')}</td>
                                          <td>{u.email}</td>
