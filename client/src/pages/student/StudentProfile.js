@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import API from '../../utils/api';
 import { useAuth } from '../../context/AuthContext';
 import { toast } from 'react-toastify';
-import { FaUser, FaPen, FaCartShopping } from 'react-icons/fa';
+import { FaUser, FaPen, FaShoppingCart } from 'react-icons/fa';
 
 const StudentProfile = () => {
     const { user, syncSession } = useAuth();
@@ -108,7 +108,7 @@ const StudentProfile = () => {
                 <div className="col-lg-8">
                     {/* Merch History */}
                     <div className="card mb-4">
-                        <div className="card-header bg-success text-white"><FaCartShopping className="me-2" />Recently Bought Merch</div>
+                        <div className="card-header bg-success text-white"><FaShoppingCart className="me-2" />Recently Bought Merch</div>
                         <div className="card-body">
                             {boughtMerch.length === 0 ? <p className="text-center text-muted">No merch purchased yet.</p> : (
                                 <div className="d-flex overflow-auto pb-2" style={{gap: '15px'}}>
