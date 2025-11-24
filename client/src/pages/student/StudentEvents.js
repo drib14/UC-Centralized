@@ -161,6 +161,22 @@ const StudentEvents = () => {
                     ))}
                     {days}
                 </div>
+
+                {/* Calendar Legend */}
+                <div className="mt-3 d-flex gap-3 justify-content-center small">
+                    <div className="d-flex align-items-center">
+                        <div className="bg-primary" style={{width: '15px', height: '15px', marginRight: '5px'}}></div>
+                        <span>Today's Date</span>
+                    </div>
+                    <div className="d-flex align-items-center">
+                        <div className="bg-warning" style={{width: '15px', height: '15px', marginRight: '5px'}}></div>
+                        <span>Event Date</span>
+                    </div>
+                    <div className="d-flex align-items-center">
+                        <div style={{width: '15px', height: '15px', marginRight: '5px', background: 'linear-gradient(135deg, #0d6efd 50%, #ffc107 50%)'}}></div>
+                        <span>Today is Event's Date</span>
+                    </div>
+                </div>
             </div>
         );
     };
