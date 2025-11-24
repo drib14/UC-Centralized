@@ -135,6 +135,20 @@ const StudentDashboard = () => {
         return item.variants.filter(v => v.size === sel.size).map(v => v.color);
     };
 
+    const formatTime = (timeStr) => {
+        if (!timeStr) return 'All Day';
+        const [hour, minute] = timeStr.split(':');
+        const h = parseInt(hour, 10);
+        const m = parseInt(minute, 10);
+        if (isNaN(h) || isNaN(m)) return timeStr;
+
+        const ampm = h >= 12 ? 'PM' : 'AM';
+        const formattedHour = h % 12 || 12;
+        const formattedMinute = m < 10 ? `0${m}` : m;
+
+        return `${formattedHour}:${formattedMinute} ${ampm}`;
+    };
+
     if (loading) {
         return (
             <div className="text-center my-5">
@@ -241,7 +255,7 @@ const StudentDashboard = () => {
                             )}
                             <div className="card-body">
                                 <h5 className="card-title fw-bold">{latestEvent.title}</h5>
-                                <p className="card-text text-muted mb-1"><i className="fa-regular fa-clock me-1"></i>{latestEvent.time || 'All Day'}</p>
+                                <p className="card-text text-muted mb-1"><i className="fa-regular fa-clock me-1"></i>{formatTime(latestEvent.time)}</p>
                                 <p className="card-text small">{latestEvent.location}</p>
                                 <Link to="/student/events" className="btn btn-warning btn-sm w-100">View Details</Link>
                             </div>

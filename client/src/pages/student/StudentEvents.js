@@ -57,10 +57,30 @@ const StudentEvents = () => {
     const isRegistered = (event) => event.attendees && event.attendees.includes(user?._id);
 
     const isEnded = (event) => {
+         if (!event.date) return false;
          const eventDateStr = event.date;
          const eventTimeStr = event.time || '23:59';
+
+         // Construct ISO string: YYYY-MM-DDTHH:mm
+         // Assuming date is YYYY-MM-DD from backend
          const eventDateTime = new Date(`${eventDateStr}T${eventTimeStr}`);
-         return new Date() > eventDateTime;
+         const now = new Date();
+
+         return now > eventDateTime;
+    };
+
+    const formatTime = (timeStr) => {
+        if (!timeStr) return '';
+        const [hour, minute] = timeStr.split(':');
+        const h = parseInt(hour, 10);
+        const m = parseInt(minute, 10);
+        if (isNaN(h) || isNaN(m)) return timeStr;
+
+        const ampm = h >= 12 ? 'PM' : 'AM';
+        const formattedHour = h % 12 || 12;
+        const formattedMinute = m < 10 ? `0${m}` : m;
+
+        return `${formattedHour}:${formattedMinute} ${ampm}`;
     };
 
     if (loading) return <div className="text-center mt-5"><div className="spinner-border text-success"></div></div>;
@@ -99,7 +119,7 @@ const StudentEvents = () => {
                                             {ended && !registered && <span className="badge bg-secondary ms-2" style={{fontSize: '0.7em'}}>Ended</span>}
                                         </h5>
                                         <p className="card-text text-muted small mb-2">
-                                            <FaCalendar /> {event.date} {event.time ? `| ${event.time}` : ''} <br />
+                                            <FaCalendar /> {event.date} {event.time ? `| ${formatTime(event.time)}` : ''} <br />
                                             {event.department}
                                         </p>
                                         <p className="card-text small text-primary fw-bold mb-2">
@@ -136,7 +156,7 @@ const StudentEvents = () => {
                                     </div>
                                     <div className="col-md-6">
                                         <strong><FaClock className="me-2" />Time:</strong>
-                                        <span>{selectedEvent.time}</span>
+                                        <span>{formatTime(selectedEvent.time)}</span>
                                     </div>
                                 </div>
                                 <p>
