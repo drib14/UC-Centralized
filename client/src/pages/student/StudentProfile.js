@@ -2,13 +2,14 @@ import React, { useState, useEffect, useCallback } from 'react';
 import API from '../../utils/api';
 import { useAuth } from '../../context/AuthContext';
 import { toast } from 'react-toastify';
-import { FaUser, FaPen, FaShoppingCart } from 'react-icons/fa';
+import { FaUser, FaPen, FaShoppingCart, FaEye, FaEyeSlash } from 'react-icons/fa';
 
 const StudentProfile = () => {
     const { user, syncSession } = useAuth();
     const [orders, setOrders] = useState([]);
     const [myEvents, setMyEvents] = useState([]);
     const [showEdit, setShowEdit] = useState(false);
+    const [showPassword, setShowPassword] = useState(false);
     const [editForm, setEditForm] = useState({ firstName: '', lastName: '', password: '', image: null });
 
     const loadActivity = useCallback(async () => {
@@ -176,7 +177,21 @@ const StudentProfile = () => {
                                 <div className="mb-3"><label>Student ID</label><input className="form-control" value={user.studentId} disabled /></div>
                                 <div className="mb-3"><label>Department</label><input className="form-control" value={user.department} disabled /></div>
                                 <hr />
-                                <div className="mb-3"><label>New Password (Optional)</label><input className="form-control" type="password" value={editForm.password} onChange={e => setEditForm({...editForm, password: e.target.value})} placeholder="Leave blank to keep current" /></div>
+                                <div className="mb-3">
+                                    <label>New Password (Optional)</label>
+                                    <div className="input-group">
+                                        <input
+                                            className="form-control"
+                                            type={showPassword ? 'text' : 'password'}
+                                            value={editForm.password}
+                                            onChange={e => setEditForm({...editForm, password: e.target.value})}
+                                            placeholder="Leave blank to keep current"
+                                        />
+                                        <span className="input-group-text" onClick={() => setShowPassword(!showPassword)} style={{ cursor: 'pointer' }}>
+                                            {showPassword ? <FaEyeSlash /> : <FaEye />}
+                                        </span>
+                                    </div>
+                                </div>
                             </div>
                             <div className="modal-footer">
                                 <button className="btn btn-secondary" onClick={() => setShowEdit(false)}>Cancel</button>

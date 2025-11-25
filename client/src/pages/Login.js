@@ -3,11 +3,12 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { toast } from 'react-toastify';
 import logo from '../assets/uc-central-logo.png';
-import { FaIdCard, FaLock } from 'react-icons/fa6';
+import { FaIdCard, FaLock, FaEye, FaEyeSlash } from 'react-icons/fa6';
 
 const Login = () => {
     const [studentId, setStudentId] = useState('');
     const [password, setPassword] = useState('');
+    const [showPassword, setShowPassword] = useState(false);
     const { login } = useAuth();
     const navigate = useNavigate();
 
@@ -58,7 +59,7 @@ const Login = () => {
                         <div className="input-group">
                             <span className="input-group-text"><FaLock /></span>
                             <input
-                                type="password"
+                                type={showPassword ? 'text' : 'password'}
                                 className="form-control"
                                 id="password"
                                 placeholder="********"
@@ -66,7 +67,13 @@ const Login = () => {
                                 value={password}
                                 onChange={(e) => setPassword(e.target.value)}
                             />
+                            <span className="input-group-text" onClick={() => setShowPassword(!showPassword)} style={{ cursor: 'pointer' }}>
+                                {showPassword ? <FaEyeSlash /> : <FaEye />}
+                            </span>
                         </div>
+                    </div>
+                     <div className="d-flex justify-content-end mb-3">
+                        <Link to="/forgot-password" style={{ fontSize: '0.9rem' }}>Forgot Password?</Link>
                     </div>
                     <div className="d-grid gap-2">
                         <button type="submit" className="btn btn-primary">Login</button>

@@ -3,8 +3,11 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { toast } from 'react-toastify';
 import logo from '../assets/uc-central-logo.png';
+import { FaEye, FaEyeSlash } from 'react-icons/fa6';
 
 const Register = () => {
+    const [showPassword, setShowPassword] = useState(false);
+    const [showConfirmPassword, setShowConfirmPassword] = useState(false);
     const { register } = useAuth();
     const navigate = useNavigate();
     const [formData, setFormData] = useState({
@@ -99,12 +102,32 @@ const Register = () => {
                     <div className="row">
                         <div className="col-md-6 mb-3">
                             <label htmlFor="password" className="form-label">Password</label>
-                            <input type="password" className="form-control" id="password" required value={formData.password} onChange={handleChange} />
+                            <div className="input-group">
+                                <input type={showPassword ? 'text' : 'password'} className="form-control" id="password" required value={formData.password} onChange={handleChange} />
+                                <span className="input-group-text" onClick={() => setShowPassword(!showPassword)} style={{ cursor: 'pointer' }}>
+                                    {showPassword ? <FaEyeSlash /> : <FaEye />}
+                                </span>
+                            </div>
                         </div>
                         <div className="col-md-6 mb-3">
                             <label htmlFor="confirmPassword" className="form-label">Confirm Password</label>
-                            <input type="password" className="form-control" id="confirmPassword" required value={formData.confirmPassword} onChange={handleChange} />
+                            <div className="input-group">
+                                <input type={showConfirmPassword ? 'text' : 'password'} className="form-control" id="confirmPassword" required value={formData.confirmPassword} onChange={handleChange} />
+                                <span className="input-group-text" onClick={() => setShowConfirmPassword(!showConfirmPassword)} style={{ cursor: 'pointer' }}>
+                                    {showConfirmPassword ? <FaEyeSlash /> : <FaEye />}
+                                </span>
+                            </div>
                         </div>
+                    </div>
+
+                    <div className="mt-3">
+                        <p className="mb-1 small">Password must contain:</p>
+                        <ul className="list-unstyled small">
+                            <li><small>At least 8 characters</small></li>
+                            <li><small>An uppercase and lowercase letter</small></li>
+                            <li><small>A number</small></li>
+                            <li><small>A special character</small></li>
+                        </ul>
                     </div>
 
                     <div className="d-grid gap-2 mt-4">

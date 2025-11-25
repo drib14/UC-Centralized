@@ -99,4 +99,147 @@ router.put('/profile', verifyToken, parser.single('image'), async (req, res) => 
     }
 });
 
+const sendEmail = require('../utils/sendEmail');
+const crypto = require('crypto');
+
+// FORGOT PASSWORD
+router.post('/forgot-password', async (req, res) => {
+    try {
+        const { studentId, email } = req.body;
+        const user = await User.findOne({ studentId });
+
+        if (!user) {
+            return res.status(404).json({ message: "ID number doesn't exist" });
+        }
+
+        if (user.email !== email) {
+            return res.status(400).json({ message: "Email doesn't exist" });
+        }
+
+        if (user.resetLockoutUntil && user.resetLockoutUntil > new Date()) {
+            const remainingTime = Math.ceil((user.resetLockoutUntil - new Date()) / 60000);
+            return res.status(429).json({ message: `You have made too many attempts. Please try again in ${remainingTime} minutes.` });
+        }
+
+        const resetCode = crypto.randomInt(100000, 999999).toString();
+        user.resetCode = resetCode;
+        user.resetCodeExpires = new Date(new Date().getTime() + 5 * 60 * 1000); // 5 minutes
+        user.resetAttempts = 0;
+        await user.save();
+
+        const emailTemplate = `
+            <div style="font-family: Arial, sans-serif; text-align: center; color: #333;">
+              <div style="max-width: 600px; margin: auto; border: 1px solid #ddd; padding: 20px; border-radius: 10px;">
+                <h2 style="color: #003399;">Password Reset Request</h2>
+                <p>We received a request to reset your password. Use the code below to complete the process.</p>
+                <div style="background-color: #f0f0f0; padding: 15px; border-radius: 5px; margin: 20px 0;">
+                  <h3 style="margin: 0; font-size: 24px; letter-spacing: 5px; color: #003399;">${resetCode}</h3>
+                </div>
+                <p>This code is valid for 5 minutes. If you did not request this, please ignore this email.</p>
+                <hr style="border: none; border-top: 1px solid #eee; margin-top: 20px;">
+                <p style="font-size: 0.9em; color: #999;">UC-Central</p>
+              </div>
+            </div>`;
+
+        await sendEmail({
+            email: user.email,
+            subject: 'Your Password Reset Code',
+            html: emailTemplate,
+        });
+
+        res.status(200).json({ message: 'Verification code sent to your email.' });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ message: 'Server error' });
+    }
+});
+
+// VERIFY CODE
+router.post('/verify-code', async (req, res) => {
+    try {
+        const { studentId, code } = req.body;
+        const user = await User.findOne({ studentId });
+
+        if (!user || !user.resetCode) {
+            return res.status(400).json({ message: 'Invalid request.' });
+        }
+
+        if (user.resetLockoutUntil && user.resetLockoutUntil > new Date()) {
+            const remainingTime = Math.ceil((user.resetLockoutUntil - new Date()) / 60000);
+            return res.status(429).json({ message: `You have made too many attempts. Please try again in ${remainingTime} minutes.` });
+        }
+
+        if (user.resetCodeExpires < new Date()) {
+            return res.status(400).json({ message: 'Code has expired. Please request a new one.' });
+        }
+
+        if (user.resetCode !== code) {
+            user.resetAttempts += 1;
+            if (user.resetAttempts >= 10) {
+                user.resetLockoutUntil = new Date(new Date().getTime() + 60 * 60 * 1000); // 1 hour lockout
+                user.resetCode = undefined;
+                user.resetCodeExpires = undefined;
+            }
+            await user.save();
+            return res.status(400).json({ message: 'Invalid verification code.' });
+        }
+
+        const resetToken = crypto.randomBytes(32).toString('hex');
+        user.resetPasswordToken = crypto.createHash('sha256').update(resetToken).digest('hex');
+        user.resetPasswordExpires = new Date(new Date().getTime() + 10 * 60 * 1000); // 10 minutes
+
+        user.resetCode = undefined;
+        user.resetCodeExpires = undefined;
+        user.resetAttempts = 0;
+        await user.save();
+
+        res.status(200).json({ message: 'Verification successful. You can now reset your password.', resetToken });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ message: 'Server error' });
+    }
+});
+
+// RESET PASSWORD
+router.post('/reset-password', async (req, res) => {
+    try {
+        const { token, password, confirmPassword } = req.body;
+
+        if (password !== confirmPassword) {
+            return res.status(400).json({ message: "Passwords do not match." });
+        }
+
+        // Password strength check
+        const passRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]).{8,}$/;
+        if (!passRegex.test(password)) {
+            return res.status(400).json({
+                message: "Password is not strong enough. It must be at least 8 characters long and include an uppercase letter, a lowercase letter, a number, and a special character."
+            });
+        }
+
+        const hashedToken = crypto.createHash('sha256').update(token).digest('hex');
+
+        const user = await User.findOne({
+            resetPasswordToken: hashedToken,
+            resetPasswordExpires: { $gt: new Date() },
+        });
+
+        if (!user) {
+            return res.status(400).json({ message: 'Invalid or expired password reset token.' });
+        }
+
+        const salt = await bcrypt.genSalt(10);
+        user.password = await bcrypt.hash(password, salt);
+        user.resetPasswordToken = undefined;
+        user.resetPasswordExpires = undefined;
+        user.resetLockoutUntil = undefined; // Clear any lockout
+        await user.save();
+
+        res.status(200).json({ message: 'Password has been reset successfully.' });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ message: 'Server error' });
+    }
+});
+
 module.exports = router;
