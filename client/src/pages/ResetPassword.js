@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import API from '../utils/API';
+import API from '../utils/api';
 import { toast } from 'react-toastify';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { FaEye, FaEyeSlash } from 'react-icons/fa6';
