@@ -1,16 +1,16 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import API from '../utils/api';
 import { toast } from 'react-toastify';
 import logo from '../assets/uc-central-logo.png';
-import { FaShieldHalved } from 'react-icons/fa6';
 
 const VerifyCode = () => {
-    const [code, setCode] = useState('');
+    const [code, setCode] = useState(new Array(6).fill(''));
     const [loading, setLoading] = useState(false);
     const navigate = useNavigate();
     const location = useLocation();
     const studentId = location.state?.studentId;
+    const inputsRef = useRef([]);
 
     if (!studentId) {
         navigate('/forgot-password');
@@ -18,17 +18,51 @@ const VerifyCode = () => {
         return null;
     }
 
+    const handleChange = (e, index) => {
+        const { value } = e.target;
+        if (!/^[0-9]$/.test(value) && value !== '') return;
+
+        const newCode = [...code];
+        newCode[index] = value;
+        setCode(newCode);
+
+        if (value && index < 5) {
+            inputsRef.current[index + 1].focus();
+        }
+    };
+
+    const handleKeyDown = (e, index) => {
+        if (e.key === 'Backspace' && !code[index] && index > 0) {
+            inputsRef.current[index - 1].focus();
+        }
+    };
+
+    const handlePaste = (e) => {
+        const paste = e.clipboardData.getData('text');
+        if (/^[0-9]{6}$/.test(paste)) {
+            const newCode = paste.split('');
+            setCode(newCode);
+            inputsRef.current[5].focus();
+        }
+    };
+
     const handleSubmit = async (e) => {
         e.preventDefault();
         setLoading(true);
+        const verificationCode = code.join('');
+
+        if (verificationCode.length !== 6) {
+            toast.error("Please enter the complete 6-digit code.");
+            setLoading(false);
+            return;
+        }
+
         try {
-            const data = await API.request('/auth/verify-code', 'POST', { studentId, code });
+            const data = await API.request('/auth/verify-code', 'POST', { studentId, code: verificationCode });
             toast.success('Verification successful!');
             navigate('/reset-password', { state: { token: data.resetToken } });
         } catch (error) {
-            console.error("Verify Code Error:", error);
-            console.error("Error Response:", error.response);
-            toast.error(error.message || 'An error occurred. Please check the console for details.');
+            toast.error(error.message || 'Invalid or expired code.');
         } finally {
             setLoading(false);
         }
@@ -44,21 +78,22 @@ const VerifyCode = () => {
                 </div>
 
                 <form onSubmit={handleSubmit}>
-                    <div className="mb-3">
-                        <label htmlFor="code" className="form-label">Verification Code</label>
-                        <div className="input-group">
-                            <span className="input-group-text"><FaShieldHalved /></span>
+                    <div className="d-flex justify-content-center gap-2 mb-4" onPaste={handlePaste}>
+                        {code.map((digit, index) => (
                             <input
+                                key={index}
+                                ref={el => inputsRef.current[index] = el}
                                 type="text"
-                                className="form-control"
-                                id="code"
-                                placeholder="_ _ _ _ _ _"
-                                value={code}
-                                onChange={(e) => setCode(e.target.value)}
+                                className="form-control text-center"
+                                style={{ width: '45px', height: '45px', fontSize: '1.2rem' }}
+                                maxLength="1"
+                                value={digit}
+                                onChange={e => handleChange(e, index)}
+                                onKeyDown={e => handleKeyDown(e, index)}
+                                onFocus={e => e.target.select()}
                                 required
-                                maxLength="6"
                             />
-                        </div>
+                        ))}
                     </div>
                     <div className="d-grid gap-2">
                         <button type="submit" className="btn btn-primary" disabled={loading}>

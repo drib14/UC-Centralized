@@ -185,24 +185,28 @@ router.post('/verify-code', async (req, res) => {
         }
 
         if (user.resetCode !== code) {
-            user.resetAttempts += 1;
-            if (user.resetAttempts >= 10) {
-                user.resetLockoutUntil = new Date(new Date().getTime() + 60 * 60 * 1000); // 1 hour lockout
-                user.resetCode = undefined;
-                user.resetCodeExpires = undefined;
+            const update = { $inc: { resetAttempts: 1 } };
+            if (user.resetAttempts + 1 >= 10) {
+                update.$set = {
+                    resetLockoutUntil: new Date(new Date().getTime() + 60 * 60 * 1000), // 1 hour lockout
+                    resetCode: undefined,
+                    resetCodeExpires: undefined
+                };
             }
-            await user.save();
+            await User.updateOne({ _id: user._id }, update);
             return res.status(400).json({ message: 'Invalid verification code.' });
         }
 
         const resetToken = crypto.randomBytes(32).toString('hex');
-        user.resetPasswordToken = crypto.createHash('sha256').update(resetToken).digest('hex');
-        user.resetPasswordExpires = new Date(new Date().getTime() + 10 * 60 * 1000); // 10 minutes
-
-        user.resetCode = undefined;
-        user.resetCodeExpires = undefined;
-        user.resetAttempts = 0;
-        await user.save();
+        await User.updateOne({ _id: user._id }, {
+            $set: {
+                resetPasswordToken: crypto.createHash('sha256').update(resetToken).digest('hex'),
+                resetPasswordExpires: new Date(new Date().getTime() + 10 * 60 * 1000), // 10 minutes
+                resetCode: undefined,
+                resetCodeExpires: undefined,
+                resetAttempts: 0
+            }
+        });
 
         res.status(200).json({ message: 'Verification successful. You can now reset your password.', resetToken });
     } catch (err) {
