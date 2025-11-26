@@ -1,3 +1,9 @@
+/**
+ * @swagger
+ * tags:
+ *   name: Orders
+ *   description: API for managing orders
+ */
 const router = require('express').Router();
 const Order = require('../models/Order');
 const Merch = require('../models/Merch');

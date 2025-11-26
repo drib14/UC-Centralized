@@ -1,3 +1,9 @@
+/**
+ * @swagger
+ * tags:
+ *   name: Auth
+ *   description: API for user authentication
+ */
 const router = require('express').Router();
 const User = require('../models/User');
 const bcrypt = require('bcryptjs');

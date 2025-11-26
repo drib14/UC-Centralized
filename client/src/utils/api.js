@@ -126,6 +126,10 @@ class API {
         return this.request(`/announcements/${id}`, 'DELETE');
     }
 
+    static getUserAnnouncements() {
+        return this.request('/announcements/user');
+    }
+
     // Admin Stats
     static getAdminStats() {
         return this.request('/stats/dashboard');
@@ -142,6 +146,14 @@ class API {
 
     static deleteUser(id) {
         return this.request(`/users/${id}`, 'DELETE');
+    }
+
+    static generateApiKey(id) {
+        return this.request(`/users/${id}/apikey`, 'POST');
+    }
+
+    static revokeApiKey(id) {
+        return this.request(`/users/${id}/apikey`, 'DELETE');
     }
 }
 

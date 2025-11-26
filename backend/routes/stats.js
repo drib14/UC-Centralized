@@ -1,3 +1,9 @@
+/**
+ * @swagger
+ * tags:
+ *   name: Stats
+ *   description: API for retrieving statistics
+ */
 const router = require('express').Router();
 const User = require('../models/User');
 const Order = require('../models/Order');

@@ -1,3 +1,9 @@
+/**
+ * @swagger
+ * tags:
+ *   name: Events
+ *   description: API for managing events
+ */
 const router = require('express').Router();
 const Event = require('../models/Event');
 const { verifyToken, verifyAdmin } = require('../middleware/auth');

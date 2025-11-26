@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
+import AdminEventsSkeleton from '../../components/skeletons/AdminEventsSkeleton';
 import API from '../../utils/api';
 import { toast } from 'react-toastify';
 import { FaPlus, FaPen, FaTrash, FaUsers } from 'react-icons/fa';
@@ -100,7 +101,7 @@ const AdminEvents = () => {
         setShowEditModal(true);
     };
 
-    if (loading) return <div className="text-center mt-5"><div className="spinner-border text-primary"></div></div>;
+    if (loading) return <AdminEventsSkeleton />;
 
     return (
         <div className="container-fluid">

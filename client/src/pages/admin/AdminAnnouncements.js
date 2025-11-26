@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
+import AdminAnnouncementsSkeleton from '../../components/skeletons/AdminAnnouncementsSkeleton';
 import API from '../../utils/api';
 import { toast } from 'react-toastify';
 import { FaPlus, FaTrash } from 'react-icons/fa6';
@@ -7,7 +8,14 @@ const AdminAnnouncements = () => {
     const [announcements, setAnnouncements] = useState([]);
     const [loading, setLoading] = useState(true);
     const [showCreate, setShowCreate] = useState(false);
-    const [form, setForm] = useState({ title: '', message: '', department: 'ALL' });
+    const [form, setForm] = useState({
+        title: '',
+        message: '',
+        target: 'ALL',
+        department: '',
+        program: '',
+        yearLevel: ''
+    });
     const [deleteId, setDeleteId] = useState(null);
     const [showDelete, setShowDelete] = useState(false);
 
@@ -26,7 +34,14 @@ const AdminAnnouncements = () => {
             await API.createAnnouncement(form);
             toast.success("Announcement posted");
             setShowCreate(false);
-            setForm({ title: '', message: '', department: 'ALL' });
+            setForm({
+                title: '',
+                message: '',
+                target: 'ALL',
+                department: '',
+                program: '',
+                yearLevel: ''
+            });
             loadAnnouncements();
         } catch(e) { toast.error(e.message); }
     };
@@ -40,7 +55,7 @@ const AdminAnnouncements = () => {
         } catch(e) { toast.error("Failed to delete"); }
     };
 
-    if (loading) return <div className="text-center mt-5"><div className="spinner-border text-primary"></div></div>;
+    if (loading) return <AdminAnnouncementsSkeleton />;
 
     return (
         <div className="container-fluid">
@@ -78,11 +93,27 @@ const AdminAnnouncements = () => {
                             <div className="modal-header bg-primary text-white"><h5 className="modal-title">Post Announcement</h5><button className="btn-close btn-close-white" onClick={() => setShowCreate(false)}></button></div>
                             <div className="modal-body">
                                 <input className="form-control mb-3" placeholder="Title" value={form.title} onChange={e => setForm({...form, title: e.target.value})} />
-                                <select className="form-select mb-3" value={form.department} onChange={e => setForm({...form, department: e.target.value})}>
-                                    <option value="ALL">All Departments</option>
-                                    <option value="CCS">CCS</option><option value="CBA">CBA</option><option value="CAS">CAS</option>
+                                <textarea className="form-control mb-3" rows="4" placeholder="Message" value={form.message} onChange={e => setForm({...form, message: e.target.value})}></textarea>
+                                <select className="form-select mb-3" value={form.target} onChange={e => setForm({...form, target: e.target.value})}>
+                                    <option value="ALL">All Students</option>
+                                    <option value="DEPARTMENT">By Department</option>
+                                    <option value="PROGRAM">By Program</option>
+                                    <option value="YEAR_LEVEL">By Year Level</option>
                                 </select>
-                                <textarea className="form-control" rows="4" placeholder="Message" value={form.message} onChange={e => setForm({...form, message: e.target.value})}></textarea>
+                                {form.target === 'DEPARTMENT' && (
+                                    <select className="form-select mb-3" value={form.department} onChange={e => setForm({...form, department: e.target.value})}>
+                                        <option value="">Select Department</option>
+                                        <option value="CCS">CCS</option>
+                                        <option value="CBA">CBA</option>
+                                        <option value="CAS">CAS</option>
+                                    </select>
+                                )}
+                                {form.target === 'PROGRAM' && (
+                                    <input className="form-control mb-3" placeholder="Program (e.g., BSIT)" value={form.program} onChange={e => setForm({...form, program: e.target.value})} />
+                                )}
+                                {form.target === 'YEAR_LEVEL' && (
+                                    <input type="number" className="form-control mb-3" placeholder="Year Level (e.g., 4)" value={form.yearLevel} onChange={e => setForm({...form, yearLevel: e.target.value})} />
+                                )}
                             </div>
                             <div className="modal-footer"><button className="btn btn-secondary" onClick={() => setShowCreate(false)}>Cancel</button><button className="btn btn-primary" onClick={handleCreate}>Post</button></div>
                         </div>

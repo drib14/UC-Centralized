@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
+import AdminMerchSkeleton from '../../components/skeletons/AdminMerchSkeleton';
 import API from '../../utils/api';
 import { toast } from 'react-toastify';
 import { FaPlus, FaPen, FaTrash } from 'react-icons/fa';
@@ -123,7 +124,7 @@ const AdminMerch = () => {
         </div>
     );
 
-    if (loading) return <div className="text-center mt-5"><div className="spinner-border text-primary"></div></div>;
+    if (loading) return <AdminMerchSkeleton />;
 
     return (
         <div className="container-fluid">

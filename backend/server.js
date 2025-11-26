@@ -9,10 +9,29 @@ const merchRoute = require('./routes/merch');
 const orderRoute = require('./routes/orders');
 const announcementRoute = require('./routes/announcements');
 const statsRoute = require('./routes/stats');
+const swaggerJSDoc = require('swagger-jsdoc');
+const swaggerUi = require('swagger-ui-express');
 
 dotenv.config();
 
 const app = express();
+
+// Swagger Configuration
+const swaggerOptions = {
+    swaggerDefinition: {
+        openapi: '3.0.0',
+        info: {
+            title: 'UC-Central API',
+            version: '1.0.0',
+            description: 'API documentation for the UC-Central application.',
+        },
+        servers: [{ url: '/api' }],
+    },
+    apis: ['./routes/*.js'],
+};
+
+const swaggerDocs = swaggerJSDoc(swaggerOptions);
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocs));
 
 // Middleware
 app.use(express.json());

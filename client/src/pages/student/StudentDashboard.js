@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import StudentDashboardSkeleton from '../../components/skeletons/StudentDashboardSkeleton';
 import API from '../../utils/api';
 import { useCart } from '../../context/CartContext';
 import { FaBullhorn, FaCalendar, FaTshirt } from 'react-icons/fa';

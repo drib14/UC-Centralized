@@ -1,7 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
+import AdminUsersSkeleton from '../../components/skeletons/AdminUsersSkeleton';
 import API from '../../utils/api';
 import { toast } from 'react-toastify';
-import { FaPen, FaTrash } from 'react-icons/fa';
+import { FaPen, FaTrash, FaKey } from 'react-icons/fa';
 
 const AdminUsers = () => {
     const [users, setUsers] = useState([]);
@@ -40,7 +41,29 @@ const AdminUsers = () => {
         } catch(e) { toast.error("Failed to delete user"); }
     };
 
-    if (loading) return <div className="text-center mt-5"><div className="spinner-border text-primary"></div></div>;
+    const handleGenerateApiKey = async () => {
+        try {
+            const data = await API.generateApiKey(editData._id);
+            setEditData({ ...editData, apiKey: data.apiKey });
+            toast.success("API key generated");
+            loadUsers();
+        } catch (e) {
+            toast.error("Failed to generate API key");
+        }
+    };
+
+    const handleRevokeApiKey = async () => {
+        try {
+            await API.revokeApiKey(editData._id);
+            setEditData({ ...editData, apiKey: null });
+            toast.success("API key revoked");
+            loadUsers();
+        } catch (e) {
+            toast.error("Failed to revoke API key");
+        }
+    };
+
+    if (loading) return <AdminUsersSkeleton />;
 
     return (
         <div className="container-fluid">
@@ -89,12 +112,20 @@ const AdminUsers = () => {
                                 <div className="mb-3"><label>Last Name</label><input className="form-control" value={editData.lastName} onChange={e => setEditData({...editData, lastName: e.target.value})} /></div>
                                 <div className="mb-3"><label>Role</label><select className="form-select" value={editData.role} onChange={e => setEditData({...editData, role: e.target.value})}><option value="student">Student</option><option value="admin">Admin</option></select></div>
                                 <div className="mb-3"><label>Department</label><input className="form-control" value={editData.department} onChange={e => setEditData({...editData, department: e.target.value})} /></div>
+                                <hr />
+                                <div className="mb-3">
+                                    <label>API Key</label>
+                                    <input className="form-control" value={editData.apiKey || 'No key generated'} disabled />
+                                </div>
+                                <button className="btn btn-sm btn-success me-2" onClick={handleGenerateApiKey}><FaKey className="me-2" />Generate Key</button>
+                                <button className="btn btn-sm btn-danger" onClick={handleRevokeApiKey} disabled={!editData.apiKey}><FaTrash className="me-2" />Revoke Key</button>
                             </div>
                             <div className="modal-footer"><button className="btn btn-secondary" onClick={() => setShowEdit(false)}>Cancel</button><button className="btn btn-primary" onClick={handleUpdate}>Update</button></div>
                         </div>
                     </div>
                 </div>
             )}
+
 
             {/* Delete Modal */}
              {showDelete && (

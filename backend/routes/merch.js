@@ -1,3 +1,9 @@
+/**
+ * @swagger
+ * tags:
+ *   name: Merch
+ *   description: API for managing merchandise
+ */
 const router = require('express').Router();
 const Merch = require('../models/Merch');
 const { verifyToken, verifyAdmin } = require('../middleware/auth');
