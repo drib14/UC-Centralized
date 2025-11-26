@@ -13,25 +13,29 @@
   margin-bottom: 20px;
 }
 
-.splash-text {
-  font-size: 2rem;
-  font-weight: bold;
-  color: #003399;
-}
-
 .trace-svg text {
-  font-size: 2rem;
+  font-family: 'Segoe UI', 'Roboto', 'Helvetica Neue', sans-serif;
+  font-size: 2.5rem;
   font-weight: bold;
-  fill: transparent;
   stroke: #003399;
-  stroke-width: 1;
-  stroke-dasharray: 1000;
-  stroke-dashoffset: 1000;
-  animation: trace 5s ease-in-out forwards;
+  stroke-width: 1px;
+  stroke-dasharray: 600;
+  stroke-dashoffset: 600;
+  fill: transparent;
+  animation: trace 4s ease-out forwards;
 }
 
 @keyframes trace {
-  to {
+  0% {
+    stroke-dashoffset: 600;
+    fill: transparent;
+  }
+  80% {
     stroke-dashoffset: 0;
+    fill: transparent;
+  }
+  100% {
+    stroke-dashoffset: 0;
+    fill: #003399;
   }
 }
