@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
+import StudentMerchSkeleton from '../../components/skeletons/StudentMerchSkeleton';
 import API from '../../utils/api';
 import { useCart } from '../../context/CartContext';
 import { toast } from 'react-toastify';
@@ -67,7 +68,7 @@ const StudentMerch = () => {
         return v ? v.stock : 0;
     };
 
-    if (loading) return <div className="text-center mt-5"><div className="spinner-border text-success"></div></div>;
+    if (loading) return <StudentMerchSkeleton />;
 
     return (
         <div className="container-fluid">

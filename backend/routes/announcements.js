@@ -13,10 +13,29 @@ router.post('/', verifyAdmin, async (req, res) => {
     }
 });
 
-// GET ALL
-router.get('/', verifyToken, async (req, res) => {
+// GET ALL (for admins)
+router.get('/', verifyAdmin, async (req, res) => {
     try {
         const announcements = await Announcement.find().sort({ date: -1 });
+        res.status(200).json(announcements);
+    } catch (err) {
+        res.status(500).json(err);
+    }
+});
+
+// GET FOR USER
+router.get('/user', verifyToken, async (req, res) => {
+    try {
+        const user = req.user;
+        const query = {
+            $or: [
+                { target: 'ALL' },
+                { target: 'DEPARTMENT', department: user.department },
+                { target: 'PROGRAM', program: user.program },
+                { target: 'YEAR_LEVEL', yearLevel: user.yearLevel }
+            ]
+        };
+        const announcements = await Announcement.find(query).sort({ date: -1 });
         res.status(200).json(announcements);
     } catch (err) {
         res.status(500).json(err);

@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
+import AdminOrdersSkeleton from '../../components/skeletons/AdminOrdersSkeleton';
 import API from '../../utils/api';
 import { toast } from 'react-toastify';
 
@@ -27,7 +28,7 @@ const AdminOrders = () => {
         } catch(e) { toast.error(e.message); }
     };
 
-    if (loading) return <div className="text-center mt-5"><div className="spinner-border text-primary"></div></div>;
+    if (loading) return <AdminOrdersSkeleton />;
 
     return (
         <div className="container-fluid">

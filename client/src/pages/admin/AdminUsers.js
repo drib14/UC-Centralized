@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
+import AdminUsersSkeleton from '../../components/skeletons/AdminUsersSkeleton';
 import API from '../../utils/api';
 import { toast } from 'react-toastify';
 import { FaPen, FaTrash } from 'react-icons/fa';
@@ -40,7 +41,7 @@ const AdminUsers = () => {
         } catch(e) { toast.error("Failed to delete user"); }
     };
 
-    if (loading) return <div className="text-center mt-5"><div className="spinner-border text-primary"></div></div>;
+    if (loading) return <AdminUsersSkeleton />;
 
     return (
         <div className="container-fluid">

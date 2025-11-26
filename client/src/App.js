@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
@@ -7,6 +7,7 @@ import { AuthProvider, useAuth } from './context/AuthContext';
 import { CartProvider } from './context/CartContext';
 
 import Layout from './components/Layout';
+import SplashScreen from './components/SplashScreen';
 import Landing from './pages/Landing';
 import Login from './pages/Login';
 import Register from './pages/Register';
@@ -47,6 +48,19 @@ const ProtectedRoute = ({ children, allowedRoles }) => {
 };
 
 function App() {
+    const [showSplash, setShowSplash] = useState(true);
+
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            setShowSplash(false);
+        }, 5000);
+        return () => clearTimeout(timer);
+    }, []);
+
+    if (showSplash) {
+        return <SplashScreen />;
+    }
+
     return (
         <AuthProvider>
             <CartProvider>

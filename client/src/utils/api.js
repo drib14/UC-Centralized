@@ -126,6 +126,10 @@ class API {
         return this.request(`/announcements/${id}`, 'DELETE');
     }
 
+    static getUserAnnouncements() {
+        return this.request('/announcements/user');
+    }
+
     // Admin Stats
     static getAdminStats() {
         return this.request('/stats/dashboard');
