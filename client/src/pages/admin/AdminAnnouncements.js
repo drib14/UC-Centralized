@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
+import AdminAnnouncementsSkeleton from '../../components/skeletons/AdminAnnouncementsSkeleton';
 import API from '../../utils/api';
 import { toast } from 'react-toastify';
 import { FaPlus, FaTrash } from 'react-icons/fa6';
@@ -40,7 +41,7 @@ const AdminAnnouncements = () => {
         } catch(e) { toast.error("Failed to delete"); }
     };
 
-    if (loading) return <div className="text-center mt-5"><div className="spinner-border text-primary"></div></div>;
+    if (loading) return <AdminAnnouncementsSkeleton />;
 
     return (
         <div className="container-fluid">

@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import API from '../../utils/api';
 import { Link } from 'react-router-dom';
+import AdminDashboardSkeleton from '../../components/skeletons/AdminDashboardSkeleton';
 
 const AdminDashboard = () => {
     const [stats, setStats] = useState({
@@ -41,7 +42,7 @@ const AdminDashboard = () => {
         return <span className={`badge ${map[status] || 'bg-secondary'}`}>{status.toUpperCase()}</span>;
     };
 
-    if (loading) return <div className="text-center mt-5"><div className="spinner-border text-primary"></div></div>;
+    if (loading) return <AdminDashboardSkeleton />;
 
     return (
         <div className="container-fluid">
