@@ -1,13 +1,17 @@
 import React from 'react';
 import './SplashScreen.css';
-import logo from '../../assets/uc-central-logo.png';
+import logo from '../assets/uc-central-logo.png';
 
 const SplashScreen = () => {
   return (
     <div className="splash-screen">
       <img src={logo} alt="UC Central Logo" className="splash-logo" />
       <div className="splash-text">
-        <span className="trace-text">Centralized</span>
+        <svg className="trace-svg" viewBox="0 0 400 50">
+          <text x="50%" y="50%" dy=".35em" textAnchor="middle">
+            Centralized
+          </text>
+        </svg>
       </div>
     </div>
   );
