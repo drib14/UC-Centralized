@@ -15,13 +15,13 @@ const ForgotPassword = () => {
         e.preventDefault();
         setLoading(true);
         try {
-            await API.post('/auth/forgot-password', { studentId, email });
+            await API.request('/auth/forgot-password', 'POST', { studentId, email });
             toast.success('A verification code has been sent to your email.');
             navigate('/verify-code', { state: { studentId } });
         } catch (error) {
             console.error("Forgot Password Error:", error);
             console.error("Error Response:", error.response);
-            toast.error(error.response?.data?.message || 'An error occurred. Please check the console for details.');
+            toast.error(error.message || 'An error occurred. Please check the console for details.');
         } finally {
             setLoading(false);
         }

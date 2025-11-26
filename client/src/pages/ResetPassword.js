@@ -29,13 +29,13 @@ const ResetPassword = () => {
         }
         setLoading(true);
         try {
-            await API.post('/auth/reset-password', { token, password, confirmPassword });
+            await API.request('/auth/reset-password', 'POST', { token, password, confirmPassword });
             toast.success('Password has been reset successfully!');
             navigate('/login');
         } catch (error) {
             console.error("Reset Password Error:", error);
             console.error("Error Response:", error.response);
-            toast.error(error.response?.data?.message || 'An error occurred. Please check the console for details.');
+            toast.error(error.message || 'An error occurred. Please check the console for details.');
         } finally {
             setLoading(false);
         }

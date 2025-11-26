@@ -22,13 +22,13 @@ const VerifyCode = () => {
         e.preventDefault();
         setLoading(true);
         try {
-            const { data } = await API.post('/auth/verify-code', { studentId, code });
+            const data = await API.request('/auth/verify-code', 'POST', { studentId, code });
             toast.success('Verification successful!');
             navigate('/reset-password', { state: { token: data.resetToken } });
         } catch (error) {
             console.error("Verify Code Error:", error);
             console.error("Error Response:", error.response);
-            toast.error(error.response?.data?.message || 'An error occurred. Please check the console for details.');
+            toast.error(error.message || 'An error occurred. Please check the console for details.');
         } finally {
             setLoading(false);
         }
