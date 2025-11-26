@@ -244,11 +244,16 @@ router.post('/reset-password', async (req, res) => {
         }
 
         const salt = await bcrypt.genSalt(10);
-        user.password = await bcrypt.hash(password, salt);
-        user.resetPasswordToken = undefined;
-        user.resetPasswordExpires = undefined;
-        user.resetLockoutUntil = undefined; // Clear any lockout
-        await user.save();
+        const hashedPassword = await bcrypt.hash(password, salt);
+
+        await User.updateOne({ _id: user._id }, {
+            $set: {
+                password: hashedPassword,
+                resetPasswordToken: undefined,
+                resetPasswordExpires: undefined,
+                resetLockoutUntil: undefined // Clear any lockout
+            }
+        });
 
         res.status(200).json({ message: 'Password has been reset successfully.' });
     } catch (err) {
