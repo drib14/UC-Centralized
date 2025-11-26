@@ -30,6 +30,7 @@ const corsOptions = {
 };
 
 app.use(cors(corsOptions));
+app.options('*', cors(corsOptions)); // Enable pre-flight for all routes
 
 // Health Check (No DB dependency) to verify server status
 app.get('/health', (req, res) => {
