@@ -4,6 +4,7 @@ import API from '../utils/api';
 import { toast } from 'react-toastify';
 import logo from '../assets/uc-central-logo.png';
 import { FaLock, FaEye, FaEyeSlash } from 'react-icons/fa6';
+import PasswordStrength from '../components/PasswordStrength';
 
 const ResetPassword = () => {
     const [password, setPassword] = useState('');
@@ -88,13 +89,8 @@ const ResetPassword = () => {
                         </div>
                     </div>
 
-                    <div className="mt-3 small">
-                        <p className="mb-1">Password must contain:</p>
-                        <ul className="list-unstyled">
-                            <li>At least 8 characters</li>
-                            <li>An uppercase and lowercase letter</li>
-                            <li>A number and a special character</li>
-                        </ul>
+                    <div className="mt-3">
+                        <PasswordStrength password={password} />
                     </div>
 
                     <div className="d-grid gap-2">

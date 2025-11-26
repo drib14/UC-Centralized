@@ -19,9 +19,13 @@ const ForgotPassword = () => {
             toast.success('A verification code has been sent to your email.');
             navigate('/verify-code', { state: { studentId } });
         } catch (error) {
-            console.error("Forgot Password Error:", error);
-            console.error("Error Response:", error.response);
-            toast.error(error.message || 'An error occurred. Please check the console for details.');
+            if (error.response && error.response.status === 404) {
+                toast.error("ID number doesn't exist.");
+            } else if (error.response && error.response.status === 400) {
+                toast.error("Email doesn't exist for the provided ID number.");
+            } else {
+                toast.error(error.message || 'An error occurred. Please try again.');
+            }
         } finally {
             setLoading(false);
         }

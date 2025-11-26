@@ -4,6 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import { toast } from 'react-toastify';
 import logo from '../assets/uc-central-logo.png';
 import { FaEye, FaEyeSlash } from 'react-icons/fa6';
+import PasswordStrength from '../components/PasswordStrength';
 
 const Register = () => {
     const [showPassword, setShowPassword] = useState(false);
@@ -121,13 +122,7 @@ const Register = () => {
                     </div>
 
                     <div className="mt-3">
-                        <p className="mb-1 small">Password must contain:</p>
-                        <ul className="list-unstyled small">
-                            <li><small>At least 8 characters</small></li>
-                            <li><small>An uppercase and lowercase letter</small></li>
-                            <li><small>A number</small></li>
-                            <li><small>A special character</small></li>
-                        </ul>
+                        <PasswordStrength password={formData.password} />
                     </div>
 
                     <div className="d-grid gap-2 mt-4">

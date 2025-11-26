@@ -12,6 +12,14 @@ router.post('/register', async (req, res) => {
         const existingUser = await User.findOne({ studentId: req.body.studentId });
         if (existingUser) return res.status(400).json({ message: "User already exists" });
 
+        // Password strength check
+        const passRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]).{8,}$/;
+        if (!passRegex.test(req.body.password)) {
+            return res.status(400).json({
+                message: "Password is not strong enough. It must be at least 8 characters long and include an uppercase letter, a lowercase letter, a number, and a special character."
+            });
+        }
+
         // Generate new password
         const salt = await bcrypt.genSalt(10);
         const hashedPassword = await bcrypt.hash(req.body.password, salt);
@@ -122,10 +130,13 @@ router.post('/forgot-password', async (req, res) => {
         }
 
         const resetCode = crypto.randomInt(100000, 999999).toString();
-        user.resetCode = resetCode;
-        user.resetCodeExpires = new Date(new Date().getTime() + 5 * 60 * 1000); // 5 minutes
-        user.resetAttempts = 0;
-        await user.save();
+        await User.updateOne({ _id: user._id }, {
+            $set: {
+                resetCode: resetCode,
+                resetCodeExpires: new Date(new Date().getTime() + 5 * 60 * 1000), // 5 minutes
+                resetAttempts: 0
+            }
+        });
 
         const emailTemplate = `
             <div style="font-family: Arial, sans-serif; text-align: center; color: #333;">
@@ -211,7 +222,7 @@ router.post('/reset-password', async (req, res) => {
 
         // Password strength check
         const passRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]).{8,}$/;
-        if (!passRegex.test(password)) {
+        if (!passRegex.test(req.body.password)) {
             return res.status(400).json({
                 message: "Password is not strong enough. It must be at least 8 characters long and include an uppercase letter, a lowercase letter, a number, and a special character."
             });
