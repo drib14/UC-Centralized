@@ -1,6 +1,6 @@
 import React from 'react';
 import './SplashScreen.css';
-import logo from '../../assets/uc-central-logo.png';
+import logo from '../assets/uc-central-logo.png';
 
 const SplashScreen = () => {
   return (
