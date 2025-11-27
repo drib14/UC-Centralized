@@ -2,7 +2,8 @@ import React, { useState, useEffect, useCallback } from 'react';
 import API from '../../utils/api';
 import { useAuth } from '../../context/AuthContext';
 import { toast } from 'react-toastify';
-import { FaUser, FaPen, FaShoppingCart, FaEye, FaEyeSlash, FaKey, FaCopy } from 'react-icons/fa';
+import { Link } from 'react-router-dom';
+import { FaUser, FaPen, FaShoppingCart, FaEye, FaEyeSlash, FaKey, FaCopy, FaBook } from 'react-icons/fa';
 import StudentProfileSkeleton from '../../components/skeletons/StudentProfileSkeleton';
 
 const StudentProfile = () => {
@@ -147,9 +148,12 @@ const StudentProfile = () => {
                                          <FaCopy />
                                      </button>
                                  </div>
-                                 <button className="btn btn-sm btn-primary w-100" onClick={handleGenerateApiKey}>
+                                 <button className="btn btn-sm btn-primary w-100 mb-2" onClick={handleGenerateApiKey}>
                                      {apiKey ? 'Regenerate Key' : 'Generate Key'}
                                  </button>
+                                 <Link to="/documentation" className="btn btn-sm btn-outline-info w-100 d-flex align-items-center justify-content-center">
+                                     <FaBook className="me-2" /> View Documentation
+                                 </Link>
                              </div>
                         </div>
                     </div>

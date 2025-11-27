@@ -1,7 +1,22 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { FaCode, FaKey, FaBook, FaUser } from 'react-icons/fa';
-import './Documentation.css'; // We'll create a simple CSS for this
+import './Documentation.css';
+
+const CodeBlock = ({ method, url, body, response }) => (
+    <div className="bg-light p-3 rounded mt-3 code-block">
+        <h6 className="fw-bold text-muted">Example Request (JavaScript)</h6>
+        <pre className="mb-0"><code>{`const response = await fetch('https://uc-central.vercel.app/api${url}', {
+    method: '${method}',
+    headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': 'YOUR_API_KEY'
+    }${body ? `,\n    body: JSON.stringify(${JSON.stringify(body, null, 4).replace(/\n/g, '\n    ')})` : ''}
+});
+const data = await response.json();
+console.log(data);`}</code></pre>
+    </div>
+);
 
 const Documentation = () => {
     return (
@@ -56,10 +71,12 @@ const Documentation = () => {
                             <div className="api-endpoint">
                                 <span className="badge bg-success">POST</span> <code>/auth/login</code>
                                 <p>Login with Student ID and Password.</p>
+                                <CodeBlock method="POST" url="/auth/login" body={{ studentId: "12345", password: "SecretPassword1!" }} />
                             </div>
                              <div className="api-endpoint">
                                 <span className="badge bg-success">POST</span> <code>/auth/register</code>
                                 <p>Register a new account.</p>
+                                <CodeBlock method="POST" url="/auth/register" body={{ studentId: "12345", email: "student@uc.edu.ph", password: "Pass", firstName: "John", lastName: "Doe" }} />
                             </div>
                         </section>
 
@@ -68,10 +85,12 @@ const Documentation = () => {
                             <div className="api-endpoint">
                                 <span className="badge bg-primary">GET</span> <code>/users</code>
                                 <p>Get all users (Admin only).</p>
+                                <CodeBlock method="GET" url="/users" />
                             </div>
                              <div className="api-endpoint">
                                 <span className="badge bg-info">GET</span> <code>/auth/me</code>
                                 <p>Get current user profile.</p>
+                                <CodeBlock method="GET" url="/auth/me" />
                             </div>
                         </section>
 
@@ -80,10 +99,12 @@ const Documentation = () => {
                             <div className="api-endpoint">
                                 <span className="badge bg-primary">GET</span> <code>/events</code>
                                 <p>Get all events.</p>
+                                <CodeBlock method="GET" url="/events" />
                             </div>
                             <div className="api-endpoint">
                                 <span className="badge bg-success">POST</span> <code>/events</code>
                                 <p>Create a new event (Admin only).</p>
+                                <CodeBlock method="POST" url="/events" body={{ title: "Tech Talk", date: "2024-12-01", description: "Learn React" }} />
                             </div>
                         </section>
 
@@ -92,6 +113,7 @@ const Documentation = () => {
                             <div className="api-endpoint">
                                 <span className="badge bg-primary">GET</span> <code>/merch</code>
                                 <p>Get all merchandise items.</p>
+                                <CodeBlock method="GET" url="/merch" />
                             </div>
                         </section>
 
@@ -100,10 +122,12 @@ const Documentation = () => {
                             <div className="api-endpoint">
                                 <span className="badge bg-primary">GET</span> <code>/orders</code>
                                 <p>Get all orders.</p>
+                                <CodeBlock method="GET" url="/orders" />
                             </div>
                             <div className="api-endpoint">
                                 <span className="badge bg-success">POST</span> <code>/orders</code>
                                 <p>Create a new order.</p>
+                                <CodeBlock method="POST" url="/orders" body={{ items: [{ merch: "item_id", quantity: 1 }], totalPrice: 500 }} />
                             </div>
                         </section>
 
@@ -112,6 +136,7 @@ const Documentation = () => {
                             <div className="api-endpoint">
                                 <span className="badge bg-primary">GET</span> <code>/announcements</code>
                                 <p>Get all announcements.</p>
+                                <CodeBlock method="GET" url="/announcements" />
                             </div>
                         </section>
                     </div>
