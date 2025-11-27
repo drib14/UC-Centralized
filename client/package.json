@@ -18,8 +18,21 @@
   "scripts": {
     "start": "react-scripts start",
     "build": "CI=false react-scripts build",
+    "postbuild": "react-snap",
     "test": "react-scripts test",
     "eject": "react-scripts eject"
+  },
+  "reactSnap": {
+    "include": [
+      "/",
+      "/login",
+      "/register",
+      "/documentation"
+    ],
+    "puppeteerArgs": [
+      "--no-sandbox",
+      "--disable-setuid-sandbox"
+    ]
   },
   "eslintConfig": {
     "extends": [
@@ -41,6 +54,7 @@
   },
   "proxy": "http://localhost:5000",
   "devDependencies": {
-    "react-scripts": "^5.0.1"
+    "react-scripts": "^5.0.1",
+    "react-snap": "^1.23.0"
   }
 }
