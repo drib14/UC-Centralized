@@ -19,8 +19,70 @@ console.log(data);`}</code></pre>
     </div>
 );
 
+const SchemaBlock = ({ name, fields }) => (
+    <div className="card mb-4 border-warning">
+        <div className="card-header bg-warning text-dark fw-bold">{name} Schema</div>
+        <div className="card-body bg-light">
+             <pre className="mb-0"><code>{JSON.stringify(fields, null, 4)}</code></pre>
+        </div>
+    </div>
+);
+
 const Documentation = () => {
     const { user } = useAuth();
+
+    // Define Schemas manually based on Backend Models
+    const userSchema = {
+        studentId: "String (Required, Unique)",
+        email: "String (Required, Unique)",
+        password: "String (Hashed)",
+        firstName: "String",
+        lastName: "String",
+        department: "String (Default: CCS)",
+        program: "String",
+        year: "String",
+        role: "String (student|admin)",
+        profileImage: "String (URL)",
+        apiKey: "String (Sparse, Unique)"
+    };
+
+    const eventSchema = {
+        title: "String",
+        description: "String",
+        date: "String",
+        time: "String",
+        location: "String",
+        image: "String (URL)",
+        department: "String (Default: ALL)",
+        attendees: "[ObjectId (Ref: User)]"
+    };
+
+    const merchSchema = {
+        name: "String",
+        description: "String",
+        price: "Number",
+        stock: "Number",
+        category: "String (wearable|accessories)",
+        variants: "[{ size, color, stock }]",
+        image: "String (URL)"
+    };
+
+    const orderSchema = {
+        user: "ObjectId (Ref: User)",
+        customerName: "String",
+        items: "[{ merch, quantity, variant }]",
+        totalPrice: "Number",
+        status: "String (pending|processing|claimed|cancelled)",
+        orderDate: "Date"
+    };
+
+    const announcementSchema = {
+        title: "String",
+        message: "String",
+        date: "Date",
+        author: "String",
+        department: "String"
+    };
 
     return (
         <div className="documentation-page">
@@ -95,6 +157,8 @@ const Documentation = () => {
 
                         <section id="users" className="mb-5">
                             <h2 className="text-secondary border-bottom pb-2"><FaUser className="me-2"/>Users</h2>
+                            <SchemaBlock name="User" fields={userSchema} />
+
                             <div className="api-endpoint">
                                 <span className="badge bg-primary">GET</span> <code>/users</code>
                                 <p>Get all users (Admin only).</p>
@@ -109,6 +173,8 @@ const Documentation = () => {
 
                          <section id="events" className="mb-5">
                             <h2 className="text-secondary border-bottom pb-2"><FaBook className="me-2"/>Events</h2>
+                            <SchemaBlock name="Event" fields={eventSchema} />
+
                             <div className="api-endpoint">
                                 <span className="badge bg-primary">GET</span> <code>/events</code>
                                 <p>Get all events.</p>
@@ -117,12 +183,14 @@ const Documentation = () => {
                             <div className="api-endpoint">
                                 <span className="badge bg-success">POST</span> <code>/events</code>
                                 <p>Create a new event (Admin only).</p>
-                                <CodeBlock method="POST" url="/events" body={{ title: "Tech Talk", date: "2024-12-01", description: "Learn React" }} />
+                                <CodeBlock method="POST" url="/events" body={{ title: "Tech Talk", date: "2024-12-01", description: "Learn React", location: "AVR" }} />
                             </div>
                         </section>
 
                          <section id="merch" className="mb-5">
                             <h2 className="text-secondary border-bottom pb-2">Merchandise</h2>
+                            <SchemaBlock name="Merch" fields={merchSchema} />
+
                             <div className="api-endpoint">
                                 <span className="badge bg-primary">GET</span> <code>/merch</code>
                                 <p>Get all merchandise items.</p>
@@ -132,6 +200,8 @@ const Documentation = () => {
 
                          <section id="orders" className="mb-5">
                             <h2 className="text-secondary border-bottom pb-2">Orders</h2>
+                            <SchemaBlock name="Order" fields={orderSchema} />
+
                             <div className="api-endpoint">
                                 <span className="badge bg-primary">GET</span> <code>/orders</code>
                                 <p>Get all orders.</p>
@@ -146,6 +216,8 @@ const Documentation = () => {
 
                          <section id="announcements" className="mb-5">
                             <h2 className="text-secondary border-bottom pb-2">Announcements</h2>
+                            <SchemaBlock name="Announcement" fields={announcementSchema} />
+
                             <div className="api-endpoint">
                                 <span className="badge bg-primary">GET</span> <code>/announcements</code>
                                 <p>Get all announcements.</p>
