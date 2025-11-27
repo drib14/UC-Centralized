@@ -234,7 +234,16 @@ const Documentation = () => {
             </div>
 
             <footer className="bg-dark text-white text-center py-3">
-                <small>&copy; {new Date().getFullYear()} UC-Central API</small>
+                <div className="container">
+                    <div className="d-flex justify-content-center gap-3 mb-2">
+                        <noscript>
+                            <a href="/documentation.html" className="text-white text-decoration-underline small">Static Docs (HTML)</a>
+                        </noscript>
+                        <a href="/docs/api.md" className="text-white text-decoration-underline small">Raw Docs (Markdown)</a>
+                        <a href="/api/documentation" target="_blank" className="text-white text-decoration-underline small">API Response (JSON)</a>
+                    </div>
+                    <small>&copy; {new Date().getFullYear()} UC-Central API</small>
+                </div>
             </footer>
         </div>
     );
