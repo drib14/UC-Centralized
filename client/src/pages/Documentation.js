@@ -2,6 +2,7 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { FaCode, FaKey, FaBook, FaUser, FaArrowRight } from 'react-icons/fa';
+import SEO from '../components/SEO';
 import './Documentation.css';
 
 const CodeBlock = ({ method, url, body, response }) => (
@@ -86,6 +87,10 @@ const Documentation = () => {
 
     return (
         <div className="documentation-page">
+            <SEO
+                title="API Documentation"
+                description="Official API Documentation for UC-Central. Learn how to integrate with our platform."
+            />
             <nav className="doc-navbar sticky-top">
                 <div className="container d-flex justify-content-between align-items-center">
                     <Link to="/" className="navbar-brand text-white fw-bold">

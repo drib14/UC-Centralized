@@ -3,12 +3,17 @@ import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import logo from '../assets/uc-central-logo.png';
 import { FaCalendarDays, FaShirt, FaBullhorn, FaArrowRight } from 'react-icons/fa6';
+import SEO from '../components/SEO';
 
 const Landing = () => {
     const { user } = useAuth();
 
     return (
         <div className="d-flex flex-column min-vh-100">
+            <SEO
+                title="Home"
+                description="Welcome to UC-Central, the ultimate hub for students and faculty. Manage events, merchandise, and announcements."
+            />
             {/* Navbar */}
             <nav className="navbar navbar-expand-lg navbar-dark bg-primary">
                 <div className="container">

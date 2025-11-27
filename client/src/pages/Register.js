@@ -5,6 +5,7 @@ import { toast } from 'react-toastify';
 import logo from '../assets/uc-central-logo.png';
 import { FaEye, FaEyeSlash } from 'react-icons/fa6';
 import PasswordStrength from '../components/PasswordStrength';
+import SEO from '../components/SEO';
 
 const Register = () => {
     const [showPassword, setShowPassword] = useState(false);
@@ -46,6 +47,7 @@ const Register = () => {
 
     return (
         <div className="container py-5">
+            <SEO title="Register" description="Create your UC-Central account today." />
             <div className="auth-container w-100 mx-auto" style={{ maxWidth: '600px' }}>
                 <div className="auth-header text-center mb-4">
                     <img src={logo} alt="UC Logo" style={{ height: '60px' }} className="mb-2" />

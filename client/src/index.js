@@ -5,23 +5,17 @@ import 'bootstrap/dist/js/bootstrap.bundle.min.js';
 import './assets/css/styles.css';
 import './index.css';
 import App from './App';
+import { HelmetProvider } from 'react-helmet-async';
 import reportWebVitals from './reportWebVitals';
 
-const rootElement = document.getElementById('root');
-if (rootElement.hasChildNodes()) {
-  ReactDOM.hydrateRoot(rootElement,
-    <React.StrictMode>
+const root = ReactDOM.createRoot(document.getElementById('root'));
+root.render(
+  <React.StrictMode>
+    <HelmetProvider>
       <App />
-    </React.StrictMode>
-  );
-} else {
-  const root = ReactDOM.createRoot(rootElement);
-  root.render(
-    <React.StrictMode>
-      <App />
-    </React.StrictMode>
-  );
-}
+    </HelmetProvider>
+  </React.StrictMode>
+);
 
 // If you want to start measuring performance in your app, pass a function
 // to log results (for example: reportWebVitals(console.log))

@@ -4,6 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import { toast } from 'react-toastify';
 import logo from '../assets/uc-central-logo.png';
 import { FaIdCard, FaLock, FaEye, FaEyeSlash } from 'react-icons/fa6';
+import SEO from '../components/SEO';
 
 const Login = () => {
     const [studentId, setStudentId] = useState('');
@@ -31,6 +32,7 @@ const Login = () => {
 
     return (
         <div className="container d-flex align-items-center justify-content-center" style={{ minHeight: '100vh' }}>
+            <SEO title="Login" description="Sign in to your UC-Central account." />
             <div className="auth-container w-100">
                 <div className="auth-header text-center mb-4">
                     <img src={logo} alt="UC Logo" style={{ height: '60px' }} className="mb-2" />
