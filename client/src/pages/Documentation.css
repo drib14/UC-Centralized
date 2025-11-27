@@ -1,0 +1,29 @@
+.doc-navbar {
+    background-color: #003399; /* UC Blue */
+    padding: 0.8rem 0;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+}
+
+.documentation-page {
+    background-color: #f8f9fa;
+    min-height: 100vh;
+}
+
+.api-endpoint {
+    background: white;
+    padding: 15px;
+    border-radius: 8px;
+    border-left: 5px solid #003399;
+    margin-bottom: 15px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+}
+
+.api-endpoint code {
+    font-size: 1.1em;
+    color: #d63384;
+    margin-left: 10px;
+}
+
+.api-endpoint .badge {
+    width: 60px;
+}

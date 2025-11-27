@@ -5,7 +5,7 @@ import { useCart } from '../context/CartContext';
 import logo from '../assets/uc-central-logo.png';
 import {
     FaTableColumns, FaCalendarDays, FaShirt, FaEnvelope, FaCartShopping, FaUser, FaRightFromBracket,
-    FaUsers, FaBullhorn, FaClipboardList, FaCashRegister, FaChevronLeft, FaChevronRight
+    FaUsers, FaBullhorn, FaClipboardList, FaCashRegister, FaChevronLeft, FaChevronRight, FaBook
 } from 'react-icons/fa6';
 
 const Sidebar = () => {
@@ -92,6 +92,7 @@ const Sidebar = () => {
                         <NavLink to="/student/profile" className={navLinkClass} onClick={handleMobileClick}><FaUser className={iconClass} /> <span>Profile</span></NavLink>
                     </>
                 )}
+                <NavLink to="/documentation" className={navLinkClass} onClick={handleMobileClick}><FaBook className={iconClass} /> <span>API Docs</span></NavLink>
             </nav>
 
             <div className="sidebar-footer">

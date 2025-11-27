@@ -60,6 +60,11 @@ const userSchema = new mongoose.Schema({
     },
     resetPasswordExpires: {
         type: Date,
+    },
+    apiKey: {
+        type: String,
+        unique: true,
+        sparse: true
     }
 }, { timestamps: true });
 

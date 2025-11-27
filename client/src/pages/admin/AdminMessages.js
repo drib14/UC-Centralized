@@ -1,18 +1,25 @@
 import React, { useState, useEffect } from 'react';
 import { toast } from 'react-toastify';
 import { FaReply } from 'react-icons/fa6';
+import AdminMessagesSkeleton from '../../components/skeletons/AdminMessagesSkeleton';
 
 const AdminMessages = () => {
     const [messages, setMessages] = useState([]);
+    const [loading, setLoading] = useState(true);
     const [showReply, setShowReply] = useState(false);
     const [replyData, setReplyData] = useState({ student: '', subject: '', body: '' });
 
     useEffect(() => { loadMessages(); }, []);
 
     const loadMessages = () => {
-        const all = JSON.parse(localStorage.getItem('ucc_messages_local') || '[]');
-        setMessages(all);
+        setTimeout(() => {
+            const all = JSON.parse(localStorage.getItem('ucc_messages_local') || '[]');
+            setMessages(all);
+            setLoading(false);
+        }, 800);
     };
+
+    if (loading) return <AdminMessagesSkeleton />;
 
     const handleReply = () => {
         toast.success("Reply sent successfully!");

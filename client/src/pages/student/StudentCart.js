@@ -1,12 +1,20 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import API from '../../utils/api';
 import { useCart } from '../../context/CartContext';
 import { toast } from 'react-toastify';
 import { FaShoppingCart, FaTrash } from 'react-icons/fa';
+import StudentCartSkeleton from '../../components/skeletons/StudentCartSkeleton';
 
 const StudentCart = () => {
     const { cart, updateQuantity, removeItem, updateItemVariant, clearCart, getTotal } = useCart();
     const [showConfirm, setShowConfirm] = useState(false);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        setTimeout(() => setLoading(false), 800);
+    }, []);
+
+    if (loading) return <StudentCartSkeleton />;
 
     const handleCheckout = async () => {
         const orderItems = cart.map(i => ({

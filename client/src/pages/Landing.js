@@ -20,7 +20,10 @@ const Landing = () => {
                         <span className="navbar-toggler-icon"></span>
                     </button>
                     <div className="collapse navbar-collapse" id="navbarNav">
-                        <ul className="navbar-nav ms-auto">
+                        <ul className="navbar-nav ms-auto align-items-center">
+                            <li className="nav-item me-3">
+                                <Link className="nav-link" to="/documentation">API Docs</Link>
+                            </li>
                             {user ? (
                                 <li className="nav-item">
                                     <Link className="nav-link" to={user.role === 'admin' ? '/admin/dashboard' : '/student/dashboard'}>

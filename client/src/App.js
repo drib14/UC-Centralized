@@ -14,6 +14,7 @@ import Register from './pages/Register';
 import ForgotPassword from './pages/ForgotPassword';
 import VerifyCode from './pages/VerifyCode';
 import ResetPassword from './pages/ResetPassword';
+import Documentation from './pages/Documentation';
 
 import StudentDashboard from './pages/student/StudentDashboard';
 import StudentEvents from './pages/student/StudentEvents';
@@ -74,6 +75,7 @@ function App() {
                         <Route path="/forgot-password" element={<ForgotPassword />} />
                         <Route path="/verify-code" element={<VerifyCode />} />
                         <Route path="/reset-password" element={<ResetPassword />} />
+                        <Route path="/documentation" element={<Documentation />} />
 
                         {/* Student Routes */}
                         <Route path="/student" element={<ProtectedRoute allowedRoles={['student']}><Layout /></ProtectedRoute>}>

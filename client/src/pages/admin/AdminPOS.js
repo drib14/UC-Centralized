@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import API from '../../utils/api';
 import { toast } from 'react-toastify';
 import { FaShoppingBasket, FaCashRegister, FaSearch, FaUser } from 'react-icons/fa';
+import AdminPOSSkeleton from '../../components/skeletons/AdminPOSSkeleton';
 
 const AdminPOS = () => {
     const [merch, setMerch] = useState([]);
@@ -30,7 +31,9 @@ const AdminPOS = () => {
             const data = await API.getMerch();
             setMerch(data);
         } catch (e) { toast.error("Failed to load products"); }
-        finally { setLoading(false); }
+        finally {
+             setTimeout(() => setLoading(false), 800);
+        }
     };
 
     const loadUsers = async () => {
@@ -160,7 +163,7 @@ const AdminPOS = () => {
         } catch(e) { toast.error("Transaction failed: " + e.message); }
     };
 
-    if (loading) return <div className="text-center mt-5"><div className="spinner-border text-primary"></div></div>;
+    if (loading) return <AdminPOSSkeleton />;
 
     return (
         <div className="container-fluid">

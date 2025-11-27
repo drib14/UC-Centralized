@@ -79,6 +79,17 @@ router.get('/me', verifyToken, async (req, res) => {
     }
 });
 
+// GENERATE API KEY
+router.post('/generate-api-key', verifyToken, async (req, res) => {
+    try {
+        const key = crypto.randomBytes(32).toString('hex');
+        await User.findByIdAndUpdate(req.user.id, { apiKey: key });
+        res.status(200).json({ apiKey: key });
+    } catch (err) {
+        res.status(500).json(err);
+    }
+});
+
 // UPDATE PROFILE
 router.put('/profile', verifyToken, parser.single('image'), async (req, res) => {
     try {

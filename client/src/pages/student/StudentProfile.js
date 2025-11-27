@@ -2,15 +2,19 @@ import React, { useState, useEffect, useCallback } from 'react';
 import API from '../../utils/api';
 import { useAuth } from '../../context/AuthContext';
 import { toast } from 'react-toastify';
-import { FaUser, FaPen, FaShoppingCart, FaEye, FaEyeSlash } from 'react-icons/fa';
+import { FaUser, FaPen, FaShoppingCart, FaEye, FaEyeSlash, FaKey, FaCopy } from 'react-icons/fa';
+import StudentProfileSkeleton from '../../components/skeletons/StudentProfileSkeleton';
 
 const StudentProfile = () => {
     const { user, syncSession } = useAuth();
     const [orders, setOrders] = useState([]);
     const [myEvents, setMyEvents] = useState([]);
+    const [loading, setLoading] = useState(true);
     const [showEdit, setShowEdit] = useState(false);
     const [showPassword, setShowPassword] = useState(false);
     const [editForm, setEditForm] = useState({ firstName: '', lastName: '', password: '', image: null });
+    const [apiKey, setApiKey] = useState('');
+    const [showApiKey, setShowApiKey] = useState(false);
 
     const loadActivity = useCallback(async () => {
         try {
@@ -23,6 +27,8 @@ const StudentProfile = () => {
             }
         } catch (e) {
             console.error(e);
+        } finally {
+            setTimeout(() => setLoading(false), 800);
         }
     }, [user]);
 
@@ -34,6 +40,7 @@ const StudentProfile = () => {
                 password: '',
                 image: null
             });
+            if (user.apiKey) setApiKey(user.apiKey);
             loadActivity();
         }
     }, [user, loadActivity]);
@@ -55,6 +62,23 @@ const StudentProfile = () => {
         }
     };
 
+    const handleGenerateApiKey = async () => {
+        try {
+            const res = await API.generateApiKey();
+            setApiKey(res.apiKey);
+            // Update local user context if needed, but API usually doesn't return full user.
+            // syncSession() might be overkill if it reloads everything, but let's try just setting local state.
+            toast.success("API Key generated successfully");
+        } catch (e) {
+            toast.error(e.message || "Failed to generate API Key");
+        }
+    };
+
+    const copyToClipboard = () => {
+        navigator.clipboard.writeText(apiKey);
+        toast.success("API Key copied to clipboard");
+    };
+
     const getInitials = () => {
         if (!user) return 'U';
         const f = user.firstName ? user.firstName.charAt(0) : (user.name ? user.name.charAt(0) : '');
@@ -74,6 +98,7 @@ const StudentProfile = () => {
         return merchList.sort((a,b) => new Date(b.orderDate) - new Date(a.orderDate));
     };
 
+    if (loading) return <StudentProfileSkeleton />;
     if (!user) return null;
 
     const boughtMerch = getPurchasedMerch();
@@ -103,6 +128,30 @@ const StudentProfile = () => {
                             <li className="list-group-item"><strong>Program:</strong> {user.program || 'N/A'}</li>
                             <li className="list-group-item"><strong>Year:</strong> {user.year || 'N/A'}</li>
                         </ul>
+                        <div className="card-footer bg-light">
+                             <h6 className="fw-bold text-start"><FaKey className="me-2" />Developer Settings</h6>
+                             <div className="text-start">
+                                 <label className="form-label small">API Key</label>
+                                 <div className="input-group mb-2">
+                                     <input
+                                         type={showApiKey ? "text" : "password"}
+                                         className="form-control form-control-sm"
+                                         value={apiKey || ''}
+                                         readOnly
+                                         placeholder="No API Key generated"
+                                     />
+                                     <button className="btn btn-outline-secondary btn-sm" type="button" onClick={() => setShowApiKey(!showApiKey)}>
+                                         {showApiKey ? <FaEyeSlash /> : <FaEye />}
+                                     </button>
+                                     <button className="btn btn-outline-primary btn-sm" type="button" onClick={copyToClipboard} disabled={!apiKey}>
+                                         <FaCopy />
+                                     </button>
+                                 </div>
+                                 <button className="btn btn-sm btn-primary w-100" onClick={handleGenerateApiKey}>
+                                     {apiKey ? 'Regenerate Key' : 'Generate Key'}
+                                 </button>
+                             </div>
+                        </div>
                     </div>
                 </div>
 

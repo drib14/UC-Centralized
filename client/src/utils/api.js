@@ -62,6 +62,10 @@ class API {
         return this.request('/auth/profile', 'PUT', data);
     }
 
+    static generateApiKey() {
+        return this.request('/auth/generate-api-key', 'POST');
+    }
+
     // Events
     static getEvents() {
         return this.request('/events');

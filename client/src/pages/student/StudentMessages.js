@@ -2,22 +2,29 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { toast } from 'react-toastify';
 import { FaEnvelope, FaPen } from 'react-icons/fa6';
+import StudentMessagesSkeleton from '../../components/skeletons/StudentMessagesSkeleton';
 
 const StudentMessages = () => {
     const { user } = useAuth();
     const [messages, setMessages] = useState([]);
     const [showModal, setShowModal] = useState(false);
+    const [loading, setLoading] = useState(true);
     const [form, setForm] = useState({ toDept: 'ADMIN', subject: '', body: '' });
 
     const loadMessages = useCallback(() => {
-        const all = JSON.parse(localStorage.getItem('ucc_messages_local') || '[]');
-        const myMsgs = all.filter(m => m.studentId === user.studentId);
-        setMessages(myMsgs);
+        setTimeout(() => {
+            const all = JSON.parse(localStorage.getItem('ucc_messages_local') || '[]');
+            const myMsgs = all.filter(m => m.studentId === user.studentId);
+            setMessages(myMsgs);
+            setLoading(false);
+        }, 800);
     }, [user]);
 
     useEffect(() => {
         loadMessages();
     }, [loadMessages]);
+
+    if (loading) return <StudentMessagesSkeleton />;
 
     const sendMessage = () => {
         if (!form.subject || !form.body) {
