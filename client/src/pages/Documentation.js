@@ -1,6 +1,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { FaCode, FaKey, FaBook, FaUser } from 'react-icons/fa';
+import { useAuth } from '../context/AuthContext';
+import { FaCode, FaKey, FaBook, FaUser, FaArrowRight } from 'react-icons/fa';
 import './Documentation.css';
 
 const CodeBlock = ({ method, url, body, response }) => (
@@ -19,6 +20,8 @@ console.log(data);`}</code></pre>
 );
 
 const Documentation = () => {
+    const { user } = useAuth();
+
     return (
         <div className="documentation-page">
             <nav className="doc-navbar sticky-top">
@@ -27,10 +30,20 @@ const Documentation = () => {
                         <img src={require('../assets/uc-central-logo.png')} alt="Logo" width="30" height="30" className="d-inline-block align-text-top me-2 rounded" />
                         UC-Central API
                     </Link>
-                    <div className="nav-links">
-                        <Link to="/login" className="btn btn-outline-light btn-sm me-2">Login</Link>
-                        <Link to="/register" className="btn btn-outline-light btn-sm me-2">Register</Link>
-                        <Link to="/" className="btn btn-warning btn-sm text-dark">Landing</Link>
+                    <div className="nav-links d-flex align-items-center">
+                        {user ? (
+                            <>
+                                <Link to={user.role === 'admin' ? '/admin/dashboard' : '/student/dashboard'} className="btn btn-warning btn-sm text-dark fw-bold">
+                                    Go to Dashboard <FaArrowRight className="ms-1" />
+                                </Link>
+                            </>
+                        ) : (
+                            <>
+                                <Link to="/login" className="btn btn-outline-light btn-sm me-2">Login</Link>
+                                <Link to="/register" className="btn btn-outline-light btn-sm me-2">Register</Link>
+                                <Link to="/" className="btn btn-warning btn-sm text-dark">Landing</Link>
+                            </>
+                        )}
                     </div>
                 </div>
             </nav>
