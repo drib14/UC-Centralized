@@ -168,12 +168,12 @@ const AdminPOS = () => {
     return (
         <div className="container-fluid">
             <h2 className="mb-4">Point of Sale</h2>
-            <div className="row">
+            <div className="row g-4">
                 {/* Product Grid */}
-                <div className="col-lg-8">
-                    <div className="row">
+                <div className="col-lg-8 order-2 order-lg-1">
+                    <div className="row g-3">
                         {merch.map(item => (
-                            <div className="col-md-3 mb-4" key={item._id} onClick={() => handleProductClick(item)} style={{cursor: 'pointer'}}>
+                            <div className="col-6 col-sm-4 col-md-3" key={item._id} onClick={() => handleProductClick(item)} style={{cursor: 'pointer'}}>
                                 <div className="card h-100 hover-shadow">
                                     <img src={item.image || 'https://via.placeholder.com/150'} className="card-img-top" style={{height:'120px', objectFit:'cover'}} alt={item.name} />
                                     <div className="card-body p-2 text-center">
@@ -188,7 +188,7 @@ const AdminPOS = () => {
                 </div>
 
                 {/* Cart Side */}
-                <div className="col-lg-4">
+                <div className="col-lg-4 order-1 order-lg-2 mb-4 mb-lg-0">
                     <div className="card shadow h-100">
                         <div className="card-header bg-dark text-white d-flex justify-content-between align-items-center">
                             <span>Current Order</span>

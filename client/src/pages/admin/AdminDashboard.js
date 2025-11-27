@@ -49,7 +49,7 @@ const AdminDashboard = () => {
             <h2 className="mb-4">Admin Dashboard</h2>
 
             <div className="row g-4 mb-4">
-                <div className="col-md-3">
+                <div className="col-12 col-sm-6 col-lg-3">
                     <div className="card bg-primary text-white h-100">
                         <div className="card-body">
                             <h6 className="card-title">Total Sales</h6>
@@ -58,7 +58,7 @@ const AdminDashboard = () => {
                         </div>
                     </div>
                 </div>
-                <div className="col-md-3">
+                <div className="col-12 col-sm-6 col-lg-3">
                     <div className="card bg-success text-white h-100">
                         <div className="card-body">
                             <h6 className="card-title">Active Orders</h6>
@@ -67,7 +67,7 @@ const AdminDashboard = () => {
                         </div>
                     </div>
                 </div>
-                <div className="col-md-3">
+                <div className="col-12 col-sm-6 col-lg-3">
                     <div className="card bg-warning text-dark h-100">
                         <div className="card-body">
                             <h6 className="card-title">Upcoming Events</h6>
@@ -76,7 +76,7 @@ const AdminDashboard = () => {
                         </div>
                     </div>
                 </div>
-                <div className="col-md-3">
+                <div className="col-12 col-sm-6 col-lg-3">
                     <div className="card bg-info text-white h-100">
                         <div className="card-body">
                             <h6 className="card-title">Registered Users</h6>
@@ -87,9 +87,9 @@ const AdminDashboard = () => {
                 </div>
             </div>
 
-            <div className="row">
+            <div className="row g-4">
                 <div className="col-lg-8">
-                    <div className="card">
+                    <div className="card h-100">
                         <div className="card-header bg-light text-dark">Recent Orders</div>
                         <div className="card-body">
                             <div className="table-responsive">
@@ -127,7 +127,7 @@ const AdminDashboard = () => {
                     </div>
                 </div>
                 <div className="col-lg-4">
-                    <div className="card">
+                    <div className="card h-100">
                         <div className="card-header bg-light text-dark">System Status</div>
                         <div className="card-body">
                             <ul className="list-group list-group-flush">

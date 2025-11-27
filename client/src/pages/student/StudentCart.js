@@ -78,9 +78,9 @@ const StudentCart = () => {
     return (
         <div className="container-fluid">
             <h2 className="mb-4 text-success"><FaShoppingCart className="me-2" />Your Cart</h2>
-            <div className="row">
+            <div className="row g-4">
                 <div className="col-lg-8">
-                    <div className="card mb-4">
+                    <div className="card h-100">
                         <div className="card-body">
                             {cart.map(item => (
                                 <div className="d-flex align-items-center mb-3 pb-3 border-bottom" key={item.cartId}>
@@ -142,7 +142,7 @@ const StudentCart = () => {
                     </div>
                 </div>
                 <div className="col-lg-4">
-                    <div className="card">
+                    <div className="card h-100">
                         <div className="card-header">Order Summary</div>
                         <div className="card-body">
                             <div className="d-flex justify-content-between mb-2">

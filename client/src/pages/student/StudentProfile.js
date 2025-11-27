@@ -106,8 +106,8 @@ const StudentProfile = () => {
 
     return (
         <div className="container-fluid">
-            <div className="row">
-                <div className="col-lg-4 mb-4">
+            <div className="row g-4">
+                <div className="col-lg-4">
                     <div className="card text-center h-100">
                         <div className="card-body d-flex flex-column align-items-center justify-content-center">
                              {user.profileImage ? (
