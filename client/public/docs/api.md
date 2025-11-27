@@ -10,6 +10,12 @@ You can authenticate using **JWT Token** (for frontend) or **API Key** (for exte
 Include your API Key in the request header:
 `x-api-key: YOUR_API_KEY`
 
+### OAuth 2.0
+Use UC-Central as an identity provider.
+1. Register app in Developer Console.
+2. Redirect to `/oauth/authorize`.
+3. Exchange code at `/oauth/token`.
+
 ### Endpoints
 
 #### Login

@@ -4,10 +4,13 @@ router.get('/', (req, res) => {
     res.json({
         intro: "Welcome to the UC-Central API. This API provides access to the school management system's core features including Users, Events, Merchandise, Orders, and Announcements.",
         authentication: {
-            methods: ["JWT Token", "API Key (x-api-key header)"],
+            methods: ["JWT Token", "API Key (x-api-key header)", "OAuth 2.0"],
             endpoints: [
                 { method: "POST", url: "/auth/login", description: "Login with Student ID and Password" },
-                { method: "POST", url: "/auth/register", description: "Register a new account" }
+                { method: "POST", url: "/auth/register", description: "Register a new account" },
+                { method: "GET", url: "/oauth/authorize", description: "OAuth 2.0 Authorization Endpoint" },
+                { method: "POST", url: "/oauth/token", description: "OAuth 2.0 Token Exchange" },
+                { method: "GET", url: "/oauth/userinfo", description: "OAuth 2.0 User Info" }
             ]
         },
         resources: {

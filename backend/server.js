@@ -10,6 +10,7 @@ const orderRoute = require('./routes/orders');
 const announcementRoute = require('./routes/announcements');
 const statsRoute = require('./routes/stats');
 const docsRoute = require('./routes/docs');
+const oauthRoute = require('./routes/oauth');
 
 dotenv.config();
 
@@ -82,6 +83,7 @@ app.use('/orders', orderRoute);
 app.use('/announcements', announcementRoute);
 app.use('/stats', statsRoute);
 app.use('/documentation', docsRoute);
+app.use('/oauth', oauthRoute);
 
 app.get('/', (req, res) => {
     res.send('UC-Central Backend is running');

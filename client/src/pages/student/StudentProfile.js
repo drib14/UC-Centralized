@@ -151,8 +151,11 @@ const StudentProfile = () => {
                                  <button className="btn btn-sm btn-primary w-100 mb-2" onClick={handleGenerateApiKey}>
                                      {apiKey ? 'Regenerate Key' : 'Generate Key'}
                                  </button>
-                                 <Link to="/documentation" className="btn btn-sm btn-outline-info w-100 d-flex align-items-center justify-content-center">
+                                 <Link to="/documentation" className="btn btn-sm btn-outline-info w-100 d-flex align-items-center justify-content-center mb-2">
                                      <FaBook className="me-2" /> View Documentation
+                                 </Link>
+                                 <Link to="/student/developer" className="btn btn-sm btn-outline-dark w-100 d-flex align-items-center justify-content-center">
+                                     <FaKey className="me-2" /> OAuth Apps Console
                                  </Link>
                              </div>
                         </div>

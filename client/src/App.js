@@ -15,6 +15,7 @@ import ForgotPassword from './pages/ForgotPassword';
 import VerifyCode from './pages/VerifyCode';
 import ResetPassword from './pages/ResetPassword';
 import Documentation from './pages/Documentation';
+import OAuthConsent from './pages/OAuthConsent';
 
 import StudentDashboard from './pages/student/StudentDashboard';
 import StudentEvents from './pages/student/StudentEvents';
@@ -22,6 +23,7 @@ import StudentMerch from './pages/student/StudentMerch';
 import StudentCart from './pages/student/StudentCart';
 import StudentMessages from './pages/student/StudentMessages';
 import StudentProfile from './pages/student/StudentProfile';
+import DeveloperDashboard from './pages/student/DeveloperDashboard';
 
 import AdminDashboard from './pages/admin/AdminDashboard';
 import AdminEvents from './pages/admin/AdminEvents';
@@ -76,6 +78,7 @@ function App() {
                         <Route path="/verify-code" element={<VerifyCode />} />
                         <Route path="/reset-password" element={<ResetPassword />} />
                         <Route path="/documentation" element={<Documentation />} />
+                        <Route path="/oauth/authorize" element={<OAuthConsent />} />
 
                         {/* Student Routes */}
                         <Route path="/student" element={<ProtectedRoute allowedRoles={['student']}><Layout /></ProtectedRoute>}>
@@ -86,6 +89,7 @@ function App() {
                             <Route path="cart" element={<StudentCart />} />
                             <Route path="messages" element={<StudentMessages />} />
                             <Route path="profile" element={<StudentProfile />} />
+                            <Route path="developer" element={<DeveloperDashboard />} />
                         </Route>
 
                         {/* Admin Routes */}

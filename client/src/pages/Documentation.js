@@ -137,7 +137,7 @@ const Documentation = () => {
 
                         <section id="auth" className="mb-5">
                             <h2 className="text-secondary border-bottom pb-2"><FaKey className="me-2"/>Authentication</h2>
-                            <p>You can authenticate using <strong>JWT Token</strong> (for frontend) or <strong>API Key</strong> (for external apps).</p>
+                            <p>You can authenticate using <strong>JWT Token</strong> (for frontend), <strong>API Key</strong> (for external scripts), or <strong>OAuth 2.0</strong> (for web apps).</p>
 
                             <div className="card mb-3">
                                 <div className="card-header bg-dark text-white">Using API Key</div>
@@ -157,6 +157,31 @@ const Documentation = () => {
                                 <span className="badge bg-success">POST</span> <code>/auth/register</code>
                                 <p>Register a new account.</p>
                                 <CodeBlock method="POST" url="/auth/register" body={{ studentId: "12345", email: "student@uc.edu.ph", password: "Pass", firstName: "John", lastName: "Doe" }} />
+                            </div>
+
+                            <h4 className="mt-4">OAuth 2.0</h4>
+                            <p>Use UC-Central as an identity provider for your applications.</p>
+                            <ol>
+                                <li>Register your app in the <Link to="/student/developer">Developer Console</Link>.</li>
+                                <li>Redirect users to <code>/oauth/authorize?client_id=...&redirect_uri=...&response_type=code</code></li>
+                                <li>User approves, we redirect back to you with <code>?code=...</code></li>
+                                <li>Exchange code for token at <code>/oauth/token</code></li>
+                            </ol>
+                            <div className="api-endpoint">
+                                <span className="badge bg-success">POST</span> <code>/oauth/token</code>
+                                <p>Exchange authorization code for access token.</p>
+                                <CodeBlock method="POST" url="/oauth/token" body={{
+                                    grant_type: "authorization_code",
+                                    client_id: "YOUR_CLIENT_ID",
+                                    client_secret: "YOUR_CLIENT_SECRET",
+                                    code: "AUTH_CODE_FROM_CALLBACK",
+                                    redirect_uri: "YOUR_CALLBACK_URL"
+                                }} />
+                            </div>
+                            <div className="api-endpoint">
+                                <span className="badge bg-info">GET</span> <code>/oauth/userinfo</code>
+                                <p>Get user details with the access token.</p>
+                                <CodeBlock method="GET" url="/oauth/userinfo" />
                             </div>
                         </section>
 
