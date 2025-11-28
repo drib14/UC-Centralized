@@ -19,20 +19,8 @@
       "dest": "backend/api/index.js"
     },
     {
-      "src": "/api",
-      "dest": "backend/api/index.js"
-    },
-    {
-      "src": "/static/(.*)",
-      "dest": "client/static/$1"
-    },
-    {
-      "src": "/(.*\\..*)",
-      "dest": "client/$1"
-    },
-    {
       "src": "/(.*)",
-      "dest": "client/index.html"
+      "dest": "client/$1"
     }
   ]
 }
