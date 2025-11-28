@@ -18,6 +18,7 @@ const app = express();
 
 // Middleware
 app.use(express.json());
+app.enable('trust proxy'); // Important for Vercel
 
 // CORS Configuration
 const corsOptions = {
@@ -28,7 +29,7 @@ const corsOptions = {
         callback(null, true);
     },
     credentials: true,
-    optionsSuccessStatus: 200 // some legacy browsers (IE11, various SmartTVs) choke on 204
+    optionsSuccessStatus: 200
 };
 
 app.use(cors(corsOptions));
@@ -64,34 +65,34 @@ app.use(async (req, res, next) => {
     next();
 });
 
-// URL Normalization for Vercel
-// Vercel rewrites /api/... to this file, but sometimes req.url retains the /api prefix.
-// We strip it to ensure standard routing works for both Localhost and Vercel.
-app.enable('trust proxy'); // Important for Vercel
+// Main API Router
+const apiRouter = express.Router();
 
-app.use((req, res, next) => {
-    // Regex replace to ensure we only replace the STARTING /api
-    // Handles cases like /api/auth/login -> /auth/login
-    // Also handles /api/ -> /
-    if (req.url.startsWith('/api')) {
-        req.url = req.url.replace(/^\/api/, '') || '/';
-    }
-    next();
+apiRouter.use('/auth', authRoute);
+apiRouter.use('/users', userRoute);
+apiRouter.use('/events', eventRoute);
+apiRouter.use('/merch', merchRoute);
+apiRouter.use('/orders', orderRoute);
+apiRouter.use('/announcements', announcementRoute);
+apiRouter.use('/stats', statsRoute);
+apiRouter.use('/documentation', docsRoute);
+apiRouter.use('/oauth', oauthRoute);
+
+apiRouter.get('/', (req, res) => {
+    res.send('UC-Central Backend is running');
 });
 
-// Routes
-app.use('/auth', authRoute);
-app.use('/users', userRoute);
-app.use('/events', eventRoute);
-app.use('/merch', merchRoute);
-app.use('/orders', orderRoute);
-app.use('/announcements', announcementRoute);
-app.use('/stats', statsRoute);
-app.use('/documentation', docsRoute);
-app.use('/oauth', oauthRoute);
+// Mount router at BOTH / and /api to handle Vercel's potentially unpredictable stripping
+app.use('/api', apiRouter);
+app.use('/', apiRouter);
 
-app.get('/', (req, res) => {
-    res.send('UC-Central Backend is running');
+// Global 404 Handler
+app.use((req, res) => {
+    res.status(404).json({
+        message: `Route not found: ${req.method} ${req.url}`,
+        originalUrl: req.originalUrl,
+        path: req.path
+    });
 });
 
 // Local Development
