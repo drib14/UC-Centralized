@@ -1,27 +1,36 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { FaCode, FaKey, FaBook, FaUser, FaArrowRight, FaShieldAlt } from 'react-icons/fa';
+import { FaCode, FaKey, FaBook, FaUser, FaArrowRight, FaShieldAlt, FaServer, FaGlobe } from 'react-icons/fa';
 import SEO from '../components/SEO';
 import './Documentation.css';
 
-const CodeBlock = ({ method, url, body, response }) => (
-    <div className="bg-light p-3 rounded mt-3 code-block">
-        <h6 className="fw-bold text-muted">Example Request (JavaScript)</h6>
-        <pre className="mb-0"><code>{`const response = await fetch('https://uc-centralized.vercel.app/api${url}', {
-    method: '${method}',
-    headers: {
-        'Content-Type': 'application/json'
-    }${body ? `,\n    body: JSON.stringify(${JSON.stringify(body, null, 4).replace(/\n/g, '\n    ')})` : ''}
-});
-const data = await response.json();
-console.log(data);`}</code></pre>
+const CodeBlock = ({ title, code, language = 'javascript' }) => (
+    <div className="bg-dark rounded mt-3 code-block border border-secondary">
+        <div className="d-flex justify-content-between align-items-center bg-secondary px-3 py-1 rounded-top text-white">
+            <small className="fw-bold font-monospace">{title}</small>
+            <small className="text-light">{language}</small>
+        </div>
+        <pre className="p-3 mb-0 text-white overflow-auto">
+            <code style={{ fontFamily: 'Consolas, Monaco, "Andale Mono", "Ubuntu Mono", monospace' }}>
+                {code}
+            </code>
+        </pre>
+    </div>
+);
+
+const EndpointBadge = ({ method, path }) => (
+    <div className="d-flex align-items-center mb-2 font-monospace">
+        <span className={`badge me-2 ${method === 'GET' ? 'bg-primary' : method === 'POST' ? 'bg-success' : method === 'PUT' ? 'bg-warning text-dark' : 'bg-danger'}`}>
+            {method}
+        </span>
+        <span className="fw-bold">{path}</span>
     </div>
 );
 
 const SchemaBlock = ({ name, fields }) => (
     <div className="card mb-4 border-warning">
-        <div className="card-header bg-warning text-dark fw-bold">{name} Schema</div>
+        <div className="card-header bg-warning text-dark fw-bold font-monospace">{name} Object</div>
         <div className="card-body bg-light">
              <pre className="mb-0"><code>{JSON.stringify(fields, null, 4)}</code></pre>
         </div>
@@ -31,298 +40,243 @@ const SchemaBlock = ({ name, fields }) => (
 const Documentation = () => {
     const { user } = useAuth();
 
-    // Define Schemas manually based on Backend Models
-    const userSchema = {
-        studentId: "String (Required, Unique)",
-        email: "String (Required, Unique)",
-        password: "String (Hashed)",
-        firstName: "String",
-        lastName: "String",
-        department: "String (Default: CCS)",
-        program: "String",
-        year: "String",
-        role: "String (student|admin)",
-        profileImage: "String (URL)",
-        apiKey: "String (Sparse, Unique)"
-    };
-
-    const eventSchema = {
-        title: "String",
-        description: "String",
-        date: "String",
-        time: "String",
-        location: "String",
-        image: "String (URL)",
-        department: "String (Default: ALL)",
-        attendees: "[ObjectId (Ref: User)]"
-    };
-
-    const merchSchema = {
-        name: "String",
-        description: "String",
-        price: "Number",
-        stock: "Number",
-        category: "String (wearable|accessories)",
-        variants: "[{ size, color, stock }]",
-        image: "String (URL)"
-    };
-
-    const orderSchema = {
-        user: "ObjectId (Ref: User)",
-        customerName: "String",
-        items: "[{ merch, quantity, variant }]",
-        totalPrice: "Number",
-        status: "String (pending|processing|claimed|cancelled)",
-        orderDate: "Date"
-    };
-
-    const announcementSchema = {
-        title: "String",
-        message: "String",
-        date: "Date",
-        author: "String",
-        department: "String"
-    };
-
     return (
-        <div className="documentation-page">
+        <div className="documentation-page bg-light min-vh-100">
             <SEO
-                title="API Documentation"
-                description="Official API Documentation for UC-Central. Learn how to integrate with our platform."
+                title="Developer Documentation"
+                description="Integrate with UC-Central OAuth 2.0 and APIs."
             />
-            <nav className="doc-navbar sticky-top">
+
+            {/* Header */}
+            <header className="bg-dark text-white py-4 shadow-sm sticky-top">
                 <div className="container d-flex justify-content-between align-items-center">
-                    <Link to="/" className="navbar-brand text-white fw-bold">
-                        <img src={require('../assets/uc-central-logo.png')} alt="Logo" width="30" height="30" className="d-inline-block align-text-top me-2 rounded" />
-                        UC-Central API
-                    </Link>
-                    <div className="nav-links d-flex align-items-center">
+                    <div className="d-flex align-items-center">
+                        <img src={require('../assets/uc-central-logo.png')} alt="Logo" width="40" height="40" className="me-3 rounded" />
+                        <div>
+                            <h1 className="h4 m-0 fw-bold">UC-Central Developers</h1>
+                            <small className="text-secondary">API & OAuth 2.0 Documentation</small>
+                        </div>
+                    </div>
+                    <div>
                         {user ? (
-                            <>
-                                <Link to={user.role === 'admin' ? '/admin/dashboard' : '/student/dashboard'} className="btn btn-warning btn-sm text-dark fw-bold">
-                                    Go to Dashboard <FaArrowRight className="ms-1" />
-                                </Link>
-                            </>
+                            <Link to="/student/developer" className="btn btn-outline-warning btn-sm fw-bold">
+                                <FaCode className="me-2"/>Developer Console
+                            </Link>
                         ) : (
-                            <>
-                                <Link to="/login" className="btn btn-outline-light btn-sm me-2">Login</Link>
-                                <Link to="/register" className="btn btn-outline-light btn-sm me-2">Register</Link>
-                                <Link to="/" className="btn btn-warning btn-sm text-dark">Landing</Link>
-                            </>
+                            <Link to="/login" className="btn btn-primary btn-sm">Login</Link>
                         )}
                     </div>
                 </div>
-            </nav>
+            </header>
 
             <div className="container my-5">
                 <div className="row">
+                    {/* Sidebar */}
                     <div className="col-lg-3 d-none d-lg-block">
-                        <div className="sticky-top" style={{ top: '80px' }}>
-                            <div className="list-group">
-                                <a href="#auth" className="list-group-item list-group-item-action">Authentication</a>
-                                <a href="#oauth" className="list-group-item list-group-item-action">OAuth 2.0 Integration</a>
-                                <a href="#users" className="list-group-item list-group-item-action">Users</a>
-                                <a href="#events" className="list-group-item list-group-item-action">Events</a>
-                                <a href="#merch" className="list-group-item list-group-item-action">Merchandise</a>
-                                <a href="#orders" className="list-group-item list-group-item-action">Orders</a>
-                                <a href="#announcements" className="list-group-item list-group-item-action">Announcements</a>
+                        <nav className="sticky-top" style={{ top: '100px' }}>
+                            <div className="list-group shadow-sm">
+                                <div className="list-group-item bg-primary text-white fw-bold">Guides</div>
+                                <a href="#intro" className="list-group-item list-group-item-action">Introduction</a>
+                                <a href="#oauth-flow" className="list-group-item list-group-item-action fw-bold text-primary"><FaShieldAlt className="me-2"/>OAuth 2.0 Flow</a>
+                                <a href="#oauth-client" className="list-group-item list-group-item-action ps-4"><FaGlobe className="me-2"/>Client-Side (Frontend)</a>
+                                <a href="#oauth-server" className="list-group-item list-group-item-action ps-4"><FaServer className="me-2"/>Server-Side (Backend)</a>
+                                <a href="#common-errors" className="list-group-item list-group-item-action text-danger fw-bold">Common Errors</a>
+
+                                <div className="list-group-item bg-secondary text-white fw-bold mt-3">API Reference</div>
+                                <a href="#endpoints-user" className="list-group-item list-group-item-action">User Info</a>
+                                <a href="#endpoints-resources" className="list-group-item list-group-item-action">Resources</a>
                             </div>
-                        </div>
+                        </nav>
                     </div>
+
+                    {/* Content */}
                     <div className="col-lg-9">
-                        <div className="doc-header mb-5">
-                            <h1 className="display-4 fw-bold text-primary">API Documentation</h1>
-                            <p className="lead text-muted">Integrate with UC-Central platform using our REST API.</p>
-                        </div>
 
-                        <section id="auth" className="mb-5">
-                            <h2 className="text-secondary border-bottom pb-2"><FaKey className="me-2"/>Authentication</h2>
-                            <p>You can authenticate using <strong>JWT Token</strong> (for frontend), <strong>API Key</strong> (for external scripts), or <strong>OAuth 2.0</strong> (for web apps).</p>
-
-                            <div className="card mb-3">
-                                <div className="card-header bg-dark text-white">Using API Key</div>
-                                <div className="card-body">
-                                    <p>Include your API Key in the request header:</p>
-                                    <pre className="bg-light p-3 rounded"><code>x-api-key: YOUR_API_KEY</code></pre>
-                                </div>
-                            </div>
-
-                            <h4 className="mt-4">Endpoints</h4>
-                            <div className="api-endpoint">
-                                <span className="badge bg-success">POST</span> <code>/auth/login</code>
-                                <p>Login with Student ID and Password.</p>
-                                <CodeBlock method="POST" url="/auth/login" body={{ studentId: "12345", password: "SecretPassword1!" }} />
-                            </div>
-                             <div className="api-endpoint">
-                                <span className="badge bg-success">POST</span> <code>/auth/register</code>
-                                <p>Register a new account.</p>
-                                <CodeBlock method="POST" url="/auth/register" body={{ studentId: "12345", email: "student@uc.edu.ph", password: "Pass", firstName: "John", lastName: "Doe" }} />
+                        {/* Introduction */}
+                        <section id="intro" className="mb-5">
+                            <h2 className="border-bottom pb-2">Introduction</h2>
+                            <p className="lead">
+                                UC-Central provides a standard <strong>OAuth 2.0 Identity Provider (IdP)</strong> service.
+                                External applications can allow users to "Sign in with UC-Central" to authenticate users and access their profile information securely.
+                            </p>
+                            <div className="alert alert-info">
+                                <strong>Base URL:</strong> <code>https://uc-centralized.vercel.app</code>
                             </div>
                         </section>
 
-                        <section id="oauth" className="mb-5">
-                            <h2 className="text-secondary border-bottom pb-2"><FaShieldAlt className="me-2"/>OAuth 2.0 Integration</h2>
-                            <p className="lead">Use UC-Central as an identity provider (IdP) for your external applications.</p>
+                        {/* OAuth Flow */}
+                        <section id="oauth-flow" className="mb-5">
+                            <h2 className="text-primary border-bottom pb-2">OAuth 2.0 Integration Guide</h2>
+                            <p>We use the standard <strong>Authorization Code Grant</strong> flow. This ensures security by exchanging credentials only on the backend.</p>
 
-                            <div className="alert alert-info">
-                                <strong>What is the Redirect URI?</strong>
-                                <br/>
-                                The Redirect URI is a URL on <strong>YOUR application</strong> (the consumer). After a user approves access, UC-Central will redirect the user back to this URL with an authorization code.
-                                <br/>
-                                <em>Example: <code>https://your-awesome-app.com/callback</code> or <code>http://localhost:3000/api/auth/callback</code></em>
-                            </div>
-
-                            <div className="card mb-4">
-                                <div className="card-header bg-primary text-white">Step-by-Step Integration Guide</div>
+                            <div className="card bg-light border-0 mb-4">
                                 <div className="card-body">
+                                    <h5 className="fw-bold">The Flow at a Glance:</h5>
                                     <ol className="mb-0">
-                                        <li className="mb-3">
-                                            <strong>Register your Application:</strong>
-                                            <p>Go to the Developer Console (if available) or use the API to register your app. You will receive a <code>Client ID</code> and <code>Client Secret</code>. You must also whitelist your <code>Redirect URI</code>.</p>
-                                        </li>
-                                        <li className="mb-3">
-                                            <strong>Direct User to Authorization Endpoint:</strong>
-                                            <p>Redirect the user's browser to the <strong>Frontend Authorization Page</strong>:</p>
-                                            <pre className="bg-light p-2 rounded"><code>https://uc-centralized.vercel.app/oauth/authorize?client_id=YOUR_ID&redirect_uri=YOUR_URI&response_type=code</code></pre>
-                                            <small className="text-muted">Note: Do NOT use <code>/api/oauth/authorize</code> here. This link renders the user consent screen.</small>
-                                        </li>
-                                        <li className="mb-3">
-                                            <strong>Handle the Callback:</strong>
-                                            <p>If the user approves, they will be redirected to:</p>
-                                            <pre className="bg-light p-2 rounded"><code>YOUR_REDIRECT_URI?code=AUTHORIZATION_CODE</code></pre>
-                                        </li>
-                                        <li>
-                                            <strong>Exchange Code for Access Token:</strong>
-                                            <p>Make a server-side POST request to exchange the code for a token.</p>
-                                        </li>
+                                        <li><strong>User</strong> clicks "Login with UC-Central" on your site.</li>
+                                        <li><strong>Your App</strong> redirects the user to our <strong>Frontend Authorization Page</strong>.</li>
+                                        <li><strong>User</strong> approves access.</li>
+                                        <li><strong>We</strong> redirect the user back to your <code>redirect_uri</code> with a <code>code</code>.</li>
+                                        <li><strong>Your Backend</strong> exchanges this <code>code</code> for an <code>access_token</code>.</li>
+                                        <li><strong>Your Backend</strong> uses the token to fetch user details.</li>
                                     </ol>
                                 </div>
                             </div>
+                        </section>
 
-                            <h4 className="mt-4">Endpoints</h4>
+                        {/* Client Side Implementation */}
+                        <section id="oauth-client" className="mb-5">
+                            <h3><FaGlobe className="me-2 text-info"/>Step 1: Client-Side (Frontend)</h3>
+                            <p>Initiate the login by redirecting the browser. Do <strong>NOT</strong> make an AJAX/Fetch request here.</p>
 
-                            <div className="api-endpoint">
-                                <span className="badge bg-success">POST</span> <code>/oauth/token</code>
-                                <p>Exchange authorization code for access token. Call this from your backend.</p>
-                                <CodeBlock method="POST" url="/oauth/token" body={{
-                                    grant_type: "authorization_code",
-                                    client_id: "YOUR_CLIENT_ID",
-                                    client_secret: "YOUR_CLIENT_SECRET",
-                                    code: "AUTH_CODE_FROM_CALLBACK",
-                                    redirect_uri: "YOUR_REGISTERED_CALLBACK_URL"
-                                }} />
+                            <div className="alert alert-warning">
+                                <strong>Crucial:</strong> You must redirect to the <code>/oauth/authorize</code> frontend route, NOT the API route.
                             </div>
 
-                            <div className="api-endpoint">
-                                <span className="badge bg-info">GET</span> <code>/oauth/userinfo</code>
-                                <p>Get user details using the access token obtained in the previous step.</p>
-                                <div className="bg-light p-3 rounded mt-3 code-block">
-                                    <h6 className="fw-bold text-muted">Example Request</h6>
-                                    <pre className="mb-0"><code>{`// Pass the access token in the Authorization header
-const response = await fetch('https://uc-centralized.vercel.app/api/oauth/userinfo', {
-    headers: {
-        'Authorization': 'Bearer ACCESS_TOKEN'
+                            <CodeBlock
+                                title="login.html / React Component"
+                                code={`// 1. Configuration
+const CLIENT_ID = "YOUR_CLIENT_ID_FROM_CONSOLE";
+const REDIRECT_URI = "https://your-app.com/callback"; // Must match Console exactly
+
+// 2. Construct the Authorization URL
+const authUrl = new URL("https://uc-centralized.vercel.app/oauth/authorize");
+authUrl.searchParams.append("client_id", CLIENT_ID);
+authUrl.searchParams.append("redirect_uri", REDIRECT_URI);
+authUrl.searchParams.append("response_type", "code");
+
+// 3. Redirect the User (On Button Click)
+function loginWithUC() {
+    window.location.href = authUrl.toString();
+}`}
+                            />
+                        </section>
+
+                        {/* Server Side Implementation */}
+                        <section id="oauth-server" className="mb-5">
+                            <h3><FaServer className="me-2 text-info"/>Step 2: Server-Side (Backend)</h3>
+                            <p>Handle the callback and exchange the code. This example uses Node.js/Express, but the logic applies to any language.</p>
+
+                            <EndpointBadge method="POST" path="/api/oauth/token" />
+
+                            <CodeBlock
+                                title="Node.js (Express) Callback Handler"
+                                code={`// Route: GET /callback (Your Redirect URI)
+app.get('/callback', async (req, res) => {
+    const { code } = req.query;
+
+    if (!code) return res.status(400).send('No code returned');
+
+    try {
+        // 1. Exchange Code for Token
+        const tokenResponse = await fetch('https://uc-centralized.vercel.app/api/oauth/token', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                grant_type: 'authorization_code',
+                client_id: process.env.UC_CLIENT_ID,
+                client_secret: process.env.UC_CLIENT_SECRET, // KEEP HIDDEN!
+                code: code,
+                redirect_uri: "https://your-app.com/callback" // Must match initiate step
+            })
+        });
+
+        const tokenData = await tokenResponse.json();
+
+        if (!tokenResponse.ok) {
+            throw new Error(tokenData.message || 'Token exchange failed');
+        }
+
+        const accessToken = tokenData.access_token;
+
+        // 2. Get User Info
+        const userResponse = await fetch('https://uc-centralized.vercel.app/api/oauth/userinfo', {
+            headers: { 'Authorization': \`Bearer \${accessToken}\` }
+        });
+
+        const userData = await userResponse.json();
+
+        // 3. Log the user in (Create session, JWT, etc.)
+        console.log("User Logged In:", userData);
+        res.send(\`Welcome \${userData.firstName}!\`);
+
+    } catch (error) {
+        console.error("OAuth Error:", error);
+        res.status(500).send('Authentication Failed');
     }
-});`}</code></pre>
+});`}
+                            />
+
+                            <h5 className="mt-4">Token Response Format</h5>
+                            <SchemaBlock name="Token Response" fields={{
+                                access_token: "eyJhbGciOiJIUz...",
+                                token_type: "Bearer",
+                                expires_in: 86400,
+                                user: {
+                                    studentId: "123456",
+                                    email: "student@uc.edu.ph",
+                                    firstName: "John",
+                                    lastName: "Doe"
+                                }
+                            }} />
+                        </section>
+
+                        {/* Common Errors */}
+                        <section id="common-errors" className="mb-5">
+                            <h2 className="text-danger border-bottom pb-2">Common Integration Errors</h2>
+
+                            <div className="card border-danger mb-3">
+                                <div className="card-header bg-danger text-white fw-bold">
+                                    Error: 404 Route Not Found (POST /api/oauth/authorize)
+                                </div>
+                                <div className="card-body">
+                                    <p><strong>Cause:</strong> You are trying to make a POST request (via Fetch/Axios) to the authorization endpoint from your code.</p>
+                                    <p><strong>Fix:</strong> You must <strong>REDIRECT the browser</strong> (GET request) to the frontend URL <code>/oauth/authorize</code>. Do not use the API endpoint directly for the first step.</p>
                                 </div>
                             </div>
 
-                            <div className="alert alert-warning mt-4">
-                                <h5 className="alert-heading">Common Mistakes</h5>
-                                <ul className="mb-0">
-                                    <li>
-                                        <strong>POST /api/oauth/authorize (404/405 Error):</strong> Do NOT make a POST request to the authorization endpoint from your backend or frontend code. You must <strong>redirect the user's browser</strong> to <code>/oauth/authorize</code> (GET).
-                                    </li>
-                                    <li>
-                                        <strong>Invalid Redirect URI:</strong> The <code>redirect_uri</code> parameter must match exactly what you registered in the Developer Console.
-                                    </li>
-                                </ul>
+                            <div className="card border-warning mb-3">
+                                <div className="card-header bg-warning text-dark fw-bold">
+                                    Error: Invalid Redirect URI
+                                </div>
+                                <div className="card-body">
+                                    <p><strong>Cause:</strong> The <code>redirect_uri</code> parameter in your URL does not EXACTLY match what you entered in the Developer Console.</p>
+                                    <p><strong>Fix:</strong> Check for trailing slashes, http vs https, or missing query parameters. It must be an exact string match.</p>
+                                </div>
                             </div>
                         </section>
 
-                        <section id="users" className="mb-5">
-                            <h2 className="text-secondary border-bottom pb-2"><FaUser className="me-2"/>Users</h2>
-                            <SchemaBlock name="User" fields={userSchema} />
+                        {/* Endpoints Reference */}
+                        <section id="endpoints-user" className="mb-5">
+                            <h2 className="border-bottom pb-2">API Reference</h2>
+                            <p>Beyond OAuth, you can access public resources or user-specific data using your <code>access_token</code>.</p>
 
-                            <div className="api-endpoint">
-                                <span className="badge bg-primary">GET</span> <code>/users</code>
-                                <p>Get all users (Admin only).</p>
-                                <CodeBlock method="GET" url="/users" />
-                            </div>
-                             <div className="api-endpoint">
-                                <span className="badge bg-info">GET</span> <code>/auth/me</code>
-                                <p>Get current user profile.</p>
-                                <CodeBlock method="GET" url="/auth/me" />
-                            </div>
-                        </section>
-
-                         <section id="events" className="mb-5">
-                            <h2 className="text-secondary border-bottom pb-2"><FaBook className="me-2"/>Events</h2>
-                            <SchemaBlock name="Event" fields={eventSchema} />
-
-                            <div className="api-endpoint">
-                                <span className="badge bg-primary">GET</span> <code>/events</code>
-                                <p>Get all events.</p>
-                                <CodeBlock method="GET" url="/events" />
-                            </div>
-                            <div className="api-endpoint">
-                                <span className="badge bg-success">POST</span> <code>/events</code>
-                                <p>Create a new event (Admin only).</p>
-                                <CodeBlock method="POST" url="/events" body={{ title: "Tech Talk", date: "2024-12-01", description: "Learn React", location: "AVR" }} />
+                            <div className="card mb-3">
+                                <div className="card-header fw-bold">Get User Profile</div>
+                                <div className="card-body">
+                                    <EndpointBadge method="GET" path="/api/oauth/userinfo" />
+                                    <p>Requires <code>Authorization: Bearer YOUR_TOKEN</code> header.</p>
+                                    <CodeBlock title="Response" code={`{
+    "_id": "65b...",
+    "studentId": "2020101",
+    "email": "student@uc.edu.ph",
+    "firstName": "Jane",
+    "lastName": "Doe",
+    "department": "CCS",
+    "role": "student"
+}`} />
+                                </div>
                             </div>
                         </section>
 
-                         <section id="merch" className="mb-5">
-                            <h2 className="text-secondary border-bottom pb-2">Merchandise</h2>
-                            <SchemaBlock name="Merch" fields={merchSchema} />
-
-                            <div className="api-endpoint">
-                                <span className="badge bg-primary">GET</span> <code>/merch</code>
-                                <p>Get all merchandise items.</p>
-                                <CodeBlock method="GET" url="/merch" />
-                            </div>
-                        </section>
-
-                         <section id="orders" className="mb-5">
-                            <h2 className="text-secondary border-bottom pb-2">Orders</h2>
-                            <SchemaBlock name="Order" fields={orderSchema} />
-
-                            <div className="api-endpoint">
-                                <span className="badge bg-primary">GET</span> <code>/orders</code>
-                                <p>Get all orders.</p>
-                                <CodeBlock method="GET" url="/orders" />
-                            </div>
-                            <div className="api-endpoint">
-                                <span className="badge bg-success">POST</span> <code>/orders</code>
-                                <p>Create a new order.</p>
-                                <CodeBlock method="POST" url="/orders" body={{ items: [{ merch: "item_id", quantity: 1 }], totalPrice: 500 }} />
-                            </div>
-                        </section>
-
-                         <section id="announcements" className="mb-5">
-                            <h2 className="text-secondary border-bottom pb-2">Announcements</h2>
-                            <SchemaBlock name="Announcement" fields={announcementSchema} />
-
-                            <div className="api-endpoint">
-                                <span className="badge bg-primary">GET</span> <code>/announcements</code>
-                                <p>Get all announcements.</p>
-                                <CodeBlock method="GET" url="/announcements" />
-                            </div>
-                        </section>
                     </div>
                 </div>
             </div>
 
-            <footer className="bg-dark text-white text-center py-3">
+            <footer className="bg-dark text-white text-center py-4 mt-5">
                 <div className="container">
-                    <div className="d-flex justify-content-center gap-3 mb-2">
-                        <noscript>
-                            <a href="/documentation.html" className="text-white text-decoration-underline small">Static Docs (HTML)</a>
-                        </noscript>
-                        <a href="/docs/api.md" className="text-white text-decoration-underline small">Raw Docs (Markdown)</a>
-                        <a href="/api/documentation" target="_blank" className="text-white text-decoration-underline small">API Response (JSON)</a>
-                    </div>
-                    <small>&copy; {new Date().getFullYear()} UC-Central API</small>
+                    <p className="mb-1">&copy; {new Date().getFullYear()} UC-Central Developer Platform</p>
+                    <small className="text-secondary">Made with <FaCode/> for Developers</small>
                 </div>
             </footer>
         </div>
