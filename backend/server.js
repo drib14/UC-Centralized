@@ -40,12 +40,14 @@ const corsOptions = {
 
 app.use(cors(corsOptions));
 
-// Health Check (No DB dependency) to verify server status
+// Health Check (No DB dependency)
 app.get('/health', (req, res) => {
     res.status(200).json({ status: 'ok', message: 'Server is running' });
 });
 
 // Database Connection (Serverless optimized)
+// We define this OUTSIDE the request handler context if possible,
+// but inside the function scope it works via caching.
 const connectDB = async () => {
     if (mongoose.connection.readyState >= 1) {
         return true;
@@ -64,8 +66,8 @@ const connectDB = async () => {
 
 // Connect DB on every request
 app.use(async (req, res, next) => {
-    // Skip DB connection for health check
-    if (req.path === '/health') return next();
+    // Skip DB connection for health check and root
+    if (req.path === '/health' || req.path === '/') return next();
 
     const isConnected = await connectDB();
     if (!isConnected) {
@@ -74,31 +76,36 @@ app.use(async (req, res, next) => {
     next();
 });
 
-// Main API Router
-const apiRouter = express.Router();
+// --- ROUTE DEFINITIONS ---
+// We mount routes directly to 'app' to avoid nested router path issues in Serverless.
+// We handle both /api prefix (standard) and root (if stripped)
 
-apiRouter.use('/auth', authRoute);
-apiRouter.use('/users', userRoute);
-apiRouter.use('/events', eventRoute);
-apiRouter.use('/merch', merchRoute);
-apiRouter.use('/orders', orderRoute);
-apiRouter.use('/announcements', announcementRoute);
-apiRouter.use('/stats', statsRoute);
-apiRouter.use('/documentation', docsRoute);
-apiRouter.use('/oauth', oauthRoute);
+const routes = [
+    { path: '/auth', handler: authRoute },
+    { path: '/users', handler: userRoute },
+    { path: '/events', handler: eventRoute },
+    { path: '/merch', handler: merchRoute },
+    { path: '/orders', handler: orderRoute },
+    { path: '/announcements', handler: announcementRoute },
+    { path: '/stats', handler: statsRoute },
+    { path: '/documentation', handler: docsRoute },
+    { path: '/oauth', handler: oauthRoute }
+];
 
-apiRouter.get('/', (req, res) => {
-    res.send('UC-Central Backend is running');
+routes.forEach(route => {
+    // Mount at /api/...
+    app.use(`/api${route.path}`, route.handler);
+    // Mount at /... (fallback for when Vercel rewrites strips /api)
+    app.use(route.path, route.handler);
 });
 
-// ROUTING FIX:
-// Vercel's rewrite sends "/api/..." to this function.
-// Depending on configuration, req.url might be "/api/auth/login" OR just "/auth/login".
-// We mount the router at BOTH /api and root / to be safe.
-// AND we explicitly handle the case where /api might be repeated.
+app.get('/api', (req, res) => {
+    res.send('UC-Central Backend is running at /api');
+});
 
-app.use('/api', apiRouter);
-app.use('/', apiRouter);
+app.get('/', (req, res) => {
+    res.send('UC-Central Backend is running');
+});
 
 // Global 404 Handler
 app.use((req, res) => {
