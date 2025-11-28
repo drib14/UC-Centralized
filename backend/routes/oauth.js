@@ -114,8 +114,9 @@ router.post('/approve', verifyToken, async (req, res) => {
 
         await newCode.save();
 
-        // Return the callback URL
-        res.status(200).json({ redirect_to: `${redirect_uri}?code=${code}` });
+        // Return the callback URL (Safely append param)
+        const separator = redirect_uri.includes('?') ? '&' : '?';
+        res.status(200).json({ redirect_to: `${redirect_uri}${separator}code=${code}` });
     } catch (err) {
         res.status(500).json(err);
     }

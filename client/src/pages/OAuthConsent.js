@@ -45,6 +45,13 @@ const OAuthConsent = () => {
         }
     };
 
+    const handleCancel = () => {
+        if (appInfo && appInfo.redirect_uri) {
+            const separator = appInfo.redirect_uri.includes('?') ? '&' : '?';
+            window.location.href = `${appInfo.redirect_uri}${separator}error=access_denied`;
+        }
+    };
+
     if (authLoading) return <div className="text-center mt-5">Loading Auth...</div>;
 
     // If not logged in, we should ideally redirect to login with a "returnTo" state.
@@ -88,7 +95,7 @@ const OAuthConsent = () => {
                     </div>
                     <div className="d-grid gap-2 mt-4">
                         <button className="btn btn-success btn-lg" onClick={handleApprove}>Authorize Access</button>
-                        <button className="btn btn-outline-secondary" onClick={() => window.location.href = appInfo.redirect_uri + '?error=access_denied'}>Cancel</button>
+                        <button className="btn btn-outline-secondary" onClick={handleCancel}>Cancel</button>
                     </div>
                 </div>
             </div>
