@@ -1,9 +1,11 @@
 import React, { useEffect, useState } from 'react';
 import StudentEventsSkeleton from '../../components/skeletons/StudentEventsSkeleton';
+import UniversalSkeleton from '../../components/skeletons/UniversalSkeleton';
 import API from '../../utils/api';
 import { useAuth } from '../../context/AuthContext';
 import { toast } from 'react-toastify';
 import { FaCalendar, FaClock, FaMapMarker, FaUsers } from 'react-icons/fa';
+import SEO from '../../components/SEO';
 
 const StudentEvents = () => {
     const { user } = useAuth();
@@ -45,6 +47,8 @@ const StudentEvents = () => {
             setLoading(false);
         }
     };
+
+    if (loading) return <UniversalSkeleton />;
 
     const handleRSVP = async () => {
         if (!selectedEvent) return;
@@ -184,6 +188,7 @@ const StudentEvents = () => {
 
     return (
         <div className="container-fluid">
+            <SEO title="Events" description="View and RSVP to upcoming university events." />
             <h2 className="mb-4 text-success">
                 <FaCalendar className="me-2" />Events & Activities
             </h2>

@@ -95,8 +95,9 @@ const Sidebar = () => {
             </nav>
 
             <div className="sidebar-footer">
-                <button className={`nav-link text-danger btn btn-link w-100 border-0 bg-transparent ${collapsed ? 'justify-content-center' : 'text-start'}`} onClick={() => { handleMobileClick(); logout(); }}>
-                    <FaRightFromBracket className={iconClass} /> <span>Logout</span>
+                <button className={`btn w-100 border-0 bg-transparent text-danger d-flex align-items-center ${collapsed ? 'justify-content-center' : 'px-3'}`} onClick={() => { handleMobileClick(); logout(); }} style={{ height: '50px' }}>
+                    <FaRightFromBracket className={collapsed ? 'fs-5' : 'me-2 fs-5'} />
+                    {!collapsed && <span>Logout</span>}
                 </button>
             </div>
         </div>

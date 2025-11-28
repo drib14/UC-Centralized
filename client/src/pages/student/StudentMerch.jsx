@@ -4,6 +4,7 @@ import API from '../../utils/api';
 import { useCart } from '../../context/CartContext';
 import { toast } from 'react-toastify';
 import { FaTshirt, FaTag } from 'react-icons/fa';
+import SEO from '../../components/SEO';
 
 const StudentMerch = () => {
     const [merch, setMerch] = useState([]);
@@ -72,6 +73,7 @@ const StudentMerch = () => {
 
     return (
         <div className="container-fluid">
+            <SEO title="Merchandise" description="Browse and purchase university merchandise." />
             <h2 className="mb-4 text-success">
                 <FaTshirt className="me-2" />Merch Store
             </h2>

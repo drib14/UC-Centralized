@@ -174,8 +174,8 @@ app.get('/callback', async (req, res) => {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 grant_type: 'authorization_code',
-                client_id: process.env.UC_CLIENT_ID,
-                client_secret: process.env.UC_CLIENT_SECRET, // KEEP HIDDEN!
+                client_id: import.meta.env.VITE_UC_CLIENT_ID,
+                client_secret: import.meta.env.VITE_UC_CLIENT_SECRET, // KEEP HIDDEN!
                 code: code,
                 redirect_uri: "https://your-app.com/callback" // Must match initiate step
             })

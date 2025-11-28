@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import API from '../../utils/api';
 import { Link } from 'react-router-dom';
 import AdminDashboardSkeleton from '../../components/skeletons/AdminDashboardSkeleton';
+import SEO from '../../components/SEO';
 
 const AdminDashboard = () => {
     const [stats, setStats] = useState({
@@ -46,6 +47,7 @@ const AdminDashboard = () => {
 
     return (
         <div className="container-fluid">
+            <SEO title="Admin Dashboard" description="Overview of system statistics and activities." />
             <h2 className="mb-4">Admin Dashboard</h2>
 
             <div className="row g-4 mb-4">

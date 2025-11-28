@@ -2,8 +2,10 @@ import React, { useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import API from '../utils/api';
 import { useAuth } from '../context/AuthContext';
+import UniversalSkeleton from '../components/skeletons/UniversalSkeleton';
 import { toast } from 'react-toastify';
 import logo from '../assets/uc-central-logo.png';
+import SEO from '../components/SEO';
 
 const OAuthConsent = () => {
     const [searchParams] = useSearchParams();
@@ -68,11 +70,12 @@ const OAuthConsent = () => {
         );
     }
 
-    if (loading) return <div className="text-center mt-5"><div className="spinner-border text-primary"></div></div>;
+    if (loading) return <UniversalSkeleton />;
 
     if (error) {
         return (
             <div className="container mt-5 text-center">
+                <SEO title="Authorization Error" />
                 <div className="alert alert-danger">{error}</div>
             </div>
         );

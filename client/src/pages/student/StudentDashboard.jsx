@@ -1,10 +1,12 @@
 import React, { useEffect, useState } from 'react';
 import StudentDashboardSkeleton from '../../components/skeletons/StudentDashboardSkeleton';
+import UniversalSkeleton from '../../components/skeletons/UniversalSkeleton';
 import API from '../../utils/api';
 import { useCart } from '../../context/CartContext';
 import { FaBullhorn, FaCalendar, FaTshirt } from 'react-icons/fa';
 import { Link } from 'react-router-dom';
 import { toast } from 'react-toastify';
+import SEO from '../../components/SEO';
 
 const StudentDashboard = () => {
     const { addItem } = useCart();
@@ -164,18 +166,11 @@ const StudentDashboard = () => {
         return `${formattedHour}:${formattedMinute} ${ampm}`;
     };
 
-    if (loading) {
-        return (
-            <div className="text-center my-5">
-                <div className="spinner-border text-success" role="status">
-                    <span className="visually-hidden">Loading...</span>
-                </div>
-            </div>
-        );
-    }
+    if (loading) return <UniversalSkeleton />;
 
     return (
         <div className="container-fluid">
+            <SEO title="Dashboard" description="Welcome to your student dashboard." />
             {/* Welcome Section */}
             <div className="row mb-4">
                 <div className="col-12">
