@@ -312,6 +312,76 @@ app.get('/callback', async (req, res) => {
                             </div>
                         </section>
 
+                        {/* Public Resources */}
+                        <section id="endpoints-resources" className="mb-5">
+                            <h2 className="border-bottom pb-2">Student Resources</h2>
+                            <p>Authorized users can access university resources. All endpoints require <code>Authorization: Bearer TOKEN</code>.</p>
+
+                            <div className="card mb-4">
+                                <div className="card-header fw-bold bg-light">Events</div>
+                                <div className="card-body">
+                                    <div className="mb-4">
+                                        <EndpointBadge method="GET" path="/api/events" />
+                                        <p>List all upcoming and past events.</p>
+                                        <CodeBlock title="Response Array" code={`[
+  {
+    "_id": "65c...",
+    "title": "CCS Week",
+    "date": "2024-05-20",
+    "time": "08:00",
+    "location": "Main Campus",
+    "attendees": ["USER_ID_1", "USER_ID_2"],
+    "image": "https://..."
+  }
+]`} />
+                                    </div>
+                                    <hr />
+                                    <div className="mb-2">
+                                        <EndpointBadge method="POST" path="/api/events/:id/rsvp" />
+                                        <p>RSVP to an event. Returns 200 OK or 403 if already registered.</p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="card mb-4">
+                                <div className="card-header fw-bold bg-light">Merchandise</div>
+                                <div className="card-body">
+                                    <EndpointBadge method="GET" path="/api/merch" />
+                                    <p>List available merchandise items.</p>
+                                    <CodeBlock title="Response Array" code={`[
+  {
+    "_id": "65d...",
+    "name": "CCS Polo Shirt",
+    "price": 350,
+    "stock": 50,
+    "category": "wearable",
+    "variants": [
+        { "size": "M", "color": "Blue", "stock": 20 }
+    ],
+    "image": "https://..."
+  }
+]`} />
+                                </div>
+                            </div>
+
+                            <div className="card mb-4">
+                                <div className="card-header fw-bold bg-light">Announcements</div>
+                                <div className="card-body">
+                                    <EndpointBadge method="GET" path="/api/announcements" />
+                                    <p>List latest announcements.</p>
+                                    <CodeBlock title="Response Array" code={`[
+  {
+    "_id": "65e...",
+    "title": "Midterm Exam Schedule",
+    "message": "Exams start next week...",
+    "department": "ALL",
+    "createdAt": "2024-03-10T..."
+  }
+]`} />
+                                </div>
+                            </div>
+                        </section>
+
                     </div>
                 </div>
             </div>
