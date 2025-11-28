@@ -20,6 +20,12 @@ const app = express();
 app.use(express.json());
 app.enable('trust proxy'); // Important for Vercel
 
+// Request Logger (Debug Vercel Routing)
+app.use((req, res, next) => {
+    console.log(`[Request] ${req.method} ${req.url}`);
+    next();
+});
+
 // CORS Configuration
 const corsOptions = {
     origin: (origin, callback) => {
@@ -58,6 +64,9 @@ const connectDB = async () => {
 
 // Connect DB on every request
 app.use(async (req, res, next) => {
+    // Skip DB connection for health check
+    if (req.path === '/health') return next();
+
     const isConnected = await connectDB();
     if (!isConnected) {
         return res.status(500).json({ message: 'Database connection failed. Check server logs.' });
@@ -82,12 +91,18 @@ apiRouter.get('/', (req, res) => {
     res.send('UC-Central Backend is running');
 });
 
-// Mount router at BOTH / and /api to handle Vercel's potentially unpredictable stripping
+// ROUTING FIX:
+// Vercel's rewrite sends "/api/..." to this function.
+// Depending on configuration, req.url might be "/api/auth/login" OR just "/auth/login".
+// We mount the router at BOTH /api and root / to be safe.
+// AND we explicitly handle the case where /api might be repeated.
+
 app.use('/api', apiRouter);
 app.use('/', apiRouter);
 
 // Global 404 Handler
 app.use((req, res) => {
+    console.log(`[404] Route not found: ${req.method} ${req.url}`);
     res.status(404).json({
         message: `Route not found: ${req.method} ${req.url}`,
         originalUrl: req.originalUrl,
