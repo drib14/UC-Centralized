@@ -264,8 +264,15 @@ app.get('/callback', async (req, res) => {
     "firstName": "Jane",
     "lastName": "Doe",
     "department": "CCS",
-    "role": "student"
+    "role": "student",
+    "profileImage": "https://res.cloudinary.com/.../image.jpg" // Optional
 }`} />
+                                    <div className="alert alert-info mt-3 small">
+                                        <FaUser className="me-2" />
+                                        <strong>Note on Profile Images:</strong> If the <code>profileImage</code> field is missing or null,
+                                        the application generates a default placeholder using the user's initials (e.g., "JD" for Jane Doe).
+                                        External applications should implement similar fallback logic.
+                                    </div>
                                 </div>
                             </div>
                         </section>
