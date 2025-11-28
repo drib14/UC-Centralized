@@ -1,11 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import API from '../../utils/api';
 import { toast } from 'react-toastify';
-import { FaPlus, FaKey } from 'react-icons/fa6';
+import { FaPlus, FaKey, FaPen, FaTrash } from 'react-icons/fa6';
 
 const DeveloperDashboard = () => {
     const [apps, setApps] = useState([]);
     const [showModal, setShowModal] = useState(false);
+    const [showDeleteModal, setShowDeleteModal] = useState(false);
+    const [isEditing, setIsEditing] = useState(false);
+    const [currentAppId, setCurrentAppId] = useState(null);
     const [form, setForm] = useState({ name: '', redirectUris: '', description: '' });
 
     useEffect(() => {
@@ -28,19 +31,79 @@ const DeveloperDashboard = () => {
                 redirectUris: form.redirectUris.split(',').map(u => u.trim())
             });
             toast.success("App created!");
-            setShowModal(false);
-            setForm({ name: '', redirectUris: '', description: '' });
+            closeModal();
             loadApps();
         } catch (e) {
             toast.error(e.message || "Failed");
         }
     };
 
+    const handleUpdate = async () => {
+        if (!form.name || !form.redirectUris) return toast.error("Name and Redirect URI required");
+
+        try {
+            await API.request(`/oauth/apps/${currentAppId}`, 'PUT', {
+                ...form,
+                redirectUris: form.redirectUris.split(',').map(u => u.trim())
+            });
+            toast.success("App updated!");
+            closeModal();
+            loadApps();
+        } catch (e) {
+            toast.error(e.message || "Failed");
+        }
+    };
+
+    const handleDelete = async () => {
+        try {
+            await API.request(`/oauth/apps/${currentAppId}`, 'DELETE');
+            toast.success("App deleted!");
+            closeDeleteModal();
+            loadApps();
+        } catch (e) {
+            toast.error(e.message || "Failed");
+        }
+    };
+
+    const openCreateModal = () => {
+        setIsEditing(false);
+        setForm({ name: '', redirectUris: '', description: '' });
+        setShowModal(true);
+    };
+
+    const openEditModal = (app) => {
+        setIsEditing(true);
+        setCurrentAppId(app._id);
+        setForm({
+            name: app.name,
+            description: app.description || '',
+            redirectUris: app.redirectUris.join(', ')
+        });
+        setShowModal(true);
+    };
+
+    const openDeleteModal = (id) => {
+        setCurrentAppId(id);
+        setShowDeleteModal(true);
+    };
+
+    const closeModal = () => {
+        setShowModal(false);
+        setForm({ name: '', redirectUris: '', description: '' });
+        setIsEditing(false);
+        setCurrentAppId(null);
+    };
+
+    const closeDeleteModal = () => {
+        setShowDeleteModal(false);
+        setCurrentAppId(null);
+    };
+
     return (
         <div className="container-fluid">
             <div className="d-flex justify-content-between align-items-center mb-4">
                 <h2 className="text-primary"><FaKey className="me-2"/>Developer Console (OAuth Apps)</h2>
-                <button className="btn btn-primary" onClick={() => setShowModal(true)}>
+                <button className="btn btn-primary" onClick={openCreateModal}>
                     <FaPlus className="me-2"/>New App
                 </button>
             </div>
@@ -49,8 +112,16 @@ const DeveloperDashboard = () => {
                 {apps.length === 0 ? <p className="text-muted">No apps created yet.</p> : apps.map(app => (
                     <div className="col-md-6 col-lg-4" key={app._id}>
                         <div className="card h-100 shadow-sm border-primary">
-                            <div className="card-body">
-                                <h5 className="card-title fw-bold">{app.name}</h5>
+                            <div className="card-body position-relative">
+                                <div className="position-absolute top-0 end-0 p-3">
+                                    <button className="btn btn-sm btn-outline-secondary me-2" onClick={() => openEditModal(app)} title="Edit">
+                                        <FaPen />
+                                    </button>
+                                    <button className="btn btn-sm btn-outline-danger" onClick={() => openDeleteModal(app._id)} title="Delete">
+                                        <FaTrash />
+                                    </button>
+                                </div>
+                                <h5 className="card-title fw-bold pe-5">{app.name}</h5>
                                 <p className="card-text small text-muted">{app.description || 'No description'}</p>
                                 <hr/>
                                 <div className="mb-2">
@@ -71,14 +142,14 @@ const DeveloperDashboard = () => {
                 ))}
             </div>
 
-            {/* Create Modal */}
+            {/* Create/Edit Modal */}
             {showModal && (
                 <div className="modal fade show d-block" style={{backgroundColor: 'rgba(0,0,0,0.5)'}}>
                     <div className="modal-dialog">
                         <div className="modal-content">
                             <div className="modal-header bg-primary text-white">
-                                <h5 className="modal-title">Create OAuth App</h5>
-                                <button className="btn-close btn-close-white" onClick={() => setShowModal(false)}></button>
+                                <h5 className="modal-title">{isEditing ? 'Edit OAuth App' : 'Create OAuth App'}</h5>
+                                <button className="btn-close btn-close-white" onClick={closeModal}></button>
                             </div>
                             <div className="modal-body">
                                 <div className="mb-3">
@@ -95,8 +166,31 @@ const DeveloperDashboard = () => {
                                 </div>
                             </div>
                             <div className="modal-footer">
-                                <button className="btn btn-secondary" onClick={() => setShowModal(false)}>Cancel</button>
-                                <button className="btn btn-primary" onClick={handleCreate}>Create App</button>
+                                <button className="btn btn-secondary" onClick={closeModal}>Cancel</button>
+                                <button className="btn btn-primary" onClick={isEditing ? handleUpdate : handleCreate}>
+                                    {isEditing ? 'Save Changes' : 'Create App'}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Delete Confirmation Modal */}
+            {showDeleteModal && (
+                <div className="modal fade show d-block" style={{backgroundColor: 'rgba(0,0,0,0.5)'}}>
+                    <div className="modal-dialog">
+                        <div className="modal-content">
+                            <div className="modal-header bg-danger text-white">
+                                <h5 className="modal-title">Confirm Delete</h5>
+                                <button className="btn-close btn-close-white" onClick={closeDeleteModal}></button>
+                            </div>
+                            <div className="modal-body">
+                                <p>Are you sure you want to delete this app? This action cannot be undone.</p>
+                            </div>
+                            <div className="modal-footer">
+                                <button className="btn btn-secondary" onClick={closeDeleteModal}>Cancel</button>
+                                <button className="btn btn-danger" onClick={handleDelete}>Delete App</button>
                             </div>
                         </div>
                     </div>

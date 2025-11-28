@@ -40,6 +40,38 @@ router.get('/apps', verifyToken, async (req, res) => {
     }
 });
 
+// UPDATE APP
+router.put('/apps/:id', verifyToken, async (req, res) => {
+    try {
+        const { name, redirectUris, description } = req.body;
+        const app = await OAuthApp.findOne({ _id: req.params.id, user: req.user.id });
+
+        if (!app) return res.status(404).json("App not found");
+
+        app.name = name || app.name;
+        app.description = description || app.description;
+        if (redirectUris) {
+            app.redirectUris = Array.isArray(redirectUris) ? redirectUris : [redirectUris];
+        }
+
+        const updatedApp = await app.save();
+        res.status(200).json(updatedApp);
+    } catch (err) {
+        res.status(500).json(err);
+    }
+});
+
+// DELETE APP
+router.delete('/apps/:id', verifyToken, async (req, res) => {
+    try {
+        const app = await OAuthApp.findOneAndDelete({ _id: req.params.id, user: req.user.id });
+        if (!app) return res.status(404).json("App not found");
+        res.status(200).json("App deleted");
+    } catch (err) {
+        res.status(500).json(err);
+    }
+});
+
 // AUTHORIZE ENDPOINT (Called by Client)
 // Validates params and returns App info for Consent Screen
 router.get('/authorize', async (req, res) => {
