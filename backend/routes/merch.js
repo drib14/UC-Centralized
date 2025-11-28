@@ -6,8 +6,24 @@ const parser = require('../config/cloudinary');
 // CREATE
 router.post('/', verifyAdmin, parser.single('image'), async (req, res) => {
     try {
+        let merchData = { ...req.body };
+
+        // Parse variants if they come as a string (from FormData)
+        if (typeof merchData.variants === 'string') {
+            try {
+                merchData.variants = JSON.parse(merchData.variants);
+            } catch (e) {
+                merchData.variants = [];
+            }
+        }
+
+        // Calculate total stock if category is wearable
+        if (merchData.category === 'wearable' && Array.isArray(merchData.variants)) {
+            merchData.stock = merchData.variants.reduce((sum, v) => sum + Number(v.stock || 0), 0);
+        }
+
         const newMerch = new Merch({
-            ...req.body,
+            ...merchData,
             image: req.file ? req.file.path : ''
         });
         const savedMerch = await newMerch.save();
@@ -43,6 +59,22 @@ router.put('/:id', verifyAdmin, parser.single('image'), async (req, res) => {
     try {
         const updateData = { ...req.body };
         if (req.file) updateData.image = req.file.path;
+
+        // Parse variants if string
+        if (typeof updateData.variants === 'string') {
+            try {
+                updateData.variants = JSON.parse(updateData.variants);
+            } catch (e) {
+                // Keep existing variants if parse fails? Or empty?
+                // Better to delete if invalid or just ignore
+                delete updateData.variants;
+            }
+        }
+
+        // Recalculate stock if variants are present and category is wearable
+        if (updateData.category === 'wearable' && Array.isArray(updateData.variants)) {
+            updateData.stock = updateData.variants.reduce((sum, v) => sum + Number(v.stock || 0), 0);
+        }
 
         const updatedMerch = await Merch.findByIdAndUpdate(
             req.params.id,

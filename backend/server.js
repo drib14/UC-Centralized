@@ -9,6 +9,8 @@ const merchRoute = require('./routes/merch');
 const orderRoute = require('./routes/orders');
 const announcementRoute = require('./routes/announcements');
 const statsRoute = require('./routes/stats');
+const docsRoute = require('./routes/docs');
+const oauthRoute = require('./routes/oauth');
 
 dotenv.config();
 
@@ -16,6 +18,7 @@ const app = express();
 
 // Middleware
 app.use(express.json());
+app.enable('trust proxy'); // Important for Vercel
 
 // CORS Configuration
 const corsOptions = {
@@ -26,18 +29,19 @@ const corsOptions = {
         callback(null, true);
     },
     credentials: true,
-    optionsSuccessStatus: 200 // some legacy browsers (IE11, various SmartTVs) choke on 204
+    optionsSuccessStatus: 200
 };
 
 app.use(cors(corsOptions));
-app.options('*', cors(corsOptions)); // Enable pre-flight for all routes
 
-// Health Check (No DB dependency) to verify server status
+// Health Check (No DB dependency)
 app.get('/health', (req, res) => {
     res.status(200).json({ status: 'ok', message: 'Server is running' });
 });
 
 // Database Connection (Serverless optimized)
+// We define this OUTSIDE the request handler context if possible,
+// but inside the function scope it works via caching.
 const connectDB = async () => {
     if (mongoose.connection.readyState >= 1) {
         return true;
@@ -56,6 +60,9 @@ const connectDB = async () => {
 
 // Connect DB on every request
 app.use(async (req, res, next) => {
+    // Skip DB connection for health check and root
+    if (req.path === '/health' || req.path === '/') return next();
+
     const isConnected = await connectDB();
     if (!isConnected) {
         return res.status(500).json({ message: 'Database connection failed. Check server logs.' });
@@ -63,27 +70,45 @@ app.use(async (req, res, next) => {
     next();
 });
 
-// URL Normalization for Vercel
-// Vercel rewrites /api/... to this file, but sometimes req.url retains the /api prefix.
-// We strip it to ensure standard routing works for both Localhost and Vercel.
-app.use((req, res, next) => {
-    if (req.url.startsWith('/api')) {
-        req.url = req.url.replace('/api', '');
-    }
-    next();
+// --- ROUTE DEFINITIONS ---
+// We mount routes directly to 'app' to avoid nested router path issues in Serverless.
+// We handle both /api prefix (standard) and root (if stripped)
+
+const routes = [
+    { path: '/auth', handler: authRoute },
+    { path: '/users', handler: userRoute },
+    { path: '/events', handler: eventRoute },
+    { path: '/merch', handler: merchRoute },
+    { path: '/orders', handler: orderRoute },
+    { path: '/announcements', handler: announcementRoute },
+    { path: '/stats', handler: statsRoute },
+    { path: '/documentation', handler: docsRoute },
+    { path: '/oauth', handler: oauthRoute }
+];
+
+routes.forEach(route => {
+    // Mount at /api/...
+    app.use(`/api${route.path}`, route.handler);
+    // Mount at /... (fallback for when Vercel rewrites strips /api)
+    app.use(route.path, route.handler);
 });
 
-// Routes
-app.use('/auth', authRoute);
-app.use('/users', userRoute);
-app.use('/events', eventRoute);
-app.use('/merch', merchRoute);
-app.use('/orders', orderRoute);
-app.use('/announcements', announcementRoute);
-app.use('/stats', statsRoute);
+app.get('/api', (req, res) => {
+    res.send('UC-Central Backend is running at /api');
+});
 
 app.get('/', (req, res) => {
     res.send('UC-Central Backend is running');
+});
+
+// Global 404 Handler
+app.use((req, res) => {
+    console.log(`[404] Route not found: ${req.method} ${req.url}`);
+    res.status(404).json({
+        message: `Route not found: ${req.method} ${req.url}`,
+        originalUrl: req.originalUrl,
+        path: req.path
+    });
 });
 
 // Local Development

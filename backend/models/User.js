@@ -41,6 +41,30 @@ const userSchema = new mongoose.Schema({
     },
     profileImage: {
         type: String
+    },
+    resetCode: {
+        type: String
+    },
+    resetCodeExpires: {
+        type: Date
+    },
+    resetAttempts: {
+        type: Number,
+        default: 0
+    },
+    resetLockoutUntil: {
+        type: Date
+    },
+    resetPasswordToken: {
+        type: String,
+    },
+    resetPasswordExpires: {
+        type: Date,
+    },
+    apiKey: {
+        type: String,
+        unique: true,
+        sparse: true
     }
 }, { timestamps: true });
 
