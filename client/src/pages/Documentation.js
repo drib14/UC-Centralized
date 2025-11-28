@@ -1,18 +1,17 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { FaCode, FaKey, FaBook, FaUser, FaArrowRight } from 'react-icons/fa';
+import { FaCode, FaKey, FaBook, FaUser, FaArrowRight, FaShieldAlt } from 'react-icons/fa';
 import SEO from '../components/SEO';
 import './Documentation.css';
 
 const CodeBlock = ({ method, url, body, response }) => (
     <div className="bg-light p-3 rounded mt-3 code-block">
         <h6 className="fw-bold text-muted">Example Request (JavaScript)</h6>
-        <pre className="mb-0"><code>{`const response = await fetch('https://uc-central.vercel.app/api${url}', {
+        <pre className="mb-0"><code>{`const response = await fetch('https://uc-centralized.vercel.app/api${url}', {
     method: '${method}',
     headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': 'YOUR_API_KEY'
+        'Content-Type': 'application/json'
     }${body ? `,\n    body: JSON.stringify(${JSON.stringify(body, null, 4).replace(/\n/g, '\n    ')})` : ''}
 });
 const data = await response.json();
@@ -121,6 +120,7 @@ const Documentation = () => {
                         <div className="sticky-top" style={{ top: '80px' }}>
                             <div className="list-group">
                                 <a href="#auth" className="list-group-item list-group-item-action">Authentication</a>
+                                <a href="#oauth" className="list-group-item list-group-item-action">OAuth 2.0 Integration</a>
                                 <a href="#users" className="list-group-item list-group-item-action">Users</a>
                                 <a href="#events" className="list-group-item list-group-item-action">Events</a>
                                 <a href="#merch" className="list-group-item list-group-item-action">Merchandise</a>
@@ -158,30 +158,72 @@ const Documentation = () => {
                                 <p>Register a new account.</p>
                                 <CodeBlock method="POST" url="/auth/register" body={{ studentId: "12345", email: "student@uc.edu.ph", password: "Pass", firstName: "John", lastName: "Doe" }} />
                             </div>
+                        </section>
 
-                            <h4 className="mt-4">OAuth 2.0</h4>
-                            <p>Use UC-Central as an identity provider for your applications.</p>
-                            <ol>
-                                <li>Register your app in the <Link to="/student/developer">Developer Console</Link>.</li>
-                                <li>Redirect users to <code>/oauth/authorize?client_id=...&redirect_uri=...&response_type=code</code></li>
-                                <li>User approves, we redirect back to you with <code>?code=...</code></li>
-                                <li>Exchange code for token at <code>/oauth/token</code></li>
-                            </ol>
+                        <section id="oauth" className="mb-5">
+                            <h2 className="text-secondary border-bottom pb-2"><FaShieldAlt className="me-2"/>OAuth 2.0 Integration</h2>
+                            <p className="lead">Use UC-Central as an identity provider (IdP) for your external applications.</p>
+
+                            <div className="alert alert-info">
+                                <strong>What is the Redirect URI?</strong>
+                                <br/>
+                                The Redirect URI is a URL on <strong>YOUR application</strong> (the consumer). After a user approves access, UC-Central will redirect the user back to this URL with an authorization code.
+                                <br/>
+                                <em>Example: <code>https://your-awesome-app.com/callback</code> or <code>http://localhost:3000/api/auth/callback</code></em>
+                            </div>
+
+                            <div className="card mb-4">
+                                <div className="card-header bg-primary text-white">Step-by-Step Integration Guide</div>
+                                <div className="card-body">
+                                    <ol className="mb-0">
+                                        <li className="mb-3">
+                                            <strong>Register your Application:</strong>
+                                            <p>Go to the Developer Console (if available) or use the API to register your app. You will receive a <code>Client ID</code> and <code>Client Secret</code>. You must also whitelist your <code>Redirect URI</code>.</p>
+                                        </li>
+                                        <li className="mb-3">
+                                            <strong>Direct User to Authorization Endpoint:</strong>
+                                            <p>Redirect the user's browser to the following URL:</p>
+                                            <pre className="bg-light p-2 rounded"><code>https://uc-centralized.vercel.app/api/oauth/authorize?client_id=YOUR_ID&redirect_uri=YOUR_URI&response_type=code</code></pre>
+                                        </li>
+                                        <li className="mb-3">
+                                            <strong>Handle the Callback:</strong>
+                                            <p>If the user approves, they will be redirected to:</p>
+                                            <pre className="bg-light p-2 rounded"><code>YOUR_REDIRECT_URI?code=AUTHORIZATION_CODE</code></pre>
+                                        </li>
+                                        <li>
+                                            <strong>Exchange Code for Access Token:</strong>
+                                            <p>Make a server-side POST request to exchange the code for a token.</p>
+                                        </li>
+                                    </ol>
+                                </div>
+                            </div>
+
+                            <h4 className="mt-4">Endpoints</h4>
+
                             <div className="api-endpoint">
                                 <span className="badge bg-success">POST</span> <code>/oauth/token</code>
-                                <p>Exchange authorization code for access token.</p>
+                                <p>Exchange authorization code for access token. Call this from your backend.</p>
                                 <CodeBlock method="POST" url="/oauth/token" body={{
                                     grant_type: "authorization_code",
                                     client_id: "YOUR_CLIENT_ID",
                                     client_secret: "YOUR_CLIENT_SECRET",
                                     code: "AUTH_CODE_FROM_CALLBACK",
-                                    redirect_uri: "YOUR_CALLBACK_URL"
+                                    redirect_uri: "YOUR_REGISTERED_CALLBACK_URL"
                                 }} />
                             </div>
+
                             <div className="api-endpoint">
                                 <span className="badge bg-info">GET</span> <code>/oauth/userinfo</code>
-                                <p>Get user details with the access token.</p>
-                                <CodeBlock method="GET" url="/oauth/userinfo" />
+                                <p>Get user details using the access token obtained in the previous step.</p>
+                                <div className="bg-light p-3 rounded mt-3 code-block">
+                                    <h6 className="fw-bold text-muted">Example Request</h6>
+                                    <pre className="mb-0"><code>{`// Pass the access token in the Authorization header
+const response = await fetch('https://uc-centralized.vercel.app/api/oauth/userinfo', {
+    headers: {
+        'Authorization': 'Bearer ACCESS_TOKEN'
+    }
+});`}</code></pre>
+                                </div>
                             </div>
                         </section>
 
