@@ -74,6 +74,13 @@ router.delete('/apps/:id', verifyToken, async (req, res) => {
 
 // AUTHORIZE ENDPOINT (Called by Client)
 // Validates params and returns App info for Consent Screen
+// NOTE: External apps should redirect users to the FRONTEND URL /oauth/authorize, NOT this API endpoint.
+router.post('/authorize', (req, res) => {
+    res.status(405).json({
+        message: "Method Not Allowed. To initiate OAuth, redirect the user's browser to the frontend URL: https://uc-centralized.vercel.app/oauth/authorize"
+    });
+});
+
 router.get('/authorize', async (req, res) => {
     try {
         const { client_id, redirect_uri, response_type } = req.query;

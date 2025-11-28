@@ -226,6 +226,18 @@ const response = await fetch('https://uc-centralized.vercel.app/api/oauth/userin
 });`}</code></pre>
                                 </div>
                             </div>
+
+                            <div className="alert alert-warning mt-4">
+                                <h5 className="alert-heading">Common Mistakes</h5>
+                                <ul className="mb-0">
+                                    <li>
+                                        <strong>POST /api/oauth/authorize (404/405 Error):</strong> Do NOT make a POST request to the authorization endpoint from your backend or frontend code. You must <strong>redirect the user's browser</strong> to <code>/oauth/authorize</code> (GET).
+                                    </li>
+                                    <li>
+                                        <strong>Invalid Redirect URI:</strong> The <code>redirect_uri</code> parameter must match exactly what you registered in the Developer Console.
+                                    </li>
+                                </ul>
+                            </div>
                         </section>
 
                         <section id="users" className="mb-5">
