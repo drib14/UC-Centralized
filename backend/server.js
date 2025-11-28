@@ -20,12 +20,6 @@ const app = express();
 app.use(express.json());
 app.enable('trust proxy'); // Important for Vercel
 
-// Request Logger (Debug Vercel Routing)
-app.use((req, res, next) => {
-    console.log(`[Request] ${req.method} ${req.url}`);
-    next();
-});
-
 // CORS Configuration
 const corsOptions = {
     origin: (origin, callback) => {
@@ -101,10 +95,6 @@ routes.forEach(route => {
 
 app.get('/api', (req, res) => {
     res.send('UC-Central Backend is running at /api');
-});
-
-app.get('/api/version', (req, res) => {
-    res.json({ version: "1.0", status: "ok", timestamp: new Date() });
 });
 
 app.get('/', (req, res) => {
