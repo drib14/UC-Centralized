@@ -5,6 +5,59 @@ const User = require('../models/User');
 const { verifyToken } = require('../middleware/auth');
 const crypto = require('crypto');
 const jwt = require('jsonwebtoken');
+const bcrypt = require('bcryptjs');
+
+// EXTERNAL USER REGISTRATION (Server-to-Server)
+router.post('/users/register', async (req, res) => {
+    try {
+        const { client_id, client_secret, studentId, email, password, firstName, lastName, department, program, year } = req.body;
+
+        // 1. Authenticate Client (External App)
+        const app = await OAuthApp.findOne({ clientId: client_id, clientSecret: client_secret });
+        if (!app) return res.status(401).json({ message: "Invalid Client Credentials" });
+
+        // 2. Validate User Input
+        if (!studentId || !email || !password || !firstName || !lastName) {
+            return res.status(400).json({ message: "Missing required user fields" });
+        }
+
+        // 3. Check for duplicates
+        const existingUser = await User.findOne({ $or: [{ email }, { studentId }] });
+        if (existingUser) return res.status(409).json({ message: "User already exists (Email or Student ID)" });
+
+        // 4. Hash Password
+        const salt = await bcrypt.genSalt(10);
+        const hashedPassword = await bcrypt.hash(password, salt);
+
+        // 5. Create User
+        const newUser = new User({
+            studentId,
+            email,
+            password: hashedPassword,
+            firstName,
+            lastName,
+            department: department || 'CCS',
+            program,
+            year,
+            role: 'student' // Default to student
+        });
+
+        const savedUser = await newUser.save();
+
+        res.status(201).json({
+            message: "User registered successfully",
+            user: {
+                _id: savedUser._id,
+                studentId: savedUser.studentId,
+                email: savedUser.email
+            }
+        });
+
+    } catch (err) {
+        console.error("External Reg Error:", err);
+        res.status(500).json({ message: "Internal Server Error", error: err.message });
+    }
+});
 
 // REGISTER APP
 router.post('/register', verifyToken, async (req, res) => {
