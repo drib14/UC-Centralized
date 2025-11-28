@@ -182,8 +182,9 @@ const Documentation = () => {
                                         </li>
                                         <li className="mb-3">
                                             <strong>Direct User to Authorization Endpoint:</strong>
-                                            <p>Redirect the user's browser to the following URL:</p>
-                                            <pre className="bg-light p-2 rounded"><code>https://uc-centralized.vercel.app/api/oauth/authorize?client_id=YOUR_ID&redirect_uri=YOUR_URI&response_type=code</code></pre>
+                                            <p>Redirect the user's browser to the <strong>Frontend Authorization Page</strong>:</p>
+                                            <pre className="bg-light p-2 rounded"><code>https://uc-centralized.vercel.app/oauth/authorize?client_id=YOUR_ID&redirect_uri=YOUR_URI&response_type=code</code></pre>
+                                            <small className="text-muted">Note: Do NOT use <code>/api/oauth/authorize</code> here. This link renders the user consent screen.</small>
                                         </li>
                                         <li className="mb-3">
                                             <strong>Handle the Callback:</strong>
