@@ -103,6 +103,10 @@ app.get('/api', (req, res) => {
     res.send('UC-Central Backend is running at /api');
 });
 
+app.get('/api/version', (req, res) => {
+    res.json({ version: "1.0", status: "ok", timestamp: new Date() });
+});
+
 app.get('/', (req, res) => {
     res.send('UC-Central Backend is running');
 });
