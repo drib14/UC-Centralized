@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { FaCode, FaKey, FaBook, FaUser, FaArrowRight, FaShieldAlt, FaServer, FaGlobe } from 'react-icons/fa';
 import SEO from '../components/SEO';
+import logo from '../assets/uc-central-logo.png';
 import './Documentation.css';
 
 const CodeBlock = ({ title, code, language = 'javascript' }) => (
@@ -51,7 +52,7 @@ const Documentation = () => {
             <header className="bg-dark text-white py-4 shadow-sm sticky-top">
                 <div className="container d-flex justify-content-between align-items-center">
                     <div className="d-flex align-items-center">
-                        <img src={require('../assets/uc-central-logo.png')} alt="Logo" width="40" height="40" className="me-3 rounded" />
+                        <img src={logo} alt="Logo" width="40" height="40" className="me-3 rounded" />
                         <div>
                             <h1 className="h4 m-0 fw-bold">UC-Central Developers</h1>
                             <small className="text-secondary">API & OAuth 2.0 Documentation</small>
