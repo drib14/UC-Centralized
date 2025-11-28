@@ -19,6 +19,10 @@
       "dest": "backend/api/index.js"
     },
     {
+      "src": "/api",
+      "dest": "backend/api/index.js"
+    },
+    {
       "src": "/static/(.*)",
       "dest": "client/static/$1"
     },

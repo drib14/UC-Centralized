@@ -67,9 +67,14 @@ app.use(async (req, res, next) => {
 // URL Normalization for Vercel
 // Vercel rewrites /api/... to this file, but sometimes req.url retains the /api prefix.
 // We strip it to ensure standard routing works for both Localhost and Vercel.
+app.enable('trust proxy'); // Important for Vercel
+
 app.use((req, res, next) => {
+    // Regex replace to ensure we only replace the STARTING /api
+    // Handles cases like /api/auth/login -> /auth/login
+    // Also handles /api/ -> /
     if (req.url.startsWith('/api')) {
-        req.url = req.url.replace('/api', '');
+        req.url = req.url.replace(/^\/api/, '') || '/';
     }
     next();
 });
