@@ -85,12 +85,12 @@ router.get('/authorize', async (req, res) => {
     try {
         const { client_id, redirect_uri, response_type } = req.query;
 
-        if (!client_id || !redirect_uri) return res.status(400).json("Missing parameters");
+        if (!client_id || !redirect_uri) return res.status(400).json({ message: "Missing parameters" });
 
         const app = await OAuthApp.findOne({ clientId: client_id });
-        if (!app) return res.status(404).json("Client not found");
+        if (!app) return res.status(404).json({ message: "Client not found" });
 
-        if (!app.redirectUris.includes(redirect_uri)) return res.status(400).json("Invalid redirect URI");
+        if (!app.redirectUris.includes(redirect_uri)) return res.status(400).json({ message: "Invalid redirect URI" });
 
         // Return app info so frontend can show "App X wants access"
         res.status(200).json({

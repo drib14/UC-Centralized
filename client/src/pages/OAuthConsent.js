@@ -28,7 +28,8 @@ const OAuthConsent = () => {
                 setLoading(false);
             })
             .catch(err => {
-                setError(err.message || "Invalid Application");
+                console.error("OAuth Error:", err);
+                setError(err.message || "Invalid Application. Please check your Client ID and Redirect URI.");
                 setLoading(false);
             });
     }, [searchParams]);
