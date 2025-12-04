@@ -1,9 +1,29 @@
 const router = require('express').Router();
 const User = require('../models/User');
 const bcrypt = require('bcryptjs');
-const { verifyAdmin } = require('../middleware/auth');
+const { verifyAdmin, verifyToken } = require('../middleware/auth');
 
-// GET ALL (Admins + Students)
+// SEARCH USERS
+router.get('/search', verifyToken, async (req, res) => {
+    try {
+        const query = req.query.q;
+        if (!query) return res.status(400).json({ message: "Query is required" });
+
+        const users = await User.find({
+            $or: [
+                { firstName: { $regex: query, $options: 'i' } },
+                { lastName: { $regex: query, $options: 'i' } },
+                { studentId: { $regex: query, $options: 'i' } }
+            ]
+        }).select('firstName lastName studentId profileImage role');
+
+        res.status(200).json(users);
+    } catch (err) {
+        res.status(500).json(err);
+    }
+});
+
+// GET ALL (Admins Only)
 router.get('/', verifyAdmin, async (req, res) => {
     try {
         const users = await User.find().select('-password');

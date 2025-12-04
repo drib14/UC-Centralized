@@ -2,6 +2,9 @@ const express = require('express');
 const mongoose = require('mongoose');
 const dotenv = require('dotenv');
 const cors = require('cors');
+const http = require('http');
+const { Server } = require("socket.io");
+
 const authRoute = require('./routes/auth');
 const userRoute = require('./routes/users');
 const eventRoute = require('./routes/events');
@@ -11,10 +14,49 @@ const announcementRoute = require('./routes/announcements');
 const statsRoute = require('./routes/stats');
 const docsRoute = require('./routes/docs');
 const oauthRoute = require('./routes/oauth');
+const messageRoute = require('./routes/messages');
 
 dotenv.config();
 
 const app = express();
+const server = http.createServer(app);
+const io = new Server(server, {
+    cors: {
+        origin: "*", // Adjust for production
+        methods: ["GET", "POST"]
+    }
+});
+
+// Store io instance in app to access it in routes if needed
+app.set('io', io);
+
+// Socket.IO Logic
+io.on("connection", (socket) => {
+    // console.log(`User Connected: ${socket.id}`);
+
+    socket.on("join_room", (userId) => {
+        socket.join(userId);
+        // console.log(`User with ID: ${socket.id} joined room: ${userId}`);
+    });
+
+    socket.on("send_message", (data) => {
+        // data expects: { conversationId, senderId, receiverId, content, ... }
+        // Emit to the receiver's room
+        socket.to(data.receiverId).emit("receive_message", data);
+    });
+
+    socket.on("typing", (data) => {
+        socket.to(data.receiverId).emit("user_typing", data);
+    });
+
+    socket.on("stop_typing", (data) => {
+        socket.to(data.receiverId).emit("user_stop_typing", data);
+    });
+
+    socket.on("disconnect", () => {
+        // console.log("User Disconnected", socket.id);
+    });
+});
 
 // Middleware
 app.use(express.json());
@@ -83,7 +125,8 @@ const routes = [
     { path: '/announcements', handler: announcementRoute },
     { path: '/stats', handler: statsRoute },
     { path: '/documentation', handler: docsRoute },
-    { path: '/oauth', handler: oauthRoute }
+    { path: '/oauth', handler: oauthRoute },
+    { path: '/messages', handler: messageRoute }
 ];
 
 routes.forEach(route => {
@@ -114,7 +157,7 @@ app.use((req, res) => {
 // Local Development
 if (require.main === module) {
     const PORT = process.env.PORT || 5000;
-    app.listen(PORT, () => {
+    server.listen(PORT, () => {
         console.log(`Server running on port ${PORT}`);
     });
 }

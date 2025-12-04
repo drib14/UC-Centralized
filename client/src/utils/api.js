@@ -147,6 +147,28 @@ class API {
     static deleteUser(id) {
         return this.request(`/users/${id}`, 'DELETE');
     }
+
+    // Search
+    static searchUsers(query) {
+        return this.request(`/users/search?q=${query}`);
+    }
+
+    // Messages
+    static getConversations() {
+        return this.request('/messages/conversations');
+    }
+
+    static getMessages(conversationId) {
+        return this.request(`/messages/${conversationId}`);
+    }
+
+    static createConversation(receiverId) {
+        return this.request('/messages/conversations', 'POST', { receiverId });
+    }
+
+    static sendMessage(conversationId, content) {
+        return this.request('/messages', 'POST', { conversationId, content });
+    }
 }
 
 export default API;
