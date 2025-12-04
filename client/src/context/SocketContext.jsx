@@ -10,22 +10,28 @@ export const useSocket = () => {
 
 export const SocketProvider = ({ children }) => {
     const [socket, setSocket] = useState(null);
+    const [onlineUsers, setOnlineUsers] = useState(new Set());
+    const [notifications, setNotifications] = useState([]);
+    const [unreadCount, setUnreadCount] = useState(0);
     const { user } = useAuth();
-    // In Vite dev, this proxies to backend. In prod, it should point to backend URL.
-    // Assuming backend is relative or same host for now given proxy config.
-    const ENDPOINT = window.location.origin.replace('5173', '5000').replace('3000', '5000');
-    // ^ This is a hacky fallback if proxy isn't perfect, but usually just '/' works if proxy is set.
-    // Let's rely on relative path '/' if proxy is set in vite.config.js, or hardcode port if not.
-    // Since vite proxy is set to localhost:5000, '/' should work.
 
     useEffect(() => {
         if (user) {
-            // Check if we are in dev or prod to determine URL
-            // If we assume standard proxy setup:
             const newSocket = io('/');
 
             newSocket.on('connect', () => {
                 newSocket.emit('join_room', user._id);
+            });
+
+            // Listen for user status changes (this is a simplified broadcast)
+            // In a real app, you'd fetch initial online users list
+            newSocket.on('user_status_change', (data) => {
+                setOnlineUsers(prev => {
+                    const next = new Set(prev);
+                    if (data.isOnline) next.add(data.userId);
+                    else next.delete(data.userId);
+                    return next;
+                });
             });
 
             setSocket(newSocket);
@@ -40,7 +46,7 @@ export const SocketProvider = ({ children }) => {
     }, [user]);
 
     return (
-        <SocketContext.Provider value={{ socket }}>
+        <SocketContext.Provider value={{ socket, onlineUsers, notifications, setNotifications, unreadCount, setUnreadCount }}>
             {children}
         </SocketContext.Provider>
     );

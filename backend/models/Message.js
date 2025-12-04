@@ -12,8 +12,15 @@ const messageSchema = new mongoose.Schema({
         required: true
     },
     content: {
+        type: String
+    },
+    type: {
         type: String,
-        required: true
+        enum: ['text', 'image', 'audio'],
+        default: 'text'
+    },
+    fileUrl: {
+        type: String
     },
     readBy: [{
         type: mongoose.Schema.Types.ObjectId,

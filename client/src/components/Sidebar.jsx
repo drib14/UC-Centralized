@@ -2,15 +2,17 @@ import React, { useState, useEffect } from 'react';
 import { NavLink } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
+import { useSocket } from '../context/SocketContext';
 import logo from '../assets/uc-central-logo.png';
 import {
     FaTableColumns, FaCalendarDays, FaShirt, FaEnvelope, FaCartShopping, FaUser, FaRightFromBracket,
-    FaUsers, FaBullhorn, FaClipboardList, FaCashRegister, FaChevronLeft, FaChevronRight, FaBook
+    FaUsers, FaBullhorn, FaClipboardList, FaCashRegister, FaChevronLeft, FaChevronRight, FaBook, FaBell
 } from 'react-icons/fa6';
 
 const Sidebar = () => {
     const { user, logout } = useAuth();
     const { getCount } = useCart();
+    const { unreadCount } = useSocket();
     const [collapsed, setCollapsed] = useState(false);
     const [mobileActive, setMobileActive] = useState(false);
     const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
@@ -78,6 +80,10 @@ const Sidebar = () => {
                         <NavLink to="/admin/orders" className={navLinkClass} onClick={handleMobileClick}><FaClipboardList className={iconClass} /> <span>Orders</span></NavLink>
                         <NavLink to="/admin/pos" className={navLinkClass} onClick={handleMobileClick}><FaCashRegister className={iconClass} /> <span>POS</span></NavLink>
                         <NavLink to="/admin/messages" className={navLinkClass} onClick={handleMobileClick}><FaEnvelope className={iconClass} /> <span>Messages</span></NavLink>
+                        <NavLink to="/admin/notifications" className={navLinkClass} onClick={handleMobileClick}>
+                             <FaBell className={iconClass} /> <span>Notifications</span>
+                             {!collapsed && unreadCount > 0 && <span className="badge bg-danger ms-auto">{unreadCount}</span>}
+                        </NavLink>
                     </>
                 ) : (
                     <>
@@ -85,6 +91,10 @@ const Sidebar = () => {
                         <NavLink to="/student/events" className={navLinkClass} onClick={handleMobileClick}><FaCalendarDays className={iconClass} /> <span>Events</span></NavLink>
                         <NavLink to="/student/merch" className={navLinkClass} onClick={handleMobileClick}><FaShirt className={iconClass} /> <span>Merch Store</span></NavLink>
                         <NavLink to="/student/messages" className={navLinkClass} onClick={handleMobileClick}><FaEnvelope className={iconClass} /> <span>Messages</span></NavLink>
+                        <NavLink to="/student/notifications" className={navLinkClass} onClick={handleMobileClick}>
+                             <FaBell className={iconClass} /> <span>Notifications</span>
+                             {!collapsed && unreadCount > 0 && <span className="badge bg-danger ms-auto">{unreadCount}</span>}
+                        </NavLink>
                         <NavLink to="/student/cart" className={navLinkClass} onClick={handleMobileClick}>
                             <FaCartShopping className={iconClass} /> <span>Cart</span>
                             {!collapsed && <span className={`badge bg-danger ms-auto ${getCount() === 0 ? 'd-none' : ''}`}>{getCount()}</span>}

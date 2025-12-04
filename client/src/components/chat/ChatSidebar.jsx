@@ -1,11 +1,13 @@
 import React, { useState } from 'react';
 import { FaSearch } from 'react-icons/fa';
 import API from '../../utils/api';
+import { useSocket } from '../../context/SocketContext';
 
 const ChatSidebar = ({ conversations, selectedId, onSelect, onNewChat, currentUser }) => {
     const [searchTerm, setSearchTerm] = useState('');
     const [searchResults, setSearchResults] = useState([]);
     const [isSearching, setIsSearching] = useState(false);
+    const { onlineUsers } = useSocket();
 
     const handleSearch = async (e) => {
         const query = e.target.value;
@@ -31,14 +33,44 @@ const ChatSidebar = ({ conversations, selectedId, onSelect, onNewChat, currentUs
     };
 
     const renderAvatar = (user) => {
-        if (user.profileImage) {
-            return <img src={user.profileImage} alt="avatar" className="rounded-circle" width="40" height="40" style={{objectFit:'cover'}} />;
-        }
+        const isOnline = onlineUsers.has(user._id);
+
         return (
-            <div className="rounded-circle bg-secondary text-white d-flex align-items-center justify-content-center" style={{width:'40px', height:'40px'}}>
-                {user.firstName ? user.firstName[0] : 'U'}
+            <div className="position-relative">
+                {user.profileImage ? (
+                    <img src={user.profileImage} alt="avatar" className="rounded-circle" width="45" height="45" style={{objectFit:'cover'}} />
+                ) : (
+                    <div className="rounded-circle bg-secondary text-white d-flex align-items-center justify-content-center" style={{width:'45px', height:'45px'}}>
+                        {user.firstName ? user.firstName[0] : 'U'}
+                    </div>
+                )}
+                {isOnline && (
+                    <span className="position-absolute bottom-0 end-0 bg-success border border-white rounded-circle" style={{width: '12px', height: '12px'}}></span>
+                )}
             </div>
         );
+    };
+
+    // Calculate unread count (mock for now, ideally backend provides it per conv)
+    const getUnreadCount = (conv) => {
+        if (!conv.lastMessage) return 0;
+        // Logic depends on 'readBy' array in lastMessage
+        const isRead = conv.lastMessage.readBy && conv.lastMessage.readBy.includes(currentUser._id);
+        return (!isRead && conv.lastMessage.sender !== currentUser._id) ? 1 : 0;
+        // Note: Real count needs backend aggregation 'unreadCount' per conversation
+    };
+
+    const formatTime = (date) => {
+        if (!date) return '';
+        const now = new Date();
+        const msgDate = new Date(date);
+        const diff = now - msgDate;
+
+        // If < 1 day, show time. Else show date.
+        if (diff < 86400000 && now.getDate() === msgDate.getDate()) {
+            return msgDate.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+        }
+        return msgDate.toLocaleDateString();
     };
 
     return (
@@ -85,30 +117,38 @@ const ChatSidebar = ({ conversations, selectedId, onSelect, onNewChat, currentUs
                         {conversations.map(conv => {
                             const other = getOtherParticipant(conv);
                             const isActive = selectedId === conv._id;
+                            const unread = getUnreadCount(conv);
+                            const contentPreview = conv.lastMessage?.type === 'image' ? '📷 sent a photo' : conv.lastMessage?.type === 'audio' ? '🎤 sent a voice message' : conv.lastMessage?.content;
+
                             return (
                                 <li
                                     key={conv._id}
-                                    className={`list-group-item list-group-item-action cursor-pointer d-flex align-items-center gap-3 py-3 ${isActive ? 'bg-light border-start border-primary border-4' : ''}`}
+                                    className={`list-group-item list-group-item-action cursor-pointer d-flex align-items-center gap-3 py-3 ${isActive ? 'bg-light' : ''}`}
                                     onClick={() => onSelect(conv)}
                                     style={{cursor: 'pointer', borderLeft: isActive ? '4px solid #0d6efd' : '4px solid transparent'}}
                                 >
                                     {renderAvatar(other)}
                                     <div className="flex-grow-1 overflow-hidden">
-                                        <div className="d-flex justify-content-between">
-                                            <h6 className="mb-0 text-truncate">{other.firstName} {other.lastName}</h6>
+                                        <div className="d-flex justify-content-between align-items-center">
+                                            <h6 className={`mb-0 text-truncate ${unread ? 'fw-bold' : ''}`}>{other.firstName} {other.lastName}</h6>
                                             {conv.lastMessage && (
-                                                <small className="text-muted" style={{fontSize: '0.75rem'}}>
-                                                    {new Date(conv.updatedAt).toLocaleDateString()}
+                                                <small className={`${unread ? 'text-primary fw-bold' : 'text-muted'}`} style={{fontSize: '0.75rem'}}>
+                                                    {formatTime(conv.updatedAt)}
                                                 </small>
                                             )}
                                         </div>
-                                        <small className="text-muted text-truncate d-block">
-                                            {conv.lastMessage ? (
-                                                <span>{conv.lastMessage.sender === currentUser._id ? 'You: ' : ''}{conv.lastMessage.content}</span>
-                                            ) : (
-                                                <span className="fst-italic">Start chatting...</span>
+                                        <div className="d-flex justify-content-between align-items-center">
+                                            <small className={`text-truncate d-block ${unread ? 'fw-bold text-dark' : 'text-muted'}`}>
+                                                {conv.lastMessage ? (
+                                                    <span>{conv.lastMessage.sender === currentUser._id ? 'You: ' : ''}{contentPreview}</span>
+                                                ) : (
+                                                    <span className="fst-italic">Start chatting...</span>
+                                                )}
+                                            </small>
+                                            {unread > 0 && (
+                                                <span className="badge bg-danger rounded-pill ms-2">{unread}</span>
                                             )}
-                                        </small>
+                                        </div>
                                     </div>
                                 </li>
                             );

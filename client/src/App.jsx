@@ -34,6 +34,7 @@ import AdminUsers from './pages/admin/AdminUsers';
 import AdminOrders from './pages/admin/AdminOrders';
 import AdminPOS from './pages/admin/AdminPOS';
 import AdminMessages from './pages/admin/AdminMessages';
+import Notifications from './pages/Notifications';
 
 const ProtectedRoute = ({ children, allowedRoles }) => {
     const { user, loading } = useAuth();
@@ -90,6 +91,7 @@ function App() {
                             <Route path="merch" element={<StudentMerch />} />
                             <Route path="cart" element={<StudentCart />} />
                             <Route path="messages" element={<StudentMessages />} />
+                            <Route path="notifications" element={<Notifications />} />
                             <Route path="profile" element={<StudentProfile />} />
                             <Route path="developer" element={<DeveloperDashboard />} />
                         </Route>
@@ -105,6 +107,7 @@ function App() {
                             <Route path="orders" element={<AdminOrders />} />
                             <Route path="pos" element={<AdminPOS />} />
                             <Route path="messages" element={<AdminMessages />} />
+                            <Route path="notifications" element={<Notifications />} />
                         </Route>
 
                          {/* Catch all */}

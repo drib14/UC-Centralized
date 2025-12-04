@@ -166,8 +166,31 @@ class API {
         return this.request('/messages/conversations', 'POST', { receiverId });
     }
 
-    static sendMessage(conversationId, content) {
-        return this.request('/messages', 'POST', { conversationId, content });
+    static sendMessage(conversationId, content, type = 'text', fileUrl = null) {
+        return this.request('/messages', 'POST', { conversationId, content, type, fileUrl });
+    }
+
+    static uploadFile(file) {
+        const formData = new FormData();
+        formData.append('file', file);
+        return this.request('/messages/upload', 'POST', formData, true);
+    }
+
+    static markMessagesRead(conversationId) {
+        return this.request(`/messages/${conversationId}/read`, 'PUT');
+    }
+
+    // Notifications
+    static getNotifications() {
+        return this.request('/notifications');
+    }
+
+    static markNotificationRead(id) {
+        return this.request(`/notifications/${id}/read`, 'PUT');
+    }
+
+    static markAllNotificationsRead() {
+        return this.request('/notifications/read-all', 'PUT');
     }
 }
 

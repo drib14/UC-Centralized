@@ -15,6 +15,8 @@ const statsRoute = require('./routes/stats');
 const docsRoute = require('./routes/docs');
 const oauthRoute = require('./routes/oauth');
 const messageRoute = require('./routes/messages');
+const notificationRoute = require('./routes/notifications'); // Create this next
+const User = require('./models/User');
 
 dotenv.config();
 
@@ -22,26 +24,41 @@ const app = express();
 const server = http.createServer(app);
 const io = new Server(server, {
     cors: {
-        origin: "*", // Adjust for production
+        origin: "*",
         methods: ["GET", "POST"]
     }
 });
 
-// Store io instance in app to access it in routes if needed
+// Store io instance in app
 app.set('io', io);
 
-// Socket.IO Logic
-io.on("connection", (socket) => {
-    // console.log(`User Connected: ${socket.id}`);
+// Track online users: Map<userId, socketId> or Set
+// We will simply broadcast presence updates.
+// Ideally use Redis or DB, but for this scope, let's update DB on connect/disconnect.
 
-    socket.on("join_room", (userId) => {
+// Socket.IO Logic
+io.on("connection", async (socket) => {
+
+    socket.on("join_room", async (userId) => {
         socket.join(userId);
-        // console.log(`User with ID: ${socket.id} joined room: ${userId}`);
+
+        // Update User Status
+        try {
+            await User.findByIdAndUpdate(userId, { isOnline: true, lastSeen: Date.now() });
+            io.emit("user_status_change", { userId, isOnline: true });
+        } catch (e) { console.error(e); }
+
+        // Handle Disconnect (captured within the closure to know userId)
+        socket.on("disconnect", async () => {
+             try {
+                await User.findByIdAndUpdate(userId, { isOnline: false, lastSeen: Date.now() });
+                io.emit("user_status_change", { userId, isOnline: false, lastSeen: Date.now() });
+            } catch (e) { console.error(e); }
+        });
     });
 
     socket.on("send_message", (data) => {
-        // data expects: { conversationId, senderId, receiverId, content, ... }
-        // Emit to the receiver's room
+        // data: { conversationId, senderId, receiverId, content, ... }
         socket.to(data.receiverId).emit("receive_message", data);
     });
 
@@ -53,8 +70,12 @@ io.on("connection", (socket) => {
         socket.to(data.receiverId).emit("user_stop_typing", data);
     });
 
-    socket.on("disconnect", () => {
-        // console.log("User Disconnected", socket.id);
+    socket.on("mark_messages_read", (data) => {
+        // data: { conversationId, readerId, senderId }
+        socket.to(data.senderId).emit("messages_read_update", {
+            conversationId: data.conversationId,
+            readBy: data.readerId
+        });
     });
 });
 
@@ -126,7 +147,8 @@ const routes = [
     { path: '/stats', handler: statsRoute },
     { path: '/documentation', handler: docsRoute },
     { path: '/oauth', handler: oauthRoute },
-    { path: '/messages', handler: messageRoute }
+    { path: '/messages', handler: messageRoute },
+    { path: '/notifications', handler: notificationRoute }
 ];
 
 routes.forEach(route => {

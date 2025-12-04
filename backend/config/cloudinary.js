@@ -15,7 +15,8 @@ const storage = new CloudinaryStorage({
     cloudinary: cloudinary,
     params: {
         folder: 'uc-central',
-        allowed_formats: ['jpg', 'png', 'jpeg', 'webp']
+        resource_type: 'auto', // Auto-detect for audio/video support
+        allowed_formats: ['jpg', 'png', 'jpeg', 'webp', 'mp3', 'webm', 'wav']
     }
 });
 

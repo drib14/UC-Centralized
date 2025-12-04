@@ -2,6 +2,15 @@ const router = require('express').Router();
 const Message = require('../models/Message');
 const Conversation = require('../models/Conversation');
 const { verifyToken } = require('../middleware/auth');
+const parser = require('../config/cloudinary');
+
+// Upload File
+router.post('/upload', verifyToken, parser.single('file'), (req, res) => {
+    if (!req.file) {
+        return res.status(400).json({ message: "No file uploaded" });
+    }
+    res.status(200).json({ url: req.file.path });
+});
 
 // Get all conversations for current user
 router.get('/conversations', verifyToken, async (req, res) => {
@@ -62,15 +71,31 @@ router.post('/conversations', verifyToken, async (req, res) => {
     }
 });
 
+// Mark messages as read
+router.put('/:conversationId/read', verifyToken, async (req, res) => {
+    try {
+        await Message.updateMany(
+            { conversationId: req.params.conversationId, readBy: { $ne: req.user.id } },
+            { $push: { readBy: req.user.id } }
+        );
+        res.status(200).json("Messages marked as read");
+    } catch (err) {
+        res.status(500).json(err);
+    }
+});
+
 // Send a message
 router.post('/', verifyToken, async (req, res) => {
     try {
-        const { conversationId, content } = req.body;
+        const { conversationId, content, type, fileUrl } = req.body;
 
         const newMessage = new Message({
             conversationId,
             sender: req.user.id,
-            content
+            content: content || '',
+            type: type || 'text',
+            fileUrl: fileUrl || '',
+            readBy: [req.user.id]
         });
 
         const savedMessage = await newMessage.save();

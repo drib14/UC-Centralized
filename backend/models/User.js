@@ -65,6 +65,18 @@ const userSchema = new mongoose.Schema({
         type: String,
         unique: true,
         sparse: true
+    },
+    isOnline: {
+        type: Boolean,
+        default: false
+    },
+    lastSeen: {
+        type: Date,
+        default: Date.now
+    },
+    notificationPreferences: {
+        email: { type: Boolean, default: true },
+        app: { type: Boolean, default: true }
     }
 }, { timestamps: true });
 
