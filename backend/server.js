@@ -2,6 +2,9 @@ const express = require('express');
 const mongoose = require('mongoose');
 const dotenv = require('dotenv');
 const cors = require('cors');
+const http = require('http'); // Import HTTP
+const { Server } = require('socket.io'); // Import Socket.IO
+
 const authRoute = require('./routes/auth');
 const userRoute = require('./routes/users');
 const eventRoute = require('./routes/events');
@@ -11,6 +14,7 @@ const announcementRoute = require('./routes/announcements');
 const statsRoute = require('./routes/stats');
 const docsRoute = require('./routes/docs');
 const oauthRoute = require('./routes/oauth');
+const messagesRoute = require('./routes/messages');
 
 dotenv.config();
 
@@ -40,8 +44,6 @@ app.get('/health', (req, res) => {
 });
 
 // Database Connection (Serverless optimized)
-// We define this OUTSIDE the request handler context if possible,
-// but inside the function scope it works via caching.
 const connectDB = async () => {
     if (mongoose.connection.readyState >= 1) {
         return true;
@@ -71,9 +73,6 @@ app.use(async (req, res, next) => {
 });
 
 // --- ROUTE DEFINITIONS ---
-// We mount routes directly to 'app' to avoid nested router path issues in Serverless.
-// We handle both /api prefix (standard) and root (if stripped)
-
 const routes = [
     { path: '/auth', handler: authRoute },
     { path: '/users', handler: userRoute },
@@ -83,13 +82,12 @@ const routes = [
     { path: '/announcements', handler: announcementRoute },
     { path: '/stats', handler: statsRoute },
     { path: '/documentation', handler: docsRoute },
-    { path: '/oauth', handler: oauthRoute }
+    { path: '/oauth', handler: oauthRoute },
+    { path: '/messages', handler: messagesRoute }
 ];
 
 routes.forEach(route => {
-    // Mount at /api/...
     app.use(`/api${route.path}`, route.handler);
-    // Mount at /... (fallback for when Vercel rewrites strips /api)
     app.use(route.path, route.handler);
 });
 
@@ -111,13 +109,45 @@ app.use((req, res) => {
     });
 });
 
+// --- SOCKET.IO SETUP ---
+// Create HTTP server instance
+const server = http.createServer(app);
+
+// Initialize Socket.IO
+const io = new Server(server, {
+    cors: {
+        origin: "*", // Allow all origins for now, match express cors
+        methods: ["GET", "POST"]
+    }
+});
+
+// Store io instance in app to access it in routes
+app.set('io', io);
+
+io.on('connection', (socket) => {
+    console.log('New client connected:', socket.id);
+
+    // Join a room based on user ID for private notifications
+    socket.on('join_room', (userId) => {
+        if (userId) {
+            socket.join(userId);
+            console.log(`Socket ${socket.id} joined room: ${userId}`);
+        }
+    });
+
+    socket.on('disconnect', () => {
+        console.log('Client disconnected:', socket.id);
+    });
+});
+
 // Local Development
 if (require.main === module) {
     const PORT = process.env.PORT || 5000;
-    app.listen(PORT, () => {
+    // Listen on the HTTP server, not app
+    server.listen(PORT, () => {
         console.log(`Server running on port ${PORT}`);
     });
 }
 
-// Export for Vercel
+// Export app for Vercel (Note: Socket.io won't work on Vercel Functions directly)
 module.exports = app;

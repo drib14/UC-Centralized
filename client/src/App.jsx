@@ -5,6 +5,7 @@ import 'react-toastify/dist/ReactToastify.css';
 
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { CartProvider } from './context/CartContext';
+import { SocketProvider } from './contexts/SocketContext';
 
 import Layout from './components/Layout';
 import SplashScreen from './components/SplashScreen';
@@ -24,6 +25,8 @@ import StudentCart from './pages/student/StudentCart';
 import StudentMessages from './pages/student/StudentMessages';
 import StudentProfile from './pages/student/StudentProfile';
 import DeveloperDashboard from './pages/student/DeveloperDashboard';
+import Chat from './pages/student/Chat';
+import Settings from './pages/student/Settings';
 
 import AdminDashboard from './pages/admin/AdminDashboard';
 import AdminEvents from './pages/admin/AdminEvents';
@@ -66,10 +69,11 @@ function App() {
 
     return (
         <AuthProvider>
-            <CartProvider>
-                <Router>
-                    <ToastContainer position="top-right" autoClose={5000} />
-                    <Routes>
+            <SocketProvider>
+                <CartProvider>
+                    <Router>
+                        <ToastContainer position="top-right" autoClose={5000} />
+                        <Routes>
                         {/* Public Routes */}
                         <Route path="/" element={<Landing />} />
                         <Route path="/login" element={<Login />} />
@@ -87,9 +91,10 @@ function App() {
                             <Route path="events" element={<StudentEvents />} />
                             <Route path="merch" element={<StudentMerch />} />
                             <Route path="cart" element={<StudentCart />} />
-                            <Route path="messages" element={<StudentMessages />} />
+                            <Route path="messages" element={<Chat />} />
                             <Route path="profile" element={<StudentProfile />} />
                             <Route path="developer" element={<DeveloperDashboard />} />
+                            <Route path="settings" element={<Settings />} />
                         </Route>
 
                         {/* Admin Routes */}
@@ -102,14 +107,16 @@ function App() {
                             <Route path="announcements" element={<AdminAnnouncements />} />
                             <Route path="orders" element={<AdminOrders />} />
                             <Route path="pos" element={<AdminPOS />} />
-                            <Route path="messages" element={<AdminMessages />} />
+                            <Route path="messages" element={<Chat />} />
+                            <Route path="settings" element={<Settings />} />
                         </Route>
 
                          {/* Catch all */}
                         <Route path="*" element={<Navigate to="/" replace />} />
-                    </Routes>
-                </Router>
-            </CartProvider>
+                        </Routes>
+                    </Router>
+                </CartProvider>
+            </SocketProvider>
         </AuthProvider>
     );
 }

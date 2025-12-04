@@ -66,12 +66,26 @@ const StudentEvents = () => {
 
     const isEnded = (event) => {
          const now = new Date();
-         const endDate = event.endDate ? new Date(event.endDate) : new Date(event.date);
-         const endTimeStr = event.endTime || event.time || '23:59';
-         const [h, m] = endTimeStr.split(':');
-         endDate.setHours(h, m);
+         // Parse dates strictly.
+         // If dates are YYYY-MM-DD strings in database:
+         const dateStr = event.endDate || event.date;
+         let end = new Date(dateStr);
 
-         return now > endDate;
+         if (isNaN(end.getTime())) {
+             // Fallback if date is not standard
+             return false;
+         }
+
+         const endTimeStr = event.endTime || event.time;
+         if (endTimeStr) {
+             const [h, m] = endTimeStr.split(':');
+             end.setHours(h, m, 0, 0);
+         } else {
+             // If no time, assume end of day
+             end.setHours(23, 59, 59, 999);
+         }
+
+         return now > end;
     };
 
     const formatTime = (timeStr) => {

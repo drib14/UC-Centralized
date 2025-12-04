@@ -1,0 +1,15 @@
+.chat-container {
+    background-color: #f8f9fa;
+}
+
+.hover-bg-light:hover {
+    background-color: #f8f9fa;
+}
+
+.bg-primary-light {
+    background-color: #e8f0fe;
+}
+
+.cursor-pointer {
+    cursor: pointer;
+}

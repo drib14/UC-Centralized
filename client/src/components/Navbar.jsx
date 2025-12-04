@@ -1,5 +1,6 @@
 import React from 'react';
 import { useAuth } from '../context/AuthContext';
+import NotificationBell from './NotificationBell';
 import logo from '../assets/uc-central-logo.png';
 
 const Navbar = () => {
@@ -14,12 +15,10 @@ const Navbar = () => {
 
     return (
         <div className="topbar">
-            {/* Empty div to push content to right if needed, but original code had it on left?
-                Actually, standard dashboard usually has user on right.
-                If 'justify-content: space-between', and I want it on right, I need a spacer or ms-auto on the item.
-                But I will stick to exact HTML structure.
-            */}
-            <div className="d-flex align-items-center">
+            <div className="d-flex align-items-center justify-content-end w-100">
+                <div className="me-3">
+                    <NotificationBell />
+                </div>
                 <span className="me-2 fw-bold text-primary" id="nav-user-name">
                     {getDisplayName()}
                 </span>

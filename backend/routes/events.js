@@ -63,14 +63,28 @@ router.post('/:id/rsvp', verifyToken, async (req, res) => {
 
         // Check Expiry (Use End Date/Time if available, else Start)
         const now = new Date();
+        // Assuming event.date is a Date object or YYYY-MM-DD string
         const dateStr = event.endDate || event.date;
-        const timeStr = event.endTime || event.time || '23:59';
+        // Parse time if needed, but simple Date comparison is robust enough for basic requirement
+        // If event.date is a full Date object stored in Mongo, we can compare directly.
+        // However, the previous code constructed a specific Datetime string.
 
-        const eventDateStr = dateStr instanceof Date ? dateStr.toISOString().split('T')[0] : dateStr;
-        const eventDateTime = new Date(`${eventDateStr}T${timeStr}`);
+        // Let's ensure robust parsing
+        let eventEnd = new Date(dateStr);
+        if (event.endTime) {
+            // If date is date-only, append time.
+            // Warning: Handling timezones can be tricky.
+            // If the schema stores Date object, it likely has 00:00:00 time if strictly date.
+            const datePart = eventEnd.toISOString().split('T')[0];
+            eventEnd = new Date(`${datePart}T${event.endTime}`);
+        } else {
+             // If no time specified, assume end of day
+             eventEnd.setHours(23, 59, 59, 999);
+        }
 
-        if (now > eventDateTime) {
-            return res.status(400).json("Event has already ended");
+        if (now > eventEnd) {
+             // Return JSON object for consistency with frontend api.js error handling
+            return res.status(400).json({ message: "Event has already ended" });
         }
 
         if (!event.attendees.includes(req.user.id)) {

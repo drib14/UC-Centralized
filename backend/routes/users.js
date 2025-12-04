@@ -1,7 +1,20 @@
 const router = require('express').Router();
 const User = require('../models/User');
+const Notification = require('../models/Notification');
 const bcrypt = require('bcryptjs');
-const { verifyAdmin } = require('../middleware/auth');
+const { verifyAdmin, verifyToken } = require('../middleware/auth');
+
+// GET NOTIFICATIONS (Current User)
+router.get('/notifications', verifyToken, async (req, res) => {
+    try {
+        const notifications = await Notification.find({ recipient: req.user.id })
+            .sort({ createdAt: -1 })
+            .limit(50);
+        res.status(200).json(notifications);
+    } catch (err) {
+        res.status(500).json(err);
+    }
+});
 
 // GET ALL (Admins + Students)
 router.get('/', verifyAdmin, async (req, res) => {
