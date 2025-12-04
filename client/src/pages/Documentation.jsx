@@ -78,6 +78,7 @@ const Documentation = () => {
                             <div className="list-group shadow-sm">
                                 <div className="list-group-item bg-primary text-white fw-bold">Guides</div>
                                 <a href="#intro" className="list-group-item list-group-item-action">Introduction</a>
+                                <a href="#external-register" className="list-group-item list-group-item-action fw-bold text-success"><FaUser className="me-2"/>External Registration</a>
                                 <a href="#oauth-flow" className="list-group-item list-group-item-action fw-bold text-primary"><FaShieldAlt className="me-2"/>OAuth 2.0 Flow</a>
                                 <a href="#oauth-client" className="list-group-item list-group-item-action ps-4"><FaGlobe className="me-2"/>Client-Side (Frontend)</a>
                                 <a href="#oauth-server" className="list-group-item list-group-item-action ps-4"><FaServer className="me-2"/>Server-Side (Backend)</a>
@@ -102,6 +103,40 @@ const Documentation = () => {
                             </p>
                             <div className="alert alert-info">
                                 <strong>Base URL:</strong> <code>https://uc-centralized.vercel.app</code>
+                            </div>
+                        </section>
+
+                        {/* External User Registration */}
+                        <section id="external-register" className="mb-5">
+                            <h2 className="border-bottom pb-2">External Registration</h2>
+                            <p>If your platform collects user registrations, you can push them directly to UC-Central to create an account for them automatically.</p>
+
+                            <EndpointBadge method="POST" path="/api/oauth/users/register" />
+                            <p>This is a <strong>server-to-server</strong> request. You must provide your Client Credentials.</p>
+
+                            <SchemaBlock name="Request Body" fields={{
+                                client_id: "YOUR_CLIENT_ID",
+                                client_secret: "YOUR_CLIENT_SECRET",
+                                studentId: "2024001",
+                                email: "student@example.com",
+                                password: "Password123!",
+                                firstName: "Juan",
+                                lastName: "Dela Cruz",
+                                department: "CCS",
+                                program: "BSIT",
+                                year: "3"
+                            }} />
+
+                            <div className="alert alert-info">
+                                <strong>Success Response (201 Created):</strong>
+                                <pre className="mb-0 mt-2"><code>{`{
+    "message": "User registered successfully",
+    "user": {
+        "_id": "65b...",
+        "studentId": "2024001",
+        "email": "student@example.com"
+    }
+}`}</code></pre>
                             </div>
                         </section>
 
@@ -264,8 +299,85 @@ app.get('/callback', async (req, res) => {
     "firstName": "Jane",
     "lastName": "Doe",
     "department": "CCS",
-    "role": "student"
+    "role": "student",
+    "profileImage": "https://res.cloudinary.com/.../image.jpg" // Optional
 }`} />
+                                    <div className="alert alert-info mt-3 small">
+                                        <FaUser className="me-2" />
+                                        <strong>Note on Profile Images:</strong> If the <code>profileImage</code> field is missing or null,
+                                        the application generates a default placeholder using the user's initials (e.g., "JD" for Jane Doe).
+                                        External applications should implement similar fallback logic.
+                                    </div>
+                                </div>
+                            </div>
+                        </section>
+
+                        {/* Public Resources */}
+                        <section id="endpoints-resources" className="mb-5">
+                            <h2 className="border-bottom pb-2">Student Resources</h2>
+                            <p>Authorized users can access university resources. All endpoints require <code>Authorization: Bearer TOKEN</code>.</p>
+
+                            <div className="card mb-4">
+                                <div className="card-header fw-bold bg-light">Events</div>
+                                <div className="card-body">
+                                    <div className="mb-4">
+                                        <EndpointBadge method="GET" path="/api/events" />
+                                        <p>List all upcoming and past events.</p>
+                                        <CodeBlock title="Response Array" code={`[
+  {
+    "_id": "65c...",
+    "title": "CCS Week",
+    "date": "2024-05-20",
+    "time": "08:00",
+    "location": "Main Campus",
+    "attendees": ["USER_ID_1", "USER_ID_2"],
+    "image": "https://..."
+  }
+]`} />
+                                    </div>
+                                    <hr />
+                                    <div className="mb-2">
+                                        <EndpointBadge method="POST" path="/api/events/:id/rsvp" />
+                                        <p>RSVP to an event. Returns 200 OK or 403 if already registered.</p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="card mb-4">
+                                <div className="card-header fw-bold bg-light">Merchandise</div>
+                                <div className="card-body">
+                                    <EndpointBadge method="GET" path="/api/merch" />
+                                    <p>List available merchandise items.</p>
+                                    <CodeBlock title="Response Array" code={`[
+  {
+    "_id": "65d...",
+    "name": "CCS Polo Shirt",
+    "price": 350,
+    "stock": 50,
+    "category": "wearable",
+    "variants": [
+        { "size": "M", "color": "Blue", "stock": 20 }
+    ],
+    "image": "https://..."
+  }
+]`} />
+                                </div>
+                            </div>
+
+                            <div className="card mb-4">
+                                <div className="card-header fw-bold bg-light">Announcements</div>
+                                <div className="card-body">
+                                    <EndpointBadge method="GET" path="/api/announcements" />
+                                    <p>List latest announcements.</p>
+                                    <CodeBlock title="Response Array" code={`[
+  {
+    "_id": "65e...",
+    "title": "Midterm Exam Schedule",
+    "message": "Exams start next week...",
+    "department": "ALL",
+    "createdAt": "2024-03-10T..."
+  }
+]`} />
                                 </div>
                             </div>
                         </section>
