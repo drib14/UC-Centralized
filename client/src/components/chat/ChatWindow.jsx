@@ -29,6 +29,8 @@ const ChatWindow = ({ conversation, currentUser, socket, onBack, onMessageSent }
     const [hoveredMsgId, setHoveredMsgId] = useState(null);
     const [forwardMsg, setForwardMsg] = useState(null); // Message to forward
     const [showForwardModal, setShowForwardModal] = useState(false);
+    const [deleteCandidateMsg, setDeleteCandidateMsg] = useState(null); // Msg pending deletion
+    const [showDeleteModal, setShowDeleteModal] = useState(false);
 
     const { onlineUsers } = useSocket();
 
@@ -187,20 +189,23 @@ const ChatWindow = ({ conversation, currentUser, socket, onBack, onMessageSent }
         }
     };
 
-    const handleDelete = async (id, mode) => {
-        if (!window.confirm(mode === 'everyone' ? "Unsend for everyone?" : "Delete for you?")) return;
+    const confirmDelete = async (mode) => {
+        if (!deleteCandidateMsg) return;
         try {
+            const id = deleteCandidateMsg._id;
             const updated = await API.deleteMessage(id, mode);
+
             if (mode === 'everyone') {
                 setMessages(prev => prev.map(m => m._id === id ? updated : m));
             } else {
-                setMessages(prev => prev.filter(m => m._id !== id)); // Remove locally if just 'me'
-                // Actually, API returns "Message deleted for you", so we filter manually or fetch again.
-                // Filter is better.
+                setMessages(prev => prev.filter(m => m._id !== id));
             }
-            toast.success(mode === 'everyone' ? "Unsent" : "Deleted");
+            toast.success(mode === 'everyone' ? "Unsent" : "Deleted for you");
         } catch (err) {
             toast.error("Failed to delete");
+        } finally {
+            setShowDeleteModal(false);
+            setDeleteCandidateMsg(null);
         }
     };
 
@@ -472,6 +477,37 @@ const ChatWindow = ({ conversation, currentUser, socket, onBack, onMessageSent }
                 </div>
             )}
 
+            {/* Delete Modal */}
+            {showDeleteModal && deleteCandidateMsg && (
+                <div className="modal fade show d-block" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>
+                    <div className="modal-dialog modal-dialog-centered modal-sm">
+                        <div className="modal-content">
+                            <div className="modal-header border-0 pb-0">
+                                <h5 className="modal-title">Delete Message?</h5>
+                            </div>
+                            <div className="modal-body d-flex flex-column gap-2">
+                                <p className="text-muted small mb-2">Who do you want to remove this message for?</p>
+
+                                {(deleteCandidateMsg.sender._id === currentUser._id || deleteCandidateMsg.sender === currentUser._id) && (
+                                    <button className="btn btn-outline-danger w-100 text-start" onClick={() => confirmDelete('everyone')}>
+                                        <strong>Unsend for Everyone</strong>
+                                        <div className="small text-muted" style={{fontSize: '0.75rem'}}>Remove for you and {otherUser.firstName}</div>
+                                    </button>
+                                )}
+
+                                <button className="btn btn-outline-secondary w-100 text-start" onClick={() => confirmDelete('me')}>
+                                    <strong>Remove for You</strong>
+                                    <div className="small text-muted" style={{fontSize: '0.75rem'}}>Others will still see it</div>
+                                </button>
+                            </div>
+                            <div className="modal-footer border-0 pt-0">
+                                <button className="btn btn-link text-secondary text-decoration-none" onClick={() => setShowDeleteModal(false)}>Cancel</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
             {/* Forward Modal */}
             {showForwardModal && (
                 <div className="modal fade show d-block" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>
@@ -543,8 +579,8 @@ const ChatWindow = ({ conversation, currentUser, socket, onBack, onMessageSent }
                                                                 <FaPen className="me-2 text-warning" /> Edit
                                                             </button></li>
                                                         )}
-                                                        <li><button className="dropdown-item text-danger" onClick={() => handleDelete(msg._id, isMe ? 'everyone' : 'me')}>
-                                                            <FaTrash className="me-2" /> {isMe ? 'Unsend for everyone' : 'Delete for me'}
+                                                        <li><button className="dropdown-item text-danger" onClick={() => { setDeleteCandidateMsg(msg); setShowDeleteModal(true); }}>
+                                                            <FaTrash className="me-2" /> Delete
                                                         </button></li>
                                                     </ul>
                                                 </div>
