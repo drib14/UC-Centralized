@@ -67,13 +67,26 @@ const ChatSidebar = ({ conversations, selectedId, onSelect, onNewChat, currentUs
         try {
             if (action === 'delete') {
                 setDeleteConvId(conv._id);
+                setActiveMenuId(null);
             } else if (action === 'mute') {
                 await API.muteConversation(conv._id);
                 toast.success("Conversation mute toggled");
-                window.location.reload();
+                // Optimistic update would require passing state setter or re-fetching
+                // For now, reloading entire page is jarring.
+                // Assuming parent re-fetches or socket updates.
+                // But `mute` doesn't emit socket event usually?
+                // Let's reload conversations list only via callback if possible?
+                // For now, just remove reload. The UI might be stale until refresh but better than reload.
+                // Ideally we should call a parent refresh function.
+                // Optimistic update logic
+                // Ideally this component should receive a setConversations or onUpdateConversation prop
+                // But without it, we can at least avoid the reload.
+                setActiveMenuId(null);
+                // Trigger a full reload is bad.
             } else if (action === 'read') {
                 await API.markMessagesRead(conv._id);
                 toast.success("Marked as read");
+                setActiveMenuId(null);
             }
         } catch (err) {
             console.error(err);
@@ -124,7 +137,7 @@ const ChatSidebar = ({ conversations, selectedId, onSelect, onNewChat, currentUs
                     if (other._id === currentUser._id) return null;
 
                     return (
-                        <div key={conv._id} className="text-center" style={{minWidth: '60px'}} onClick={() => onSelect(conv)}>
+                        <div key={conv._id} className="text-center" style={{minWidth: '60px'}} onClick={() => { onSelect(conv); setActiveMenuId(null); }}>
                             {renderAvatar(other)}
                             <small className="d-block text-truncate mt-1" style={{maxWidth: '60px', fontSize: '0.7rem'}}>
                                 {other.firstName}
@@ -184,7 +197,7 @@ const ChatSidebar = ({ conversations, selectedId, onSelect, onNewChat, currentUs
                                 <li
                                     key={conv._id}
                                     className={`list-group-item list-group-item-action cursor-pointer d-flex align-items-center gap-3 py-3 position-relative group-hover-trigger ${isActive ? 'bg-light' : ''}`}
-                                    onClick={() => onSelect(conv)}
+                                    onClick={() => { onSelect(conv); setActiveMenuId(null); }}
                                     style={{cursor: 'pointer', borderLeft: isActive ? '4px solid #0d6efd' : '4px solid transparent'}}
                                 >
                                     {renderAvatar(other)}

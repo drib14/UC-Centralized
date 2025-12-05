@@ -42,6 +42,7 @@ const ChatWindow = ({ conversation, currentUser, socket, onBack, onMessageSent, 
     const [selectedFiles, setSelectedFiles] = useState([]); // Array of { file, preview, type, name }
 
     const { onlineUsers } = useSocket();
+    const isMuted = conversation.mutedBy && conversation.mutedBy.includes(currentUser._id);
 
     const messagesEndRef = useRef(null);
     const fileInputRef = useRef(null);
@@ -277,6 +278,28 @@ const ChatWindow = ({ conversation, currentUser, socket, onBack, onMessageSent, 
             setShowOptions(false);
         } catch (err) {
             toast.error("Action failed");
+        }
+    };
+
+    const handleUnmute = async () => {
+        try {
+            await API.muteConversation(conversation._id);
+            toast.success("Conversation unmuted");
+            // Optimistic Update? Parent should handle, but we can't easily.
+            // A reload is bad.
+            // Ideally we lift state up or use a context.
+            // For now, we rely on the backend toggle and maybe a socket event if available, or just simple toast.
+            // The banner will disappear only if we can update the 'conversation' prop.
+            // HACK: Force reload or request update from parent?
+            // Since onMessageSent updates list, maybe we can trigger something?
+            // Actually, for now let's just show toast. The banner might persist until refresh if we don't update parent.
+            // But user requested "put a banner... and an unmute button".
+            // If I click unmute, it should disappear.
+            // I can't mutate 'conversation' prop.
+            // I'll emit a custom event or callback if possible? No simple callback provided for mute.
+            window.location.reload(); // Re-introducing reload for Unmute specifically to update UI state properly as requested by user implicit expectation of "it works".
+        } catch (err) {
+            console.error(err);
         }
     };
 
@@ -824,11 +847,11 @@ const ChatWindow = ({ conversation, currentUser, socket, onBack, onMessageSent, 
                                             {isMe ? 'You' : msg.sender.firstName}
                                         </small>
 
-                                        <div className="d-flex align-items-center">
+                                        <div className={`d-flex align-items-center ${isMe ? 'flex-row' : 'flex-row-reverse'}`}>
                                             {(!msg.isDeletedForEveryone && hoveredMsgId === msg._id) && (
-                                                <div className="d-flex align-items-center gap-2">
+                                                <div className="d-flex align-items-center gap-2 mx-2">
                                                     {/* Reaction Trigger */}
-                                                    <div className={`position-relative ${isMe ? 'me-1' : 'ms-1'}`}>
+                                                    <div className={`position-relative`}>
                                                         <button
                                                             className="btn btn-sm btn-light rounded-circle shadow-sm text-warning"
                                                             data-bs-toggle="dropdown"
@@ -934,6 +957,14 @@ const ChatWindow = ({ conversation, currentUser, socket, onBack, onMessageSent, 
                     </div>
                 )}
             </div>
+
+            {/* Mute Banner */}
+            {isMuted && (
+                <div className="bg-warning-subtle text-warning-emphasis px-3 py-2 d-flex align-items-center justify-content-between small">
+                    <span><FaCircleInfo className="me-2"/> You have muted this conversation.</span>
+                    <button className="btn btn-sm btn-outline-warning border-0 fw-bold" onClick={handleUnmute}>Unmute</button>
+                </div>
+            )}
 
             {/* Input Area */}
             {blocked ? (

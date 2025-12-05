@@ -248,7 +248,17 @@ router.delete('/:id', verifyToken, async (req, res) => {
 // Send a message
 router.post('/', verifyToken, async (req, res) => {
     try {
-        const { conversationId, content, type, fileUrl, attachments } = req.body;
+        let { conversationId, content, type, fileUrl, attachments } = req.body;
+
+        // Backend Parse Guard: Handle double-encoded JSON strings from client
+        if (typeof attachments === 'string') {
+            try {
+                attachments = JSON.parse(attachments);
+            } catch (e) {
+                console.error("Failed to parse attachments string", e);
+                attachments = [];
+            }
+        }
 
         // Block check
         const conversation = await Conversation.findById(conversationId);

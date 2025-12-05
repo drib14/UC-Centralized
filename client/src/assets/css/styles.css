@@ -328,6 +328,7 @@ footer {
     overflow-x: hidden;
     display: flex;
     flex-direction: column;
+    flex-wrap: nowrap; /* Prevent side-by-side stacking */
     min-height: 0; /* Important for flex scrolling */
 }
 

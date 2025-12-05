@@ -24,7 +24,7 @@ const messageSchema = new mongoose.Schema({
     },
     attachments: [{
         url: String,
-        type: String, // 'image', 'video', 'file'
+        type: { type: String }, // Explicit definition to avoid Mongoose casting error
         name: String,
         size: Number
     }],
