@@ -142,9 +142,9 @@ const ChatLayout = () => {
     };
 
     return (
-        <div className="d-flex w-100 shadow-sm rounded overflow-hidden" style={{ height: 'calc(100vh - 100px)', border: '1px solid #dee2e6' }}>
+        <div className="d-flex w-100 shadow-sm rounded overflow-hidden chat-layout-container" style={{ border: '1px solid #dee2e6' }}>
             {/* Sidebar */}
-            <div className={`d-flex flex-column border-end bg-white ${mobileShowChat ? 'd-none d-md-flex' : 'd-flex'}`} style={{ width: '100%', maxWidth: '350px', minWidth: '300px' }}>
+            <div className={`d-flex flex-column border-end bg-white chat-sidebar-container ${mobileShowChat ? 'd-none d-md-flex' : 'd-flex'}`}>
                 <ChatSidebar
                     conversations={conversations}
                     selectedId={selectedConversation?._id}
@@ -157,7 +157,7 @@ const ChatLayout = () => {
             </div>
 
             {/* Chat Window */}
-            <div className={`flex-grow-1 bg-light d-flex flex-column ${!mobileShowChat ? 'd-none d-md-flex' : 'd-flex'}`}>
+            <div className={`flex-grow-1 bg-light d-flex flex-column chat-window-container ${!mobileShowChat ? 'd-none d-md-flex' : 'd-flex'}`}>
                 {selectedConversation ? (
                     <ChatWindow
                         conversation={selectedConversation}

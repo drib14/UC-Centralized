@@ -371,28 +371,3 @@ footer {
         padding: 0.8rem 1rem;
     }
 }
-
-/* Chat Layout Responsiveness */
-.chat-layout-container {
-    height: calc(100vh - 40px); /* Adjust based on padding/margin of parent */
-}
-
-.chat-sidebar-container {
-    width: 100%;
-    max-width: 350px;
-    min-width: 300px;
-}
-
-@media (max-width: 768px) {
-    .chat-layout-container {
-        height: calc(100dvh - 20px); /* Use dvh for mobile browsers */
-        border: none !important; /* Remove border on mobile for full width look */
-        border-radius: 0 !important;
-    }
-
-    .chat-sidebar-container {
-        max-width: 100%;
-        min-width: 100%;
-        border-right: none !important;
-    }
-}
