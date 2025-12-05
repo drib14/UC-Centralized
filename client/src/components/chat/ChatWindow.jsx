@@ -491,12 +491,12 @@ const ChatWindow = ({ conversation, currentUser, socket, onBack, onMessageSent }
                  return (
                     <div
                         key={index}
-                        className="position-relative d-flex align-items-center justify-content-center bg-dark rounded"
-                        style={{width: '200px', height: '150px', cursor: 'pointer'}}
+                        className="position-relative d-flex align-items-center justify-content-center rounded"
+                        style={{width: '200px', height: '150px', cursor: 'pointer', backgroundColor: '#000'}}
                         onClick={() => setLightboxMedia({ url, type: 'video' })}
                     >
-                        <FaPlay className="text-white fs-1 opacity-75" />
-                        <video src={url} className="w-100 h-100 object-fit-cover rounded opacity-50" />
+                        <FaPlay className="text-white fs-1 opacity-75 position-absolute" style={{zIndex: 2}} />
+                        <video src={url} className="w-100 h-100 object-fit-cover rounded" style={{opacity: 0.8}} />
                     </div>
                  );
              } else if (type === 'audio') {
@@ -523,14 +523,15 @@ const ChatWindow = ({ conversation, currentUser, socket, onBack, onMessageSent }
                         download
                         target="_blank"
                         rel="noreferrer"
-                        className="text-decoration-none text-dark"
+                        className="text-decoration-none"
+                        style={{color: '#000'}}
                      >
-                        <div className="d-flex align-items-center gap-3 p-3 bg-light rounded border file-card-hover" style={{minWidth: '200px', cursor: 'pointer'}}>
+                        <div className="d-flex align-items-center gap-3 p-3 rounded border file-card-hover" style={{minWidth: '200px', cursor: 'pointer', backgroundColor: '#fff'}}>
                              <div className="bg-secondary bg-opacity-10 p-2 rounded text-primary">
                                  <FaFile size={24} />
                              </div>
                              <div className="d-flex flex-column flex-grow-1 overflow-hidden">
-                                 <strong className="text-truncate" style={{maxWidth: '150px'}} title={name}>{name}</strong>
+                                 <strong className="text-truncate text-dark" style={{maxWidth: '150px'}} title={name}>{name}</strong>
                                  {size && <small className="text-muted">{(size / 1024 / 1024).toFixed(2) + ' MB'}</small>}
                              </div>
                              <div className="btn btn-sm btn-light border rounded-circle">
