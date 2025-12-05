@@ -10,6 +10,7 @@ const ChatSidebar = ({ conversations, selectedId, onSelect, onNewChat, currentUs
     const [searchResults, setSearchResults] = useState([]);
     const [isSearching, setIsSearching] = useState(false);
     const [deleteConvId, setDeleteConvId] = useState(null); // ID for delete modal
+    const [activeMenuId, setActiveMenuId] = useState(null); // Which 3-dot menu is open
     const { onlineUsers } = useSocket();
 
     const handleSearch = async (e) => {
@@ -68,17 +69,10 @@ const ChatSidebar = ({ conversations, selectedId, onSelect, onNewChat, currentUs
                 setDeleteConvId(conv._id);
             } else if (action === 'mute') {
                 await API.muteConversation(conv._id);
-                // Trigger reload or update local state logic?
-                // ChatLayout manages conversations. We can't update it easily from here without a callback.
-                // Assuming ChatLayout will refresh or we force a reload.
-                // Or simply: toast success and let it be (icon update requires parent state update).
-                // Actually, backend returns updated conv. Ideally we update parent.
-                // For now, simpler: reload page or rely on next fetch.
                 toast.success("Conversation mute toggled");
-                window.location.reload(); // Quick fix for state sync
+                window.location.reload();
             } else if (action === 'read') {
                 await API.markMessagesRead(conv._id);
-                // Socket event usually handles this update in Layout
                 toast.success("Marked as read");
             }
         } catch (err) {
@@ -214,23 +208,44 @@ const ChatSidebar = ({ conversations, selectedId, onSelect, onNewChat, currentUs
                                                     <span className="fst-italic">Start chatting...</span>
                                                 )}
                                             </small>
-                                            <div className="d-flex align-items-center">
+                                            <div className="d-flex align-items-center position-relative">
                                                 {unread > 0 && <span className="badge bg-danger rounded-pill ms-2">{unread}</span>}
 
-                                                {/* 3-Dot Menu */}
-                                                <div className="dropdown ms-2" onClick={e => e.stopPropagation()}>
-                                                    <button className="btn btn-sm btn-link text-secondary p-0" data-bs-toggle="dropdown">
+                                                {/* 3-Dot Menu Trigger */}
+                                                <div className="action-btn-wrapper ms-2">
+                                                    <button
+                                                        className="btn btn-sm btn-link text-secondary p-0"
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            setActiveMenuId(activeMenuId === conv._id ? null : conv._id);
+                                                        }}
+                                                    >
                                                         <FaEllipsisVertical />
                                                     </button>
-                                                    <ul className="dropdown-menu shadow-sm">
-                                                        <li><button className="dropdown-item" onClick={(e) => handleAction(e, 'read', conv)}><FaCheck className="me-2" /> Mark as read</button></li>
-                                                        <li><button className="dropdown-item" onClick={(e) => handleAction(e, 'mute', conv)}>
-                                                            {isMuted ? <><FaVolumeHigh className="me-2"/> Unmute</> : <><FaVolumeXmark className="me-2"/> Mute</>}
-                                                        </button></li>
-                                                        <li><hr className="dropdown-divider"/></li>
-                                                        <li><button className="dropdown-item text-danger" onClick={(e) => handleAction(e, 'delete', conv)}><FaTrash className="me-2"/> Delete</button></li>
-                                                    </ul>
                                                 </div>
+
+                                                {/* Custom Dropdown Menu */}
+                                                {activeMenuId === conv._id && (
+                                                    <>
+                                                        <div
+                                                            className="position-fixed top-0 start-0 w-100 h-100"
+                                                            style={{ zIndex: 1040 }}
+                                                            onClick={(e) => { e.stopPropagation(); setActiveMenuId(null); }}
+                                                        ></div>
+                                                        <div className="position-absolute bg-white shadow-sm rounded border py-1" style={{ right: 0, top: '100%', zIndex: 1050, minWidth: '160px' }}>
+                                                            <button className="dropdown-item btn btn-sm text-start" onClick={(e) => handleAction(e, 'read', conv)}>
+                                                                <FaCheck className="me-2 text-primary" /> Mark as read
+                                                            </button>
+                                                            <button className="dropdown-item btn btn-sm text-start" onClick={(e) => handleAction(e, 'mute', conv)}>
+                                                                {isMuted ? <><FaVolumeHigh className="me-2"/> Unmute</> : <><FaVolumeXmark className="me-2"/> Mute</>}
+                                                            </button>
+                                                            <div className="dropdown-divider my-1"></div>
+                                                            <button className="dropdown-item btn btn-sm text-start text-danger" onClick={(e) => handleAction(e, 'delete', conv)}>
+                                                                <FaTrash className="me-2"/> Delete
+                                                            </button>
+                                                        </div>
+                                                    </>
+                                                )}
                                             </div>
                                         </div>
                                     </div>
