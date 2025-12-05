@@ -91,6 +91,67 @@ router.put('/:conversationId/read', verifyToken, async (req, res) => {
     }
 });
 
+// Edit Message
+router.put('/:id', verifyToken, async (req, res) => {
+    try {
+        const message = await Message.findById(req.params.id);
+        if (!message) return res.status(404).json("Message not found");
+        if (message.sender.toString() !== req.user.id) return res.status(403).json("You can only edit your own messages");
+        if (message.isDeletedForEveryone) return res.status(400).json("Cannot edit deleted message");
+
+        const updatedMessage = await Message.findByIdAndUpdate(
+            req.params.id,
+            { $set: { content: req.body.content, isEdited: true } },
+            { new: true }
+        ).populate('sender', 'firstName lastName profileImage');
+
+        // Notify
+        const io = req.app.get('io');
+        const conversation = await Conversation.findById(message.conversationId);
+        const receiver = conversation.participants.find(p => p.toString() !== req.user.id);
+        if (receiver) io.to(receiver.toString()).emit("message_updated", updatedMessage);
+
+        res.status(200).json(updatedMessage);
+    } catch (err) {
+        res.status(500).json(err);
+    }
+});
+
+// Delete Message
+router.delete('/:id', verifyToken, async (req, res) => {
+    try {
+        const { mode } = req.query; // 'me' or 'everyone'
+        const message = await Message.findById(req.params.id);
+        if (!message) return res.status(404).json("Message not found");
+
+        if (mode === 'everyone') {
+            if (message.sender.toString() !== req.user.id) return res.status(403).json("You can only unsend your own messages");
+
+            const updatedMessage = await Message.findByIdAndUpdate(
+                req.params.id,
+                { $set: { isDeletedForEveryone: true, content: '' } }, // Clear content
+                { new: true }
+            ).populate('sender', 'firstName lastName profileImage');
+
+            // Notify
+            const io = req.app.get('io');
+            const conversation = await Conversation.findById(message.conversationId);
+            const receiver = conversation.participants.find(p => p.toString() !== req.user.id);
+            if (receiver) io.to(receiver.toString()).emit("message_updated", updatedMessage);
+
+            res.status(200).json(updatedMessage);
+        } else {
+            // Delete for me
+            await Message.findByIdAndUpdate(req.params.id, {
+                $addToSet: { deletedFor: req.user.id }
+            });
+            res.status(200).json("Message deleted for you");
+        }
+    } catch (err) {
+        res.status(500).json(err);
+    }
+});
+
 // Send a message
 router.post('/', verifyToken, async (req, res) => {
     try {

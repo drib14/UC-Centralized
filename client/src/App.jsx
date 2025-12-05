@@ -35,7 +35,6 @@ import AdminOrders from './pages/admin/AdminOrders';
 import AdminPOS from './pages/admin/AdminPOS';
 import AdminMessages from './pages/admin/AdminMessages';
 import Notifications from './pages/Notifications';
-import CallModal from './components/chat/CallModal';
 
 const ProtectedRoute = ({ children, allowedRoles }) => {
     const { user, loading } = useAuth();
@@ -72,7 +71,6 @@ function App() {
             <SocketProvider>
                 <CartProvider>
                     <Router>
-                        <CallModal />
                         <ToastContainer position="top-right" autoClose={5000} />
                     <Routes>
                         {/* Public Routes */}

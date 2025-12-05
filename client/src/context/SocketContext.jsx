@@ -14,7 +14,6 @@ export const SocketProvider = ({ children }) => {
     const [onlineUsers, setOnlineUsers] = useState(new Set());
     const [notifications, setNotifications] = useState([]);
     const [unreadCount, setUnreadCount] = useState(0);
-    const [callData, setCallData] = useState(null); // For triggering outgoing call UI
     const { user } = useAuth();
 
     useEffect(() => {
@@ -74,15 +73,8 @@ export const SocketProvider = ({ children }) => {
         }
     }, [user]);
 
-    const startCall = (userId, userName, type) => {
-        if (socket) {
-            socket.emit('call_user', { userToCall: userId, signalData: 'mock-signal', from: user._id, name: `${user.firstName} ${user.lastName}`, type });
-            setCallData({ receiverId: userId, receiverName: userName, type, status: 'outgoing' });
-        }
-    };
-
     return (
-        <SocketContext.Provider value={{ socket, onlineUsers, notifications, setNotifications, unreadCount, setUnreadCount, callData, setCallData, startCall }}>
+        <SocketContext.Provider value={{ socket, onlineUsers, notifications, setNotifications, unreadCount, setUnreadCount }}>
             {children}
         </SocketContext.Provider>
     );

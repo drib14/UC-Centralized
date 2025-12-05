@@ -170,6 +170,14 @@ class API {
         return this.request('/messages', 'POST', { conversationId, content, type, fileUrl });
     }
 
+    static editMessage(id, content) {
+        return this.request(`/messages/${id}`, 'PUT', { content });
+    }
+
+    static deleteMessage(id, mode = 'me') {
+        return this.request(`/messages/${id}?mode=${mode}`, 'DELETE');
+    }
+
     static uploadFile(file) {
         const formData = new FormData();
         formData.append('file', file);

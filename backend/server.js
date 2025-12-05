@@ -92,38 +92,6 @@ io.on("connection", async (socket) => {
         });
     });
 
-    // Call Signaling
-    socket.on("call_user", (data) => {
-        // data: { userToCall, signalData, from, name, type }
-        socket.to(data.userToCall).emit("incoming_call", {
-            signal: data.signalData,
-            from: data.from,
-            name: data.name,
-            type: data.type
-        });
-    });
-
-    socket.on("answer_call", (data) => {
-        // data: { to, signal }
-        socket.to(data.to).emit("call_accepted", data.signal);
-    });
-
-    socket.on("reject_call", (data) => {
-        socket.to(data.to).emit("call_rejected");
-    });
-
-    socket.on("end_call", (data) => {
-        socket.to(data.to).emit("call_ended");
-    });
-
-    socket.on("call_busy", (data) => {
-        socket.to(data.to).emit("call_busy");
-    });
-
-    socket.on("ice_candidate", (data) => {
-        // data: { to, candidate }
-        socket.to(data.to).emit("ice_candidate", data.candidate);
-    });
 });
 
 // Middleware

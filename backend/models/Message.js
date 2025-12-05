@@ -25,7 +25,19 @@ const messageSchema = new mongoose.Schema({
     readBy: [{
         type: mongoose.Schema.Types.ObjectId,
         ref: 'User'
-    }]
+    }],
+    deletedFor: [{
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User'
+    }],
+    isDeletedForEveryone: {
+        type: Boolean,
+        default: false
+    },
+    isEdited: {
+        type: Boolean,
+        default: false
+    }
 }, { timestamps: true });
 
 module.exports = mongoose.model('Message', messageSchema);

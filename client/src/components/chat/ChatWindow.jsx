@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import {
     FaArrowLeft, FaPaperPlane, FaImage, FaMicrophone, FaStop,
     FaPlay, FaPause, FaCheckDouble, FaVideo, FaPhone, FaEllipsisVertical,
-    FaCircleInfo, FaBan
+    FaCircleInfo, FaBan, FaTrash, FaPen, FaShare, FaEllipsis
 } from 'react-icons/fa6';
 import API from '../../utils/api';
 import { useSocket } from '../../context/SocketContext';
@@ -23,7 +23,14 @@ const ChatWindow = ({ conversation, currentUser, socket, onBack, onMessageSent }
     const [blocked, setBlocked] = useState(false); // If current user blocked other
     const [showProfile, setShowProfile] = useState(false); // Profile modal
 
-    const { onlineUsers, startCall } = useSocket();
+    // Message Actions
+    const [editingMsgId, setEditingMsgId] = useState(null);
+    const [editContent, setEditContent] = useState('');
+    const [hoveredMsgId, setHoveredMsgId] = useState(null);
+    const [forwardMsg, setForwardMsg] = useState(null); // Message to forward
+    const [showForwardModal, setShowForwardModal] = useState(false);
+
+    const { onlineUsers } = useSocket();
 
     const messagesEndRef = useRef(null);
     const fileInputRef = useRef(null);
@@ -102,16 +109,22 @@ const ChatWindow = ({ conversation, currentUser, socket, onBack, onMessageSent }
             }
         };
 
+        const handleMessageUpdate = (updatedMsg) => {
+            setMessages(prev => prev.map(m => m._id === updatedMsg._id ? updatedMsg : m));
+        };
+
         socket.on('receive_message', handleReceive);
         socket.on('messages_read_update', handleReadUpdate);
         socket.on('user_typing', handleTyping);
         socket.on('user_stop_typing', handleStopTyping);
+        socket.on('message_updated', handleMessageUpdate);
 
         return () => {
             socket.off('receive_message', handleReceive);
             socket.off('messages_read_update', handleReadUpdate);
             socket.off('user_typing', handleTyping);
             socket.off('user_stop_typing', handleStopTyping);
+            socket.off('message_updated', handleMessageUpdate);
         };
     }, [socket, conversation._id, otherUser._id]);
 
@@ -160,6 +173,35 @@ const ChatWindow = ({ conversation, currentUser, socket, onBack, onMessageSent }
 
         await sendMessage(newMessage, 'text');
         setNewMessage('');
+    };
+
+    const handleEditSave = async (id) => {
+        if (!editContent.trim()) return;
+        try {
+            const updated = await API.editMessage(id, editContent);
+            setMessages(prev => prev.map(m => m._id === id ? updated : m));
+            setEditingMsgId(null);
+            toast.success("Message updated");
+        } catch (err) {
+            toast.error("Failed to edit message");
+        }
+    };
+
+    const handleDelete = async (id, mode) => {
+        if (!window.confirm(mode === 'everyone' ? "Unsend for everyone?" : "Delete for you?")) return;
+        try {
+            const updated = await API.deleteMessage(id, mode);
+            if (mode === 'everyone') {
+                setMessages(prev => prev.map(m => m._id === id ? updated : m));
+            } else {
+                setMessages(prev => prev.filter(m => m._id !== id)); // Remove locally if just 'me'
+                // Actually, API returns "Message deleted for you", so we filter manually or fetch again.
+                // Filter is better.
+            }
+            toast.success(mode === 'everyone' ? "Unsent" : "Deleted");
+        } catch (err) {
+            toast.error("Failed to delete");
+        }
     };
 
     const sendMessage = async (content, type, fileUrl = null) => {
@@ -301,11 +343,14 @@ const ChatWindow = ({ conversation, currentUser, socket, onBack, onMessageSent }
     };
 
     const renderMessageContent = (msg) => {
+        if (msg.isDeletedForEveryone) {
+            return <em className="text-muted small border p-2 rounded d-block">Message unsent</em>;
+        }
+
         if (msg.type === 'image') {
             return <img src={msg.fileUrl} alt="sent" className="img-fluid rounded" style={{maxHeight: '200px'}} />;
         } else if (msg.type === 'audio') {
             const isPlaying = playingAudio === msg.fileUrl;
-            // Facebook-like audio player
             return (
                 <div className="d-flex align-items-center gap-3 p-1" style={{minWidth: '200px'}}>
                     <button
@@ -316,7 +361,6 @@ const ChatWindow = ({ conversation, currentUser, socket, onBack, onMessageSent }
                         {isPlaying ? <FaPause /> : <FaPlay />}
                     </button>
                     <div className="d-flex flex-column flex-grow-1">
-                        {/* Fake Waveform Visual */}
                         <div className="d-flex align-items-center gap-1" style={{height: '20px'}}>
                              {[...Array(20)].map((_, i) => (
                                  <div
@@ -336,6 +380,11 @@ const ChatWindow = ({ conversation, currentUser, socket, onBack, onMessageSent }
                 </div>
             );
         } else if (msg.type === 'call' || msg.type === 'video_call') {
+            // ... (keep existing call logic if user wants to remove only CALL LOGIC not call MESSAGES? User said "remove call logics and ui".
+            // I removed the header buttons and modal. The messages are historical data, so keeping render logic is fine,
+            // or I can remove the "Call Back" button since logic is gone.
+            // User: "just remove the call logics and ui". So the Call Back button logic is broken now.
+            // I should render static message.
             const isVideo = msg.type === 'video_call';
             const isMissed = msg.content.toLowerCase().includes('missed');
 
@@ -347,19 +396,11 @@ const ChatWindow = ({ conversation, currentUser, socket, onBack, onMessageSent }
                             {msg.content}
                         </span>
                     </div>
-                    {/* Call Back Button */}
-                    {msg.sender._id !== currentUser._id && (
-                        <button
-                            className="btn btn-sm btn-outline-primary rounded-pill px-3 mt-1"
-                            onClick={() => startCall(otherUser._id, `${otherUser.firstName} ${otherUser.lastName}`, isVideo ? 'video' : 'audio')}
-                        >
-                            Call Back
-                        </button>
-                    )}
                 </div>
             );
         }
-        return <div style={{whiteSpace: 'pre-wrap'}}>{msg.content}</div>;
+
+        return <div style={{whiteSpace: 'pre-wrap'}}>{msg.content} {msg.isEdited && <span className="text-muted small fst-italic ms-1">(edited)</span>}</div>;
     };
 
     return (
@@ -388,12 +429,6 @@ const ChatWindow = ({ conversation, currentUser, socket, onBack, onMessageSent }
 
                 {/* Actions */}
                 <div className="d-flex align-items-center gap-3">
-                    <button className="btn btn-light text-primary rounded-circle" title="Voice Call" onClick={() => startCall(otherUser._id, `${otherUser.firstName} ${otherUser.lastName}`, 'audio')}>
-                        <FaPhone />
-                    </button>
-                    <button className="btn btn-light text-primary rounded-circle" title="Video Call" onClick={() => startCall(otherUser._id, `${otherUser.firstName} ${otherUser.lastName}`, 'video')}>
-                        <FaVideo />
-                    </button>
                     <div className="dropdown">
                         <button className="btn btn-light text-secondary rounded-circle" onClick={() => setShowOptions(!showOptions)} data-bs-toggle="dropdown">
                             <FaEllipsisVertical />
@@ -437,6 +472,35 @@ const ChatWindow = ({ conversation, currentUser, socket, onBack, onMessageSent }
                 </div>
             )}
 
+            {/* Forward Modal */}
+            {showForwardModal && (
+                <div className="modal fade show d-block" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>
+                    <div className="modal-dialog modal-dialog-centered">
+                        <div className="modal-content">
+                            <div className="modal-header">
+                                <h5 className="modal-title">Forward Message</h5>
+                                <button className="btn-close" onClick={() => setShowForwardModal(false)}></button>
+                            </div>
+                            <div className="modal-body">
+                                <p className="mb-3 p-2 bg-light rounded border">{forwardMsg?.content || 'Attached Media'}</p>
+                                <div className="input-group mb-3">
+                                    <input type="text" className="form-control" placeholder="Search user to forward..." />
+                                    <button className="btn btn-primary">Search</button>
+                                </div>
+                                <div className="text-muted small text-center">
+                                    Feature currently limited to direct search in sidebar.
+                                    <br/>
+                                    (Search/Select implementation pending backend 'search' integration in modal context)
+                                </div>
+                            </div>
+                            <div className="modal-footer">
+                                <button className="btn btn-secondary" onClick={() => setShowForwardModal(false)}>Close</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
             {/* Messages */}
             <div className="flex-grow-1 p-3 overflow-auto" style={{backgroundColor: '#f8f9fa'}}>
                 {loading ? (
@@ -447,22 +511,66 @@ const ChatWindow = ({ conversation, currentUser, socket, onBack, onMessageSent }
                     <div className="d-flex flex-column gap-3">
                         {messages.map((msg, idx) => {
                             const isMe = msg.sender._id === currentUser._id || msg.sender === currentUser._id;
-                            const isSeen = msg.readBy.length > 1; // >1 because sender reads it
+                            const isSeen = msg.readBy.length > 1;
 
                             return (
-                                <div key={idx} className={`d-flex gap-2 ${isMe ? 'flex-row-reverse' : ''}`}>
+                                <div
+                                    key={idx}
+                                    className={`d-flex gap-2 message-container ${isMe ? 'flex-row-reverse' : ''}`}
+                                    onMouseEnter={() => setHoveredMsgId(msg._id)}
+                                    onMouseLeave={() => setHoveredMsgId(null)}
+                                >
                                     {renderAvatar(isMe ? currentUser : otherUser, 35)}
-                                    <div className={`d-flex flex-column ${isMe ? 'align-items-end' : 'align-items-start'}`} style={{maxWidth: '70%'}}>
-                                        {/* Name on top of bubble */}
+
+                                    <div className={`d-flex flex-column ${isMe ? 'align-items-end' : 'align-items-start'}`} style={{maxWidth: '70%', position: 'relative'}}>
                                         <small className="text-muted mb-1" style={{fontSize: '0.75rem'}}>
                                             {isMe ? 'You' : msg.sender.firstName}
                                         </small>
 
-                                        <div
-                                            className={`p-3 rounded-4 shadow-sm ${isMe ? 'bg-primary text-white' : 'bg-white text-dark'}`}
-                                            style={{wordWrap: 'break-word'}}
-                                        >
-                                            {renderMessageContent(msg)}
+                                        <div className="d-flex align-items-center">
+                                            {/* Hover Options Menu */}
+                                            {hoveredMsgId === msg._id && !msg.isDeletedForEveryone && (
+                                                <div className={`dropdown ${isMe ? 'me-2' : 'ms-2'}`}>
+                                                    <button className="btn btn-sm btn-light rounded-circle shadow-sm" data-bs-toggle="dropdown">
+                                                        <FaEllipsis />
+                                                    </button>
+                                                    <ul className="dropdown-menu shadow-sm">
+                                                        <li><button className="dropdown-item" onClick={() => { setForwardMsg(msg); setShowForwardModal(true); }}>
+                                                            <FaShare className="me-2 text-primary" /> Forward
+                                                        </button></li>
+                                                        {isMe && msg.type === 'text' && (
+                                                            <li><button className="dropdown-item" onClick={() => { setEditingMsgId(msg._id); setEditContent(msg.content); }}>
+                                                                <FaPen className="me-2 text-warning" /> Edit
+                                                            </button></li>
+                                                        )}
+                                                        <li><button className="dropdown-item text-danger" onClick={() => handleDelete(msg._id, isMe ? 'everyone' : 'me')}>
+                                                            <FaTrash className="me-2" /> {isMe ? 'Unsend for everyone' : 'Delete for me'}
+                                                        </button></li>
+                                                    </ul>
+                                                </div>
+                                            )}
+
+                                            {/* Message Bubble or Edit Input */}
+                                            {editingMsgId === msg._id ? (
+                                                <div className="input-group">
+                                                    <input
+                                                        type="text"
+                                                        className="form-control"
+                                                        value={editContent}
+                                                        onChange={e => setEditContent(e.target.value)}
+                                                        autoFocus
+                                                    />
+                                                    <button className="btn btn-success" onClick={() => handleEditSave(msg._id)}>Save</button>
+                                                    <button className="btn btn-secondary" onClick={() => setEditingMsgId(null)}>Cancel</button>
+                                                </div>
+                                            ) : (
+                                                <div
+                                                    className={`p-3 rounded-4 shadow-sm ${isMe ? 'bg-primary text-white' : 'bg-white text-dark'}`}
+                                                    style={{wordWrap: 'break-word'}}
+                                                >
+                                                    {renderMessageContent(msg)}
+                                                </div>
+                                            )}
                                         </div>
 
                                         <div className="d-flex align-items-center gap-1 mt-1">
