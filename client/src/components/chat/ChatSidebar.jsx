@@ -86,10 +86,8 @@ const ChatSidebar = ({ conversations, selectedId, onSelect, onNewChat, currentUs
 
                 {conversations.map(conv => {
                     const other = getOtherParticipant(conv);
-                    // Skip if 'other' is me (self chat), already rendered above?
-                    // Actually, if I have a self-chat conversation, 'getOtherParticipant' might return me.
-                    // Let's allow duplication for now or filter?
-                    // If conv.participants has 2 'me', find returns 'me'.
+                    // Skip if 'other' is me (avoid duplicate "You" entry)
+                    if (other._id === currentUser._id) return null;
 
                     return (
                         <div key={conv._id} className="text-center" style={{minWidth: '60px'}} onClick={() => onSelect(conv)}>
