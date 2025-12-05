@@ -146,26 +146,17 @@ const CallModal = () => {
                 .then(offer => pc.setLocalDescription(offer))
                 .then(() => {
                     const target = callData?.receiverId;
-                    // Signal is sent via 'call_user' in SocketContext? No, we need to send offer NOW.
-                    // But 'call_user' was already sent to ring.
-                    // Let's refactor: We should send offer WITH 'call_user' or AFTER?
-                    // To keep it simple: We update outgoing call with offer.
-                    // Actually, SocketContext sent 'mock-signal'. We need to send REAL offer.
-                    // We'll emit a new event or just rely on 'call_user' being triggered here?
-                    // 'startCall' in SocketContext is just UI trigger.
-                    // Let's override the 'call_user' logic here or re-emit.
-                    // Better: The initial 'call_user' rings. Once accepted, we exchange SDP?
-                    // Standard WebRTC: Initiator creates offer -> sends to peer.
-                    // So we should emit 'call_user' with the OFFER.
-                    // But 'startLocalStream' is async.
-                    // We need to move 'socket.emit(call_user)' HERE.
+                    // Explicitly serialize the description
+                    const signal = {
+                        type: pc.localDescription.type,
+                        sdp: pc.localDescription.sdp
+                    };
 
-                    // Hack: We re-emit 'call_user' with real signal
                     socket.emit('call_user', {
                         userToCall: target,
-                        signalData: pc.localDescription,
-                        from: currentUser?._id, // Need currentUser
-                        name: "User", // Need name
+                        signalData: signal,
+                        from: user?._id,
+                        name: `${user?.firstName} ${user?.lastName}`,
                         type: callData.type
                     });
                 });
@@ -176,9 +167,14 @@ const CallModal = () => {
 
     // Need currentUser to send name
     // We can get it from storage or Context
-    const user = JSON.parse(localStorage.getItem('user_data') || '{}');
+    const user = JSON.parse(localStorage.getItem('user_details') || localStorage.getItem('user_data') || '{}');
 
     const acceptCall = async () => {
+        if (!call || !call.signal) {
+            console.error("No call signal found");
+            return;
+        }
+
         setCallStatus('connected');
         setStartTime(Date.now());
 
@@ -207,15 +203,22 @@ const CallModal = () => {
                 }
             };
 
+            // Fix: Ensure we are passing a valid object to RTCSessionDescription
             await pc.setRemoteDescription(new RTCSessionDescription(call.signal));
+
             const answer = await pc.createAnswer();
             await pc.setLocalDescription(answer);
 
-            socket.emit('answer_call', { to: call.from, signal: answer });
+            const answerSignal = {
+                type: answer.type,
+                sdp: answer.sdp
+            };
+
+            socket.emit('answer_call', { to: call.from, signal: answerSignal });
             peerConnectionRef.current = pc;
 
         } catch (err) {
-            console.error(err);
+            console.error("Accept Call Error:", err);
             endCall();
         }
     };
@@ -244,9 +247,6 @@ const CallModal = () => {
     };
 
     const logCallMessage = (content) => {
-        // Find conversation ID? We don't have it.
-        // We can use 'createConversation' endpoint which gets or creates conv.
-        // Then send message.
         const targetId = call?.from || callData?.receiverId;
         if (!targetId) return;
 
