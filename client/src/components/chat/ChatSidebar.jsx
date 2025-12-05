@@ -86,6 +86,17 @@ const ChatSidebar = ({ conversations, selectedId, onSelect, onNewChat, currentUs
             } else if (action === 'read') {
                 await API.markMessagesRead(conv._id);
                 toast.success("Marked as read");
+
+                if (onUpdateConversation) {
+                    const updatedConv = {
+                        ...conv,
+                        lastMessage: {
+                            ...conv.lastMessage,
+                            readBy: [...(conv.lastMessage.readBy || []), currentUser._id]
+                        }
+                    };
+                    onUpdateConversation(updatedConv);
+                }
                 setActiveMenuId(null);
             }
         } catch (err) {
@@ -220,7 +231,7 @@ const ChatSidebar = ({ conversations, selectedId, onSelect, onNewChat, currentUs
                                     <div className="flex-grow-1 position-relative" style={{minWidth: 0}}>
                                         <div className="d-flex justify-content-between align-items-center">
                                             <div className="d-flex align-items-center gap-1">
-                                                <h6 className={`mb-0 text-truncate ${unread ? 'fw-bold' : ''}`}>{other.firstName} {other.lastName}</h6>
+                                                <h6 className={`mb-0 text-truncate fw-bold ${unread ? 'text-dark' : 'text-secondary'}`} style={{fontWeight: 700}}>{other.firstName} {other.lastName}</h6>
                                                 {isMuted && <FaVolumeXmark className="text-secondary" size={12} />}
                                             </div>
                                             {conv.lastMessage && (

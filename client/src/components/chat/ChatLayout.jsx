@@ -17,6 +17,18 @@ const ChatLayout = () => {
         loadConversations();
     }, []);
 
+    // Persist selection on refresh
+    useEffect(() => {
+        const storedId = localStorage.getItem('selectedConversationId');
+        if (storedId && conversations.length > 0 && !selectedConversation) {
+            const found = conversations.find(c => c._id === storedId);
+            if (found) {
+                setSelectedConversation(found);
+                if (window.innerWidth <= 768) setMobileShowChat(true);
+            }
+        }
+    }, [conversations]); // Run when conversations load
+
     useEffect(() => {
         if (!socket) return;
 
@@ -78,6 +90,7 @@ const ChatLayout = () => {
     const handleSelectConversation = (conv) => {
         setSelectedConversation(conv);
         setMobileShowChat(true);
+        localStorage.setItem('selectedConversationId', conv._id);
     };
 
     const handleStartNewChat = async (targetUser) => {
@@ -116,6 +129,7 @@ const ChatLayout = () => {
         if (selectedConversation && selectedConversation._id === convId) {
             setSelectedConversation(null);
             setMobileShowChat(false);
+            localStorage.removeItem('selectedConversationId');
         }
     };
 

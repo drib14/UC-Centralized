@@ -94,6 +94,7 @@ const Sidebar = () => {
                              <FaBell className={iconClass} /> <span>Notifications</span>
                              {!collapsed && unreadCount > 0 && <span className="badge bg-danger ms-auto">{unreadCount}</span>}
                         </NavLink>
+                        <NavLink to="/student/profile" className={navLinkClass} onClick={handleMobileClick}><FaUser className={iconClass} /> <span>Profile</span></NavLink>
                     </>
                 ) : (
                     <>

@@ -36,7 +36,7 @@ const Layout = () => {
         <div id="wrapper">
             <Sidebar />
             <div id="page-content-wrapper" className={collapsed ? 'collapsed' : ''}>
-                <Navbar />
+                {/* Navbar removed as per request to fit content */}
                 <div className="container-fluid">
                     <Outlet />
                 </div>

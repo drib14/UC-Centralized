@@ -637,14 +637,20 @@ const ChatWindow = ({ conversation, currentUser, socket, onBack, onMessageSent, 
                     </button>
                     {renderAvatar(otherUser, 40)}
                     <div className="ms-3">
-                        <h6 className="mb-0">{otherUser.firstName} {otherUser.lastName}</h6>
+                        <h6 className="mb-0 fw-bold" style={{fontWeight: 700}}>{otherUser.firstName} {otherUser.lastName}</h6>
                         <div className="d-flex align-items-center gap-2">
                             {isOnline ? (
                                 <small className="text-success d-flex align-items-center gap-1">
                                     <span className="bg-success rounded-circle" style={{width:8, height:8}}></span> Active Now
                                 </small>
                             ) : (
-                                <small className="text-muted">Last active {otherUser.lastSeen ? new Date(otherUser.lastSeen).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}) : 'recently'}</small>
+                                <small className="text-muted">
+                                    {otherUser.lastSeen
+                                        ? `Active ${Math.floor((Date.now() - new Date(otherUser.lastSeen)) / 60000) < 60
+                                            ? Math.max(1, Math.floor((Date.now() - new Date(otherUser.lastSeen)) / 60000)) + 'm'
+                                            : Math.floor((Date.now() - new Date(otherUser.lastSeen)) / 3600000) + 'h'} ago`
+                                        : 'Offline'}
+                                </small>
                             )}
                             {/* <small className="text-muted border-start ps-2">{totalSent} messages sent</small> */}
                         </div>
@@ -868,9 +874,19 @@ const ChatWindow = ({ conversation, currentUser, socket, onBack, onMessageSent, 
                                             {isMe ? 'You' : msg.sender.firstName}
                                         </small>
 
-                                        <div className={`d-flex align-items-center ${isMe ? 'flex-row' : 'flex-row-reverse'}`}>
+                                        <div className="position-relative d-flex align-items-center">
+                                            {/* Actions Overlay - Absolute Position to prevent layout shift */}
                                             {(!msg.isDeletedForEveryone && hoveredMsgId === msg._id) && (
-                                                <div className="d-flex align-items-center gap-2 mx-2">
+                                                <div
+                                                    className="d-flex align-items-center gap-2 position-absolute"
+                                                    style={{
+                                                        [isMe ? 'right' : 'left']: '100%',
+                                                        marginRight: isMe ? '10px' : 0,
+                                                        marginLeft: !isMe ? '10px' : 0,
+                                                        whiteSpace: 'nowrap',
+                                                        zIndex: 5
+                                                    }}
+                                                >
                                                     {/* Reaction Trigger */}
                                                     <div className={`position-relative`}>
                                                         <button
@@ -947,7 +963,11 @@ const ChatWindow = ({ conversation, currentUser, socket, onBack, onMessageSent, 
                                             <small className="text-muted" style={{fontSize: '0.7rem'}}>
                                                 {new Date(msg.createdAt).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
                                             </small>
-                                            {isMe && isSeen && <FaCheckDouble className="text-primary" size={12} title="Seen" />}
+                                            {isMe && (
+                                                <small className="text-muted ms-1" style={{fontSize: '0.7rem'}}>
+                                                    {isSeen ? 'Seen' : (isOnline ? 'Delivered' : 'Sent')}
+                                                </small>
+                                            )}
                                         </div>
 
                                         {/* Reactions Display */}
@@ -965,13 +985,13 @@ const ChatWindow = ({ conversation, currentUser, socket, onBack, onMessageSent, 
                             );
                         })}
                         {isTyping && (
-                             <div className="d-flex align-items-center gap-2 ms-5 mb-2">
-                                <div className="bg-light p-2 rounded-4 shadow-sm">
+                             <div className="d-flex align-items-center gap-2 mb-2">
+                                {renderAvatar(otherUser, 35)}
+                                <div className="bg-light p-3 rounded-4 shadow-sm">
                                     <div className="typing-dots">
                                         <span></span><span></span><span></span>
                                     </div>
                                 </div>
-                                <small className="text-muted" style={{fontSize: '0.7rem'}}>typing...</small>
                              </div>
                         )}
                         <div ref={messagesEndRef} />
