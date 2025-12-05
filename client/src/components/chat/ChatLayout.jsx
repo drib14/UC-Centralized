@@ -83,13 +83,27 @@ const ChatLayout = () => {
     const handleStartNewChat = async (targetUser) => {
         try {
             // Check if conversation exists in local list
-            const existing = conversations.find(c => c.participants.some(p => p._id === targetUser._id));
+            // If target is self, check for a conversation where all participants are me
+            const existing = conversations.find(c => {
+                if (targetUser._id === user._id) {
+                    // Self chat: both participants are me? Or strictly participants length is 2 and both are me?
+                    // Or populated returns me twice.
+                    // The safest check: are ALL participants equal to target ID?
+                    return c.participants.every(p => p._id === user._id);
+                }
+                // Normal chat: Contains target AND contains me (implicit for fetch) AND target is not me
+                return c.participants.some(p => p._id === targetUser._id && p._id !== user._id);
+            });
+
             if (existing) {
                 handleSelectConversation(existing);
             } else {
                 // Create on backend
                 const newConv = await API.createConversation(targetUser._id);
-                setConversations([newConv, ...conversations]);
+                // Avoid duplicates if race condition
+                if (!conversations.some(c => c._id === newConv._id)) {
+                    setConversations([newConv, ...conversations]);
+                }
                 handleSelectConversation(newConv);
             }
         } catch (err) {

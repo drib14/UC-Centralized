@@ -32,9 +32,12 @@ const ChatWindow = ({ conversation, currentUser, socket, onBack, onMessageSent }
     const [hoveredMsgId, setHoveredMsgId] = useState(null);
     const [forwardMsg, setForwardMsg] = useState(null); // Message to forward
     const [showForwardModal, setShowForwardModal] = useState(false);
+    const [forwardSearchTerm, setForwardSearchTerm] = useState('');
+    const [forwardResults, setForwardResults] = useState([]);
     const [deleteCandidateMsg, setDeleteCandidateMsg] = useState(null); // Msg pending deletion
     const [showDeleteModal, setShowDeleteModal] = useState(false);
     const [lightboxMedia, setLightboxMedia] = useState(null); // { url, type }
+    const [reactingMsgId, setReactingMsgId] = useState(null); // Which msg is having reactions toggled
 
     const { onlineUsers } = useSocket();
 
@@ -245,6 +248,35 @@ const ChatWindow = ({ conversation, currentUser, socket, onBack, onMessageSent }
         }
     };
 
+    const handleForwardSearch = async (e) => {
+        const query = e.target.value;
+        setForwardSearchTerm(query);
+        if (query.length > 1) {
+            try {
+                const res = await API.searchUsers(query);
+                setForwardResults(res);
+            } catch(e) { console.error(e); }
+        } else {
+            setForwardResults([]);
+        }
+    };
+
+    const handleForwardSend = async (targetUser) => {
+        try {
+            // Get/Create conversation logic - similar to logCallMessage,
+            // but we need the conversationId.
+            // Ideally we assume conversation creation is idempotent.
+            const conv = await API.createConversation(targetUser._id);
+            await API.sendMessage(conv._id, forwardMsg.content, forwardMsg.type, forwardMsg.fileUrl);
+            toast.success("Forwarded successfully");
+            setShowForwardModal(false);
+            setForwardSearchTerm('');
+            setForwardResults([]);
+        } catch (err) {
+            toast.error("Failed to forward");
+        }
+    };
+
     const handleFileSelect = async (e) => {
         const file = e.target.files[0];
         if (!file) return;
@@ -254,15 +286,7 @@ const ChatWindow = ({ conversation, currentUser, socket, onBack, onMessageSent }
             const { url } = await API.uploadFile(file);
             let type = 'image';
             if (file.type.startsWith('audio')) type = 'audio';
-            else if (file.type.startsWith('video')) type = 'video_call'; // Using video_call type for now or just generic link? 'image' renders as img.
-            // Actually, we should check mime. 'image' -> img tag.
-            // Non-image -> generic file link.
-            // Since backend supports broad uploads now, we should handle rendering.
-            // Let's use 'image' for images, 'audio' for audio msg, 'text' for generic files (as link).
-            // Or better: Use type='text' and put URL in content? Or 'file' type?
-            // Existing types: text, image, audio, call, video_call.
-            // If it's a PDF/Video, 'image' type rendering will fail (<img> tag).
-            // I'll use 'text' with the URL as content for now if not image/audio.
+            else if (file.type.startsWith('video')) type = 'video_call';
 
             if (file.type.startsWith('image')) {
                 await sendMessage('', 'image', url);
@@ -289,8 +313,15 @@ const ChatWindow = ({ conversation, currentUser, socket, onBack, onMessageSent }
         try {
             const updated = await API.toggleReaction(msgId, emoji);
             setMessages(prev => prev.map(m => m._id === msgId ? updated : m));
+            setReactingMsgId(null);
         } catch (err) {
             console.error(err);
+        }
+    };
+
+    const onReactionEmojiClick = (emojiObject) => {
+        if (reactingMsgId) {
+            handleReaction(reactingMsgId, emojiObject.emoji);
         }
     };
 
@@ -397,10 +428,6 @@ const ChatWindow = ({ conversation, currentUser, socket, onBack, onMessageSent }
                 />
             );
         } else if (msg.type === 'video_call' && !msg.content.includes('ended')) {
-             // Treat generic video uploads (which currently might use this type or need a new one) as video
-             // Note: My upload logic set 'video_call' for video files in previous step as a hack.
-             // Better to assume if fileUrl exists and type is 'video_call' (or just check extension/context), it's a video file.
-             // Actually, let's just rely on the fact that I set type='video_call' for video uploads previously.
              return (
                 <div
                     className="position-relative d-flex align-items-center justify-content-center bg-dark rounded"
@@ -442,11 +469,6 @@ const ChatWindow = ({ conversation, currentUser, socket, onBack, onMessageSent }
                 </div>
             );
         } else if (msg.type === 'call' || msg.type === 'video_call') {
-            // ... (keep existing call logic if user wants to remove only CALL LOGIC not call MESSAGES? User said "remove call logics and ui".
-            // I removed the header buttons and modal. The messages are historical data, so keeping render logic is fine,
-            // or I can remove the "Call Back" button since logic is gone.
-            // User: "just remove the call logics and ui". So the Call Back button logic is broken now.
-            // I should render static message.
             const isVideo = msg.type === 'video_call';
             const isMissed = msg.content.toLowerCase().includes('missed');
 
@@ -589,36 +611,64 @@ const ChatWindow = ({ conversation, currentUser, socket, onBack, onMessageSent }
                 <div className="modal fade show d-block" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>
                     <div className="modal-dialog modal-dialog-centered">
                         <div className="modal-content">
-                            <div className="modal-header">
-                                <h5 className="modal-title">Forward Message</h5>
+                            <div className="modal-header border-0 pb-0">
+                                <h5 className="modal-title">Forward to...</h5>
                                 <button className="btn-close" onClick={() => setShowForwardModal(false)}></button>
                             </div>
-                            <div className="modal-body">
-                                <p className="mb-3 p-2 bg-light rounded border">{forwardMsg?.content || 'Attached Media'}</p>
-                                {/* Forward Search Logic Stub - In a real app, reuse ChatSidebar's search or similar */}
+                            <div className="modal-body pt-2">
+                                <p className="mb-3 p-2 bg-light rounded border small text-truncate">
+                                    {forwardMsg?.content || 'Media attachment'}
+                                </p>
                                 <div className="input-group mb-3">
-                                    <input type="text" className="form-control" placeholder="Search user..." onChange={async (e) => {
-                                        // Simple self-forward hack for now
-                                        if(e.target.value.toLowerCase() === 'me') {
-                                            if(window.confirm("Forward to yourself?")) {
-                                                await sendMessage(forwardMsg.content, forwardMsg.type, forwardMsg.fileUrl);
-                                                toast.success("Forwarded to self");
-                                                setShowForwardModal(false);
-                                            }
-                                        }
-                                    }}/>
-                                    <button className="btn btn-primary">Search</button>
+                                    <span className="input-group-text bg-light border-end-0"><FaPlus /></span>
+                                    <input
+                                        type="text"
+                                        className="form-control border-start-0 bg-light"
+                                        placeholder="Search people..."
+                                        value={forwardSearchTerm}
+                                        onChange={handleForwardSearch}
+                                        autoFocus
+                                    />
                                 </div>
-                                <div className="text-muted small">
-                                    Type "me" to forward to yourself (Quick Hack).
-                                    <br/>
-                                    Full search requires lifting Sidebar search state.
+
+                                <div className="list-group list-group-flush" style={{maxHeight: '300px', overflowY: 'auto'}}>
+                                    {forwardResults.length === 0 && forwardSearchTerm && (
+                                        <div className="text-center text-muted p-3">No users found</div>
+                                    )}
+
+                                    {/* Default "Forward to Self" option if search empty or matches */}
+                                    {(!forwardSearchTerm || "you".includes(forwardSearchTerm.toLowerCase())) && (
+                                        <button className="list-group-item list-group-item-action d-flex align-items-center gap-3 py-2" onClick={() => handleForwardSend(currentUser)}>
+                                            {renderAvatar(currentUser, 40)}
+                                            <div>
+                                                <h6 className="mb-0">You</h6>
+                                                <small className="text-muted">Message yourself</small>
+                                            </div>
+                                        </button>
+                                    )}
+
+                                    {forwardResults.filter(u => u._id !== currentUser._id).map(user => (
+                                        <button key={user._id} className="list-group-item list-group-item-action d-flex align-items-center gap-3 py-2" onClick={() => handleForwardSend(user)}>
+                                            {renderAvatar(user, 40)}
+                                            <div>
+                                                <h6 className="mb-0">{user.firstName} {user.lastName}</h6>
+                                                <small className="text-muted">{user.role}</small>
+                                            </div>
+                                        </button>
+                                    ))}
                                 </div>
-                            </div>
-                            <div className="modal-footer">
-                                <button className="btn btn-secondary" onClick={() => setShowForwardModal(false)}>Close</button>
                             </div>
                         </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Custom Reaction Picker Modal (If needed, or popover) */}
+            {reactingMsgId && (
+                <div className="position-fixed top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center" style={{ zIndex: 10600, backgroundColor: 'rgba(0,0,0,0.5)' }} onClick={() => setReactingMsgId(null)}>
+                    <div className="bg-white rounded p-3 shadow-lg" onClick={e => e.stopPropagation()}>
+                        <h6 className="mb-3">Choose Reaction</h6>
+                        <EmojiPicker onEmojiClick={onReactionEmojiClick} />
                     </div>
                 </div>
             )}
@@ -642,8 +692,6 @@ const ChatWindow = ({ conversation, currentUser, socket, onBack, onMessageSent }
                                     onMouseEnter={() => setHoveredMsgId(msg._id)}
                                     onMouseLeave={() => setHoveredMsgId(null)}
                                     onClick={() => {
-                                        // On mobile/touch, click toggles menu if it's not already hovered/active
-                                        // We check window width to apply this logic primarily for mobile
                                         if (window.innerWidth < 768) {
                                             setHoveredMsgId(prev => prev === msg._id ? null : msg._id);
                                         }
@@ -657,44 +705,57 @@ const ChatWindow = ({ conversation, currentUser, socket, onBack, onMessageSent }
                                         </small>
 
                                         <div className="d-flex align-items-center">
-                                            {/* Options Menu: Visible on Hover (Desktop) or Click (Mobile toggle) */}
-                                            {/* We use a CSS class approach or simple JS state toggle. */}
-                                            {/* User requested: "don't display automatically the 3dots option" on small screen. */}
-                                            {/* So we only show if hoveredMsgId === msg._id. On mobile, tap toggles this ID. */}
-
                                             {(!msg.isDeletedForEveryone && hoveredMsgId === msg._id) && (
-                                                <div className={`dropdown ${isMe ? 'me-2' : 'ms-2'}`}>
-                                                    <button className="btn btn-sm btn-light rounded-circle shadow-sm" data-bs-toggle="dropdown">
-                                                        <FaEllipsis />
-                                                    </button>
-                                                    <ul className="dropdown-menu shadow-sm">
-                                                        {msg.type === 'text' && (
-                                                            <li><button className="dropdown-item" onClick={() => {
-                                                                navigator.clipboard.writeText(msg.content);
-                                                                toast.success("Copied to clipboard");
-                                                            }}>
-                                                                Copy
+                                                <div className="d-flex align-items-center gap-2">
+                                                    {/* Reaction Trigger */}
+                                                    <div className={`position-relative ${isMe ? 'me-1' : 'ms-1'}`}>
+                                                        <button
+                                                            className="btn btn-sm btn-light rounded-circle shadow-sm text-warning"
+                                                            data-bs-toggle="dropdown"
+                                                            aria-expanded="false"
+                                                        >
+                                                            <FaFaceSmile />
+                                                        </button>
+                                                        <ul className="dropdown-menu p-2 shadow-lg" style={{minWidth: '280px'}}>
+                                                            <div className="d-flex gap-2 align-items-center justify-content-between">
+                                                                {['👍', '❤️', '😂', '😮', '😢', '😠'].map(emoji => (
+                                                                    <span key={emoji} className="fs-4 cursor-pointer hover-scale" onClick={() => handleReaction(msg._id, emoji)} role="button">{emoji}</span>
+                                                                ))}
+                                                                <button className="btn btn-sm btn-light rounded-circle" onClick={(e) => {
+                                                                    e.stopPropagation();
+                                                                    setReactingMsgId(msg._id);
+                                                                }}><FaPlus /></button>
+                                                            </div>
+                                                        </ul>
+                                                    </div>
+
+                                                    {/* Options Menu */}
+                                                    <div className="dropdown">
+                                                        <button className="btn btn-sm btn-light rounded-circle shadow-sm" data-bs-toggle="dropdown">
+                                                            <FaEllipsis />
+                                                        </button>
+                                                        <ul className="dropdown-menu shadow-sm">
+                                                            {msg.type === 'text' && (
+                                                                <li><button className="dropdown-item" onClick={() => {
+                                                                    navigator.clipboard.writeText(msg.content);
+                                                                    toast.success("Copied to clipboard");
+                                                                }}>
+                                                                    <FaPen className="me-2 text-secondary" /> Copy
+                                                                </button></li>
+                                                            )}
+                                                            <li><button className="dropdown-item" onClick={() => { setForwardMsg(msg); setShowForwardModal(true); }}>
+                                                                <FaShare className="me-2 text-primary" /> Forward
                                                             </button></li>
-                                                        )}
-                                                        {/* Reaction Menu Item */}
-                                                        <li><div className="dropdown-item d-flex gap-2">
-                                                            {['👍', '❤️', '😂', '😮', '😢', '😠'].map(emoji => (
-                                                                <span key={emoji} style={{cursor:'pointer'}} onClick={() => handleReaction(msg._id, emoji)}>{emoji}</span>
-                                                            ))}
-                                                        </div></li>
-                                                        <li><hr className="dropdown-divider"/></li>
-                                                        <li><button className="dropdown-item" onClick={() => { setForwardMsg(msg); setShowForwardModal(true); }}>
-                                                            <FaShare className="me-2 text-primary" /> Forward
-                                                        </button></li>
-                                                        {isMe && msg.type === 'text' && (
-                                                            <li><button className="dropdown-item" onClick={() => { setEditingMsgId(msg._id); setEditContent(msg.content); }}>
-                                                                <FaPen className="me-2 text-warning" /> Edit
+                                                            {isMe && msg.type === 'text' && (
+                                                                <li><button className="dropdown-item" onClick={() => { setEditingMsgId(msg._id); setEditContent(msg.content); }}>
+                                                                    <FaPen className="me-2 text-warning" /> Edit
+                                                                </button></li>
+                                                            )}
+                                                            <li><button className="dropdown-item text-danger" onClick={() => { setDeleteCandidateMsg(msg); setShowDeleteModal(true); }}>
+                                                                <FaTrash className="me-2" /> Delete
                                                             </button></li>
-                                                        )}
-                                                        <li><button className="dropdown-item text-danger" onClick={() => { setDeleteCandidateMsg(msg); setShowDeleteModal(true); }}>
-                                                            <FaTrash className="me-2" /> Delete
-                                                        </button></li>
-                                                    </ul>
+                                                        </ul>
+                                                    </div>
                                                 </div>
                                             )}
 
