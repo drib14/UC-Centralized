@@ -335,6 +335,16 @@ const ChatWindow = ({ conversation, currentUser, socket, onBack, onMessageSent }
                     <audio ref={el => audioRefs.current[msg.fileUrl] = el} src={msg.fileUrl} hidden />
                 </div>
             );
+        } else if (msg.type === 'call' || msg.type === 'video_call') {
+            const isVideo = msg.type === 'video_call';
+            return (
+                <div className="d-flex align-items-center justify-content-center gap-2 text-secondary py-1" style={{width: '100%', minWidth: '200px'}}>
+                    <div className="bg-light rounded-pill px-3 py-2 d-flex align-items-center gap-2 border">
+                        {isVideo ? <FaVideo /> : <FaPhone />}
+                        <span>{isVideo ? 'Video Call' : 'Voice Call'} ended</span>
+                    </div>
+                </div>
+            );
         }
         return <div style={{whiteSpace: 'pre-wrap'}}>{msg.content}</div>;
     };

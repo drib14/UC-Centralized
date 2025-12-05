@@ -52,9 +52,12 @@ const Notifications = () => {
         }
 
         // Redirect logic
-        if (notification.type === 'announcement') navigate('/student/dashboard'); // Or specific announcement page if exists
+        if (notification.type === 'announcement') navigate('/student/dashboard');
         if (notification.type === 'event') navigate('/student/events');
-        if (notification.type === 'message') navigate('/student/messages');
+        if (notification.type === 'message') {
+            navigate('/student/messages');
+            // Optimistically update badge count if needed, but setUnreadCount handles global count
+        }
     };
 
     const getIcon = (type) => {

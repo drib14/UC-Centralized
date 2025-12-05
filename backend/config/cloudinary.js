@@ -14,10 +14,9 @@ cloudinary.config({
 const storage = new CloudinaryStorage({
     cloudinary: cloudinary,
     params: async (req, file) => {
-        // Dynamically determine resource_type based on mimetype
         let resource_type = 'image';
         if (file.mimetype.startsWith('audio') || file.mimetype.startsWith('video')) {
-            resource_type = 'video'; // Cloudinary treats audio as video
+            resource_type = 'video';
         } else if (file.mimetype.startsWith('application')) {
             resource_type = 'raw';
         }
@@ -25,8 +24,8 @@ const storage = new CloudinaryStorage({
         return {
             folder: 'uc-central',
             resource_type: resource_type,
-            allowed_formats: ['jpg', 'png', 'jpeg', 'webp', 'mp3', 'webm', 'wav'],
-            public_id: `${Date.now()}-${file.originalname.split('.')[0]}`
+            // allow all formats by not specifying allowed_formats, or be very permissive
+            public_id: `${Date.now()}-${file.originalname.replace(/\.[^/.]+$/, "")}`
         };
     }
 });

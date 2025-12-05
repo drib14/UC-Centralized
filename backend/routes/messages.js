@@ -25,7 +25,7 @@ router.get('/conversations', verifyToken, async (req, res) => {
         const conversations = await Conversation.find({
             participants: { $in: [req.user.id] }
         })
-        .populate('participants', 'firstName lastName profileImage role studentId')
+        .populate('participants', 'firstName lastName profileImage role studentId department program email')
         .populate('lastMessage')
         .sort({ updatedAt: -1 });
 
@@ -69,7 +69,7 @@ router.post('/conversations', verifyToken, async (req, res) => {
         }
 
         const populatedConv = await Conversation.findById(conversation._id)
-            .populate('participants', 'firstName lastName profileImage role studentId')
+            .populate('participants', 'firstName lastName profileImage role studentId department program email')
             .populate('lastMessage');
 
         res.status(200).json(populatedConv);

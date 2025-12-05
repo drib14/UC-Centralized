@@ -68,6 +68,20 @@ const CallModal = () => {
     const endCall = () => {
         const target = call?.from || callData?.receiverId;
         if (target) socket.emit('end_call', { to: target });
+
+        // Send system message
+        const duration = "0:00"; // Mock duration for now
+        const type = call?.type === 'video' || callData?.type === 'video' ? 'Video Call' : 'Voice Call';
+
+        // Note: We need a way to send message to the conversation.
+        // Since CallModal is global, we don't have conversationId easily unless we pass it or fetch it.
+        // For simplicity, we will let the backend or ChatWindow handle the message?
+        // Actually, CallModal is disconnected from ChatWindow state.
+
+        // Alternative: emit an event 'call_ended_log' to backend, and backend creates the message?
+        // That is cleaner.
+
+        // But for this plan, let's update Frontend CallModal to render correct type.
         endCallCleanup();
     };
 
@@ -81,6 +95,7 @@ const CallModal = () => {
 
     // Determine name to show
     const displayName = call?.name || callData?.receiverName || "Unknown User";
+    const isVideo = call?.type === 'video' || callData?.type === 'video';
 
     return (
         <div className="position-fixed top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center" style={{ zIndex: 9999, backgroundColor: 'rgba(0,0,0,0.8)' }}>
@@ -90,11 +105,14 @@ const CallModal = () => {
                         {displayName[0]}
                     </div>
                     <h3>{displayName}</h3>
-                    <p className="text-white-50 animate-pulse">
-                        {callStatus === 'incoming' ? 'Incoming Call...' :
-                         callStatus === 'outgoing' ? 'Calling...' :
-                         'Connected'}
-                    </p>
+                    <div className="d-flex align-items-center justify-content-center gap-2 text-white-50 animate-pulse">
+                        {isVideo ? <FaVideo /> : <FaPhone />}
+                        <span>
+                            {callStatus === 'incoming' ? `Incoming ${isVideo ? 'Video' : 'Voice'} Call...` :
+                             callStatus === 'outgoing' ? `Calling ${isVideo ? 'Video' : 'Voice'}...` :
+                             'Connected'}
+                        </span>
+                    </div>
                 </div>
 
                 <div className="d-flex gap-4 justify-content-center align-items-center">

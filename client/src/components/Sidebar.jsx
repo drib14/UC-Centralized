@@ -100,7 +100,6 @@ const Sidebar = () => {
                             {!collapsed && <span className={`badge bg-danger ms-auto ${getCount() === 0 ? 'd-none' : ''}`}>{getCount()}</span>}
                         </NavLink>
                         <NavLink to="/student/profile" className={navLinkClass} onClick={handleMobileClick}><FaUser className={iconClass} /> <span>Profile</span></NavLink>
-                        <NavLink to="/documentation" className={navLinkClass} onClick={handleMobileClick}><FaBook className={iconClass} /> <span>API Docs</span></NavLink>
                     </>
                 )}
             </nav>
