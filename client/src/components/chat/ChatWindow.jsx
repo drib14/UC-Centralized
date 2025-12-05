@@ -9,7 +9,7 @@ import API from '../../utils/api';
 import { useSocket } from '../../context/SocketContext';
 import { toast } from 'react-toastify';
 
-const ChatWindow = ({ conversation, currentUser, socket, onBack, onMessageSent, onDeleteConversation }) => {
+const ChatWindow = ({ conversation, currentUser, socket, onBack, onMessageSent, onDeleteConversation, onUpdateConversation }) => {
     const [messages, setMessages] = useState([]);
     const [newMessage, setNewMessage] = useState('');
     const [loading, setLoading] = useState(false);
@@ -48,6 +48,7 @@ const ChatWindow = ({ conversation, currentUser, socket, onBack, onMessageSent, 
     const fileInputRef = useRef(null);
     const audioRefs = useRef({}); // Map audio URLs to audio elements
     const timerRef = useRef(null); // For recording timer
+    const [recordingStartTime, setRecordingStartTime] = useState(0); // To measure actual duration
 
     const otherUser = conversation.participants.find(p => p._id !== currentUser._id) || conversation.participants[0] || {};
     const isOnline = onlineUsers.has(otherUser._id);
@@ -285,19 +286,14 @@ const ChatWindow = ({ conversation, currentUser, socket, onBack, onMessageSent, 
         try {
             await API.muteConversation(conversation._id);
             toast.success("Conversation unmuted");
-            // Optimistic Update? Parent should handle, but we can't easily.
-            // A reload is bad.
-            // Ideally we lift state up or use a context.
-            // For now, we rely on the backend toggle and maybe a socket event if available, or just simple toast.
-            // The banner will disappear only if we can update the 'conversation' prop.
-            // HACK: Force reload or request update from parent?
-            // Since onMessageSent updates list, maybe we can trigger something?
-            // Actually, for now let's just show toast. The banner might persist until refresh if we don't update parent.
-            // But user requested "put a banner... and an unmute button".
-            // If I click unmute, it should disappear.
-            // I can't mutate 'conversation' prop.
-            // I'll emit a custom event or callback if possible? No simple callback provided for mute.
-            window.location.reload(); // Re-introducing reload for Unmute specifically to update UI state properly as requested by user implicit expectation of "it works".
+
+            if (onUpdateConversation) {
+                const updatedConv = {
+                    ...conversation,
+                    mutedBy: conversation.mutedBy.filter(id => id !== currentUser._id)
+                };
+                onUpdateConversation(updatedConv);
+            }
         } catch (err) {
             console.error(err);
         }
@@ -407,6 +403,7 @@ const ChatWindow = ({ conversation, currentUser, socket, onBack, onMessageSent, 
             recorder.ondataavailable = e => chunks.push(e.data);
             recorder.onstop = async () => {
                 clearInterval(timerRef.current);
+                const duration = Math.floor((Date.now() - recordingStartTime) / 1000);
                 setRecordingTime(0);
 
                 // Create Blob with specific type
@@ -421,7 +418,8 @@ const ChatWindow = ({ conversation, currentUser, socket, onBack, onMessageSent, 
                         url,
                         type: 'audio',
                         name: 'Voice Message',
-                        size: file.size
+                        size: file.size,
+                        duration: duration
                     };
                     await sendMessage('', 'audio', url, [attachment]);
                 } catch (err) {
@@ -435,6 +433,7 @@ const ChatWindow = ({ conversation, currentUser, socket, onBack, onMessageSent, 
             setMediaRecorder(recorder);
             setIsRecording(true);
             setRecordingTime(0);
+            setRecordingStartTime(Date.now());
 
             timerRef.current = setInterval(() => {
                 setRecordingTime(prev => prev + 1);
@@ -532,17 +531,39 @@ const ChatWindow = ({ conversation, currentUser, socket, onBack, onMessageSent, 
                  // Audio kept in bubble or custom styling? User said media bubble.
                  // We'll wrap audio in a small card to keep controls visible
                 const isPlaying = playingAudio === url;
+                const duration = att.duration || 0;
                 return (
-                    <div key={index} className="d-flex align-items-center gap-3 p-2 rounded shadow-sm bg-white border" style={{minWidth: '220px'}}>
+                    <div key={index} className="d-flex align-items-center gap-3 p-2 rounded-pill shadow-sm bg-white border" style={{minWidth: '240px'}}>
                         <button
                             className="btn btn-primary rounded-circle shadow-sm d-flex align-items-center justify-content-center"
-                            style={{width: '40px', height: '40px'}}
+                            style={{width: '35px', height: '35px', minWidth: '35px'}}
                             onClick={() => toggleAudio(url)}
                         >
-                            {isPlaying ? <FaPause className="text-white" /> : <FaPlay className="text-white" />}
+                            {isPlaying ? <FaPause className="text-white" size={12} /> : <FaPlay className="text-white" size={12} />}
                         </button>
+
+                        {/* Fake Waveform Visualizer */}
+                        <div className="d-flex align-items-center gap-1" style={{height: '20px'}}>
+                            {[...Array(15)].map((_, i) => (
+                                <div
+                                    key={i}
+                                    className={`rounded-pill ${isPlaying ? 'bg-primary animate-pulse' : 'bg-secondary'}`}
+                                    style={{
+                                        width: '3px',
+                                        height: `${Math.random() * 15 + 5}px`,
+                                        opacity: isPlaying ? 1 : 0.3,
+                                        transition: 'all 0.2s'
+                                    }}
+                                ></div>
+                            ))}
+                        </div>
+
+                        <div className="d-flex flex-column align-items-end ms-auto">
+                            <span className="small text-muted fw-bold" style={{fontSize: '0.7rem'}}>
+                                {duration ? formatDuration(duration) : (size ? (size/1024).toFixed(0)+' KB' : 'Audio')}
+                            </span>
+                        </div>
                         <audio ref={el => audioRefs.current[url] = el} src={url} hidden />
-                        <span className="small text-dark">Voice Message</span>
                     </div>
                 );
              } else {

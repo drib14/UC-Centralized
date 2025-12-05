@@ -5,7 +5,7 @@ import API from '../../utils/api';
 import { useSocket } from '../../context/SocketContext';
 import { toast } from 'react-toastify';
 
-const ChatSidebar = ({ conversations, selectedId, onSelect, onNewChat, currentUser, onDeleteConversation }) => {
+const ChatSidebar = ({ conversations, selectedId, onSelect, onNewChat, currentUser, onDeleteConversation, onUpdateConversation }) => {
     const [searchTerm, setSearchTerm] = useState('');
     const [searchResults, setSearchResults] = useState([]);
     const [isSearching, setIsSearching] = useState(false);
@@ -71,18 +71,18 @@ const ChatSidebar = ({ conversations, selectedId, onSelect, onNewChat, currentUs
             } else if (action === 'mute') {
                 await API.muteConversation(conv._id);
                 toast.success("Conversation mute toggled");
-                // Optimistic update would require passing state setter or re-fetching
-                // For now, reloading entire page is jarring.
-                // Assuming parent re-fetches or socket updates.
-                // But `mute` doesn't emit socket event usually?
-                // Let's reload conversations list only via callback if possible?
-                // For now, just remove reload. The UI might be stale until refresh but better than reload.
-                // Ideally we should call a parent refresh function.
-                // Optimistic update logic
-                // Ideally this component should receive a setConversations or onUpdateConversation prop
-                // But without it, we can at least avoid the reload.
+
+                if (onUpdateConversation) {
+                    const isMuted = conv.mutedBy.includes(currentUser._id);
+                    const updatedConv = {
+                        ...conv,
+                        mutedBy: isMuted
+                            ? conv.mutedBy.filter(id => id !== currentUser._id)
+                            : [...conv.mutedBy, currentUser._id]
+                    };
+                    onUpdateConversation(updatedConv);
+                }
                 setActiveMenuId(null);
-                // Trigger a full reload is bad.
             } else if (action === 'read') {
                 await API.markMessagesRead(conv._id);
                 toast.success("Marked as read");
@@ -191,7 +191,23 @@ const ChatSidebar = ({ conversations, selectedId, onSelect, onNewChat, currentUs
                             const isActive = selectedId === conv._id;
                             const unread = getUnreadCount(conv);
                             const isMuted = conv.mutedBy && conv.mutedBy.includes(currentUser._id);
-                            const contentPreview = conv.lastMessage?.type === 'image' ? '📷 sent a photo' : conv.lastMessage?.type === 'audio' ? '🎤 sent a voice message' : conv.lastMessage?.content;
+                            let contentPreview = conv.lastMessage?.content || 'Sent a message';
+                            const msg = conv.lastMessage;
+                            if (msg) {
+                                if (msg.attachments && msg.attachments.length > 0) {
+                                    const type = msg.attachments[0].type;
+                                    if (type === 'image') contentPreview = '📷 Sent a photo';
+                                    else if (type === 'video') contentPreview = '🎥 Sent a video';
+                                    else if (type === 'audio') contentPreview = '🎤 Sent a voice message';
+                                    else contentPreview = '📎 Sent a file';
+                                } else if (msg.type === 'image') contentPreview = '📷 Sent a photo';
+                                else if (msg.type === 'audio') contentPreview = '🎤 Sent a voice message';
+                                else if (msg.type === 'video') contentPreview = '🎥 Sent a video';
+                                else if (msg.type === 'file') contentPreview = '📎 Sent a file';
+                                else contentPreview = msg.content;
+                            } else {
+                                contentPreview = <span className="fst-italic">Start chatting...</span>;
+                            }
 
                             return (
                                 <li

@@ -26,7 +26,8 @@ const messageSchema = new mongoose.Schema({
         url: String,
         type: { type: String }, // Explicit definition to avoid Mongoose casting error
         name: String,
-        size: Number
+        size: Number,
+        duration: Number // For audio/video duration in seconds
     }],
     readBy: [{
         type: mongoose.Schema.Types.ObjectId,
