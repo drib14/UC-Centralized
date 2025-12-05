@@ -23,6 +23,39 @@ router.get('/search', verifyToken, async (req, res) => {
     }
 });
 
+// BLOCK USER
+router.put('/:id/block', verifyToken, async (req, res) => {
+    try {
+        const userToBlock = req.params.id;
+        if (userToBlock === req.user.id) return res.status(400).json("You cannot block yourself");
+
+        await User.findByIdAndUpdate(req.user.id, { $addToSet: { blockedUsers: userToBlock } });
+        res.status(200).json("User blocked");
+    } catch (err) {
+        res.status(500).json(err);
+    }
+});
+
+// UNBLOCK USER
+router.put('/:id/unblock', verifyToken, async (req, res) => {
+    try {
+        await User.findByIdAndUpdate(req.user.id, { $pull: { blockedUsers: req.params.id } });
+        res.status(200).json("User unblocked");
+    } catch (err) {
+        res.status(500).json(err);
+    }
+});
+
+// GET ME (Extended to include blocked list)
+router.get('/me/details', verifyToken, async (req, res) => {
+    try {
+        const user = await User.findById(req.user.id).select('blockedUsers');
+        res.status(200).json(user);
+    } catch (err) {
+         res.status(500).json(err);
+    }
+});
+
 // GET ALL (Admins Only)
 router.get('/', verifyAdmin, async (req, res) => {
     try {

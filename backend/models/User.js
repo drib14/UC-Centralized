@@ -77,7 +77,11 @@ const userSchema = new mongoose.Schema({
     notificationPreferences: {
         email: { type: Boolean, default: true },
         app: { type: Boolean, default: true }
-    }
+    },
+    blockedUsers: [{
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User'
+    }]
 }, { timestamps: true });
 
 module.exports = mongoose.model('User', userSchema);

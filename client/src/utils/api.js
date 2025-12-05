@@ -192,6 +192,19 @@ class API {
     static markAllNotificationsRead() {
         return this.request('/notifications/read-all', 'PUT');
     }
+
+    // User Actions
+    static blockUser(id) {
+        return this.request(`/users/${id}/block`, 'PUT');
+    }
+
+    static unblockUser(id) {
+        return this.request(`/users/${id}/unblock`, 'PUT');
+    }
+
+    static getMyDetails() {
+        return this.request('/users/me/details');
+    }
 }
 
 export default API;

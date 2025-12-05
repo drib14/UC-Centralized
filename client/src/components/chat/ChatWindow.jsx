@@ -20,8 +20,10 @@ const ChatWindow = ({ conversation, currentUser, socket, onBack, onMessageSent }
     const [isTyping, setIsTyping] = useState(false); // If other user is typing
     const [typingTimeout, setTypingTimeout] = useState(null); // For local debouncing
     const [showOptions, setShowOptions] = useState(false); // Dropdown state
+    const [blocked, setBlocked] = useState(false); // If current user blocked other
+    const [showProfile, setShowProfile] = useState(false); // Profile modal
 
-    const { onlineUsers } = useSocket();
+    const { onlineUsers, startCall } = useSocket();
 
     const messagesEndRef = useRef(null);
     const fileInputRef = useRef(null);
@@ -34,6 +36,7 @@ const ChatWindow = ({ conversation, currentUser, socket, onBack, onMessageSent }
 
     useEffect(() => {
         loadMessages();
+        checkBlockStatus();
         // Mark as read immediately on load
         API.markMessagesRead(conversation._id).catch(console.error);
         if (socket) {
@@ -44,6 +47,17 @@ const ChatWindow = ({ conversation, currentUser, socket, onBack, onMessageSent }
             });
         }
     }, [conversation._id]);
+
+    const checkBlockStatus = async () => {
+        try {
+            const me = await API.getMyDetails();
+            if (me.blockedUsers && me.blockedUsers.includes(otherUser._id)) {
+                setBlocked(true);
+            } else {
+                setBlocked(false);
+            }
+        } catch (err) { console.error(err); }
+    };
 
     useEffect(() => {
         if (!socket) return;
@@ -162,6 +176,24 @@ const ChatWindow = ({ conversation, currentUser, socket, onBack, onMessageSent }
             scrollToBottom();
         } catch (err) {
             console.error("Failed to send", err);
+            toast.error(err.message || "Failed to send message");
+        }
+    };
+
+    const handleBlock = async () => {
+        try {
+            if (blocked) {
+                await API.unblockUser(otherUser._id);
+                setBlocked(false);
+                toast.success("User unblocked");
+            } else {
+                await API.blockUser(otherUser._id);
+                setBlocked(true);
+                toast.success("User blocked");
+            }
+            setShowOptions(false);
+        } catch (err) {
+            toast.error("Action failed");
         }
     };
 
@@ -333,10 +365,10 @@ const ChatWindow = ({ conversation, currentUser, socket, onBack, onMessageSent }
 
                 {/* Actions */}
                 <div className="d-flex align-items-center gap-3">
-                    <button className="btn btn-light text-primary rounded-circle" title="Voice Call" onClick={() => toast.info("Voice Call feature coming soon!")}>
+                    <button className="btn btn-light text-primary rounded-circle" title="Voice Call" onClick={() => startCall(otherUser._id, `${otherUser.firstName} ${otherUser.lastName}`, 'audio')}>
                         <FaPhone />
                     </button>
-                    <button className="btn btn-light text-primary rounded-circle" title="Video Call" onClick={() => toast.info("Video Call feature coming soon!")}>
+                    <button className="btn btn-light text-primary rounded-circle" title="Video Call" onClick={() => startCall(otherUser._id, `${otherUser.firstName} ${otherUser.lastName}`, 'video')}>
                         <FaVideo />
                     </button>
                     <div className="dropdown">
@@ -344,12 +376,43 @@ const ChatWindow = ({ conversation, currentUser, socket, onBack, onMessageSent }
                             <FaEllipsisVertical />
                         </button>
                         <ul className={`dropdown-menu dropdown-menu-end ${showOptions ? 'show' : ''}`}>
-                            <li><button className="dropdown-item" onClick={() => toast.info("Profile view coming soon")}><FaCircleInfo className="me-2" /> View Profile</button></li>
-                            <li><button className="dropdown-item text-danger" onClick={() => toast.error("Block feature coming soon")}><FaBan className="me-2" /> Block User</button></li>
+                            <li><button className="dropdown-item" onClick={() => { setShowProfile(true); setShowOptions(false); }}><FaCircleInfo className="me-2" /> View Profile</button></li>
+                            <li><button className={`dropdown-item ${blocked ? 'text-success' : 'text-danger'}`} onClick={handleBlock}>
+                                <FaBan className="me-2" /> {blocked ? "Unblock User" : "Block User"}
+                            </button></li>
                         </ul>
                     </div>
                 </div>
             </div>
+
+            {/* Profile Modal */}
+            {showProfile && (
+                <div className="modal fade show d-block" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>
+                    <div className="modal-dialog modal-dialog-centered">
+                        <div className="modal-content">
+                            <div className="modal-header border-0 pb-0">
+                                <button className="btn-close" onClick={() => setShowProfile(false)}></button>
+                            </div>
+                            <div className="modal-body text-center pb-4">
+                                {renderAvatar(otherUser, 80)}
+                                <h4 className="mt-3 mb-1">{otherUser.firstName} {otherUser.lastName}</h4>
+                                <p className="text-muted mb-3">{otherUser.role} • {otherUser.studentId}</p>
+
+                                <div className="d-flex justify-content-center gap-3 text-start d-inline-block">
+                                    <div className="bg-light p-3 rounded text-center" style={{minWidth: '100px'}}>
+                                        <small className="text-muted d-block">Department</small>
+                                        <strong>{otherUser.department || 'N/A'}</strong>
+                                    </div>
+                                    <div className="bg-light p-3 rounded text-center" style={{minWidth: '100px'}}>
+                                        <small className="text-muted d-block">Program</small>
+                                        <strong>{otherUser.program || 'N/A'}</strong>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             {/* Messages */}
             <div className="flex-grow-1 p-3 overflow-auto" style={{backgroundColor: '#f8f9fa'}}>

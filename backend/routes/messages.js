@@ -1,6 +1,7 @@
 const router = require('express').Router();
 const Message = require('../models/Message');
 const Conversation = require('../models/Conversation');
+const User = require('../models/User');
 const { verifyToken } = require('../middleware/auth');
 const parser = require('../config/cloudinary');
 
@@ -94,6 +95,22 @@ router.put('/:conversationId/read', verifyToken, async (req, res) => {
 router.post('/', verifyToken, async (req, res) => {
     try {
         const { conversationId, content, type, fileUrl } = req.body;
+
+        // Block check
+        const conversation = await Conversation.findById(conversationId);
+        if (!conversation) return res.status(404).json("Conversation not found");
+
+        const receiverId = conversation.participants.find(p => p.toString() !== req.user.id);
+        if (receiverId) {
+             const receiver = await User.findById(receiverId);
+             if (receiver.blockedUsers.includes(req.user.id)) {
+                 return res.status(403).json({ message: "You are blocked by this user" });
+             }
+             const sender = await User.findById(req.user.id);
+             if (sender.blockedUsers.includes(receiverId)) {
+                 return res.status(403).json({ message: "You have blocked this user. Unblock to send messages." });
+             }
+        }
 
         const newMessage = new Message({
             conversationId,

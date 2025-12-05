@@ -36,8 +36,17 @@ app.set('io', io);
 // We will simply broadcast presence updates.
 // Ideally use Redis or DB, but for this scope, let's update DB on connect/disconnect.
 
-// Socket.IO Logic
+// Ensure DB is connected for Socket Events (since they are outside the HTTP middleware)
 io.on("connection", async (socket) => {
+    // Ensure DB connection if not already established
+    if (mongoose.connection.readyState < 1) {
+        try {
+            await mongoose.connect(process.env.MONGO_URI, { serverSelectionTimeoutMS: 5000 });
+            console.log("MongoDB Connected via Socket");
+        } catch (err) {
+            console.error("MongoDB Socket Connection Error:", err);
+        }
+    }
 
     socket.on("join_room", async (userId) => {
         socket.join(userId);
@@ -46,14 +55,18 @@ io.on("connection", async (socket) => {
         try {
             await User.findByIdAndUpdate(userId, { isOnline: true, lastSeen: Date.now() });
             io.emit("user_status_change", { userId, isOnline: true });
-        } catch (e) { console.error(e); }
+        } catch (e) {
+            console.error("Socket Update Status Error:", e);
+        }
 
         // Handle Disconnect (captured within the closure to know userId)
         socket.on("disconnect", async () => {
              try {
                 await User.findByIdAndUpdate(userId, { isOnline: false, lastSeen: Date.now() });
                 io.emit("user_status_change", { userId, isOnline: false, lastSeen: Date.now() });
-            } catch (e) { console.error(e); }
+            } catch (e) {
+                // Ignore errors on disconnect if DB is gone
+            }
         });
     });
 
@@ -76,6 +89,34 @@ io.on("connection", async (socket) => {
             conversationId: data.conversationId,
             readBy: data.readerId
         });
+    });
+
+    // Call Signaling
+    socket.on("call_user", (data) => {
+        // data: { userToCall, signalData, from, name, type }
+        socket.to(data.userToCall).emit("incoming_call", {
+            signal: data.signalData,
+            from: data.from,
+            name: data.name,
+            type: data.type
+        });
+    });
+
+    socket.on("answer_call", (data) => {
+        // data: { to, signal }
+        socket.to(data.to).emit("call_accepted", data.signal);
+    });
+
+    socket.on("reject_call", (data) => {
+        socket.to(data.to).emit("call_rejected");
+    });
+
+    socket.on("end_call", (data) => {
+        socket.to(data.to).emit("call_ended");
+    });
+
+    socket.on("call_busy", (data) => {
+        socket.to(data.to).emit("call_busy");
     });
 });
 
