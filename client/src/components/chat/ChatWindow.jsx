@@ -496,7 +496,7 @@ const ChatWindow = ({ conversation, currentUser, socket, onBack, onMessageSent }
                         onClick={() => setLightboxMedia({ url, type: 'video' })}
                     >
                         <FaPlay className="text-white fs-1 opacity-75 position-absolute" style={{zIndex: 2}} />
-                        <video src={url} className="w-100 h-100 object-fit-cover rounded" style={{opacity: 0.8}} />
+                        <video src={url} className="w-100 h-100 object-fit-cover rounded" style={{opacity: 0.8, pointerEvents: 'none'}} />
                     </div>
                  );
              } else if (type === 'audio') {
@@ -515,7 +515,7 @@ const ChatWindow = ({ conversation, currentUser, socket, onBack, onMessageSent }
                     </div>
                 );
              } else {
-                 // File Card Template - Clickable Card
+                 // File Card Template - Dark Theme Messenger Style
                  return (
                      <a
                         key={index}
@@ -524,18 +524,15 @@ const ChatWindow = ({ conversation, currentUser, socket, onBack, onMessageSent }
                         target="_blank"
                         rel="noreferrer"
                         className="text-decoration-none"
-                        style={{color: '#000'}}
+                        style={{color: 'inherit'}}
                      >
-                        <div className="d-flex align-items-center gap-3 p-3 rounded border file-card-hover" style={{minWidth: '200px', cursor: 'pointer', backgroundColor: '#fff'}}>
-                             <div className="bg-secondary bg-opacity-10 p-2 rounded text-primary">
-                                 <FaFile size={24} />
+                        <div className="d-flex align-items-center gap-3 p-3 rounded" style={{minWidth: '220px', cursor: 'pointer', backgroundColor: '#333', color: '#fff'}}>
+                             <div className="d-flex align-items-center justify-content-center rounded-circle" style={{width: '40px', height: '40px', backgroundColor: 'rgba(255,255,255,0.1)'}}>
+                                 <FaFile size={20} className="text-white" />
                              </div>
                              <div className="d-flex flex-column flex-grow-1 overflow-hidden">
-                                 <strong className="text-truncate text-dark" style={{maxWidth: '150px'}} title={name}>{name}</strong>
-                                 {size && <small className="text-muted">{(size / 1024 / 1024).toFixed(2) + ' MB'}</small>}
-                             </div>
-                             <div className="btn btn-sm btn-light border rounded-circle">
-                                 <FaArrowLeft className="text-secondary" style={{transform: 'rotate(-90deg)'}} />
+                                 <strong className="text-truncate d-block" style={{maxWidth: '180px', fontSize: '0.9rem'}} title={name}>{name}</strong>
+                                 <small className="text-white-50" style={{fontSize: '0.75rem'}}>{size ? (size / 1024).toFixed(2) + ' KB' : 'Download'}</small>
                              </div>
                         </div>
                      </a>
