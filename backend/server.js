@@ -37,16 +37,14 @@ app.set('io', io);
 // We will simply broadcast presence updates.
 // Ideally use Redis or DB, but for this scope, let's update DB on connect/disconnect.
 
-// Ensure DB is connected for Socket Events (since they are outside the HTTP middleware)
+// Ensure DB is connected for Socket Events
 io.on("connection", async (socket) => {
-    // Ensure DB connection if not already established
-    if (mongoose.connection.readyState < 1) {
-        try {
-            await mongoose.connect(process.env.MONGO_URI, { serverSelectionTimeoutMS: 5000 });
-            console.log("MongoDB Connected via Socket");
-        } catch (err) {
-            console.error("MongoDB Socket Connection Error:", err);
-        }
+    // We only attempt to connect if completely disconnected.
+    // We swallow the error to prevent crashing the socket process, trusting the main app to handle retries or logging.
+    if (mongoose.connection.readyState === 0) {
+        mongoose.connect(process.env.MONGO_URI, { serverSelectionTimeoutMS: 5000 })
+            .then(() => console.log("MongoDB Connected via Socket"))
+            .catch(err => console.error("MongoDB Socket Connection Error (Non-fatal):", err.message));
     }
 
     socket.on("join_room", async (userId) => {

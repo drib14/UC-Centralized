@@ -34,6 +34,7 @@ const ChatWindow = ({ conversation, currentUser, socket, onBack, onMessageSent }
     const [showForwardModal, setShowForwardModal] = useState(false);
     const [deleteCandidateMsg, setDeleteCandidateMsg] = useState(null); // Msg pending deletion
     const [showDeleteModal, setShowDeleteModal] = useState(false);
+    const [lightboxMedia, setLightboxMedia] = useState(null); // { url, type }
 
     const { onlineUsers } = useSocket();
 
@@ -386,7 +387,30 @@ const ChatWindow = ({ conversation, currentUser, socket, onBack, onMessageSent }
         }
 
         if (msg.type === 'image') {
-            return <img src={msg.fileUrl} alt="sent" className="img-fluid rounded" style={{maxHeight: '200px'}} />;
+            return (
+                <img
+                    src={msg.fileUrl}
+                    alt="sent"
+                    className="img-fluid rounded"
+                    style={{maxHeight: '200px', cursor: 'pointer'}}
+                    onClick={() => setLightboxMedia({ url: msg.fileUrl, type: 'image' })}
+                />
+            );
+        } else if (msg.type === 'video_call' && !msg.content.includes('ended')) {
+             // Treat generic video uploads (which currently might use this type or need a new one) as video
+             // Note: My upload logic set 'video_call' for video files in previous step as a hack.
+             // Better to assume if fileUrl exists and type is 'video_call' (or just check extension/context), it's a video file.
+             // Actually, let's just rely on the fact that I set type='video_call' for video uploads previously.
+             return (
+                <div
+                    className="position-relative d-flex align-items-center justify-content-center bg-dark rounded"
+                    style={{width: '200px', height: '150px', cursor: 'pointer'}}
+                    onClick={() => setLightboxMedia({ url: msg.fileUrl, type: 'video' })}
+                >
+                    <FaPlay className="text-white fs-1 opacity-75" />
+                    <video src={msg.fileUrl} className="w-100 h-100 object-fit-cover rounded opacity-50" />
+                </div>
+             );
         } else if (msg.type === 'audio') {
             const isPlaying = playingAudio === msg.fileUrl;
             return (
@@ -541,6 +565,25 @@ const ChatWindow = ({ conversation, currentUser, socket, onBack, onMessageSent }
                 </div>
             )}
 
+            {/* Lightbox Modal */}
+            {lightboxMedia && (
+                <div className="modal fade show d-block" style={{ backgroundColor: 'rgba(0,0,0,0.9)', zIndex: 10500 }}>
+                    <div className="position-absolute top-0 end-0 p-4">
+                        <button className="btn btn-close btn-close-white" onClick={() => setLightboxMedia(null)}></button>
+                    </div>
+                    <div className="d-flex flex-column align-items-center justify-content-center w-100 h-100">
+                        {lightboxMedia.type === 'image' ? (
+                            <img src={lightboxMedia.url} alt="Full view" style={{maxWidth: '90%', maxHeight: '80vh', objectFit: 'contain'}} />
+                        ) : (
+                            <video src={lightboxMedia.url} controls autoPlay style={{maxWidth: '90%', maxHeight: '80vh'}} />
+                        )}
+                        <a href={lightboxMedia.url} download target="_blank" rel="noreferrer" className="btn btn-light mt-3 rounded-pill px-4">
+                            Download
+                        </a>
+                    </div>
+                </div>
+            )}
+
             {/* Forward Modal */}
             {showForwardModal && (
                 <div className="modal fade show d-block" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>
@@ -598,6 +641,13 @@ const ChatWindow = ({ conversation, currentUser, socket, onBack, onMessageSent }
                                     className={`d-flex gap-2 message-container ${isMe ? 'flex-row-reverse' : ''}`}
                                     onMouseEnter={() => setHoveredMsgId(msg._id)}
                                     onMouseLeave={() => setHoveredMsgId(null)}
+                                    onClick={() => {
+                                        // On mobile/touch, click toggles menu if it's not already hovered/active
+                                        // We check window width to apply this logic primarily for mobile
+                                        if (window.innerWidth < 768) {
+                                            setHoveredMsgId(prev => prev === msg._id ? null : msg._id);
+                                        }
+                                    }}
                                 >
                                     {renderAvatar(isMe ? currentUser : otherUser, 35)}
 
@@ -607,18 +657,25 @@ const ChatWindow = ({ conversation, currentUser, socket, onBack, onMessageSent }
                                         </small>
 
                                         <div className="d-flex align-items-center">
-                                            {/* Hover/Click Options Menu (Responsive: always show if hovered OR touch) */}
-                                            {/* On Mobile: We can't hover. Show 3 dots always or on click? User said "implement small screen function". */}
-                                            {/* We'll use a CSS class to control visibility on hover for desktop, and maybe a click trigger? */}
-                                            {/* Simplest: Always allow clicking the bubble to toggle menu, or keep menu always visible on mobile? */}
-                                            {/* Let's make the menu button visible if hovered OR if width < 768 (mobile) */}
+                                            {/* Options Menu: Visible on Hover (Desktop) or Click (Mobile toggle) */}
+                                            {/* We use a CSS class approach or simple JS state toggle. */}
+                                            {/* User requested: "don't display automatically the 3dots option" on small screen. */}
+                                            {/* So we only show if hoveredMsgId === msg._id. On mobile, tap toggles this ID. */}
 
-                                            {(!msg.isDeletedForEveryone && (hoveredMsgId === msg._id || window.innerWidth < 768)) && (
+                                            {(!msg.isDeletedForEveryone && hoveredMsgId === msg._id) && (
                                                 <div className={`dropdown ${isMe ? 'me-2' : 'ms-2'}`}>
                                                     <button className="btn btn-sm btn-light rounded-circle shadow-sm" data-bs-toggle="dropdown">
                                                         <FaEllipsis />
                                                     </button>
                                                     <ul className="dropdown-menu shadow-sm">
+                                                        {msg.type === 'text' && (
+                                                            <li><button className="dropdown-item" onClick={() => {
+                                                                navigator.clipboard.writeText(msg.content);
+                                                                toast.success("Copied to clipboard");
+                                                            }}>
+                                                                Copy
+                                                            </button></li>
+                                                        )}
                                                         {/* Reaction Menu Item */}
                                                         <li><div className="dropdown-item d-flex gap-2">
                                                             {['👍', '❤️', '😂', '😮', '😢', '😠'].map(emoji => (
