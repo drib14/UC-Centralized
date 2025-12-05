@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { FaSearch, FaEllipsisVertical, FaTrash, FaCheck, FaVolumeXmark, FaVolumeHigh } from 'react-icons/fa6';
+import { FaSearch } from 'react-icons/fa';
+import { FaEllipsisVertical, FaTrash, FaCheck, FaVolumeXmark, FaVolumeHigh } from 'react-icons/fa6';
 import API from '../../utils/api';
 import { useSocket } from '../../context/SocketContext';
 import { toast } from 'react-toastify';
