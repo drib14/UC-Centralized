@@ -17,6 +17,17 @@ const CallModal = () => {
     const localVideoRef = React.useRef(null);
     const remoteVideoRef = React.useRef(null);
 
+    // Refs for stable access in socket listeners
+    const callStatusRef = React.useRef(callStatus);
+    const callRef = React.useRef(call);
+    const callDataRef = React.useRef(callData);
+
+    useEffect(() => {
+        callStatusRef.current = callStatus;
+        callRef.current = call;
+        callDataRef.current = callData;
+    }, [callStatus, call, callData]);
+
     const isVideo = call?.type === 'video' || callData?.type === 'video';
 
     // Cleanup tracks on unmount or idle
@@ -37,57 +48,66 @@ const CallModal = () => {
     useEffect(() => {
         if (!socket) return;
 
-        socket.on('incoming_call', (data) => {
-            if (callStatus === 'idle') {
+        const handleIncoming = (data) => {
+            if (callStatusRef.current === 'idle') {
                 setCall({ ...data, isIncoming: true });
                 setCallStatus('incoming');
             } else {
                 socket.emit('call_busy', { to: data.from });
             }
-        });
+        };
 
-        socket.on('call_accepted', (signal) => {
+        const handleAccepted = (signal) => {
             setCallStatus('connected');
             setStartTime(Date.now());
-            // Set remote description
             if (peerConnectionRef.current) {
                 peerConnectionRef.current.setRemoteDescription(new RTCSessionDescription(signal));
             }
-        });
+        };
 
-        socket.on('call_rejected', () => {
+        const handleRejected = () => {
             toast.info("Call rejected");
-            logCallMessage("Missed Call");
+            const target = callRef.current?.from || callDataRef.current?.receiverId;
+            logCallMessage("Missed Call", target);
             endCallCleanup();
-        });
+        };
 
-        socket.on('call_ended', () => {
+        const handleEnded = () => {
             toast.info("Call ended");
-            logCallDuration();
+            const target = callRef.current?.from || callDataRef.current?.receiverId;
+            // Use current start time for duration logic
+            logCallDuration(target);
             endCallCleanup();
-        });
+        };
 
-        socket.on('call_busy', () => {
+        const handleBusy = () => {
             toast.warning("User is busy");
             endCallCleanup();
-        });
+        };
 
-        socket.on('ice_candidate', (candidate) => {
+        const handleIce = (candidate) => {
             if (peerConnectionRef.current) {
                 peerConnectionRef.current.addIceCandidate(new RTCIceCandidate(candidate))
                     .catch(e => console.error("Error adding ice candidate", e));
             }
-        });
+        };
+
+        socket.on('incoming_call', handleIncoming);
+        socket.on('call_accepted', handleAccepted);
+        socket.on('call_rejected', handleRejected);
+        socket.on('call_ended', handleEnded);
+        socket.on('call_busy', handleBusy);
+        socket.on('ice_candidate', handleIce);
 
         return () => {
-            socket.off('incoming_call');
-            socket.off('call_accepted');
-            socket.off('call_rejected');
-            socket.off('call_ended');
-            socket.off('call_busy');
-            socket.off('ice_candidate');
+            socket.off('incoming_call', handleIncoming);
+            socket.off('call_accepted', handleAccepted);
+            socket.off('call_rejected', handleRejected);
+            socket.off('call_ended', handleEnded);
+            socket.off('call_busy', handleBusy);
+            socket.off('ice_candidate', handleIce);
         };
-    }, [socket, callStatus, call, callData]);
+    }, [socket]); // Only depend on socket
 
     useEffect(() => {
         if (callData && callStatus === 'idle') {
@@ -146,7 +166,6 @@ const CallModal = () => {
                 .then(offer => pc.setLocalDescription(offer))
                 .then(() => {
                     const target = callData?.receiverId;
-                    // Explicitly serialize the description
                     const signal = {
                         type: pc.localDescription.type,
                         sdp: pc.localDescription.sdp
@@ -225,29 +244,29 @@ const CallModal = () => {
 
     const rejectCall = () => {
         socket.emit('reject_call', { to: call.from });
-        logCallMessage("Missed Call");
+        const target = call?.from || callData?.receiverId;
+        logCallMessage("Missed Call", target);
         endCallCleanup();
     };
 
     const endCall = () => {
         const target = call?.from || callData?.receiverId;
         if (target) socket.emit('end_call', { to: target });
-        logCallDuration();
+        logCallDuration(target);
         endCallCleanup();
     };
 
-    const logCallDuration = () => {
+    const logCallDuration = (targetId) => {
         if (!startTime) return;
         const duration = Math.floor((Date.now() - startTime) / 1000);
         const mins = Math.floor(duration / 60);
         const secs = duration % 60;
         const timeStr = `${mins}:${secs < 10 ? '0' : ''}${secs}`;
         const typeStr = isVideo ? "Video Call" : "Voice Call";
-        logCallMessage(`${typeStr} ended · ${timeStr}`);
+        logCallMessage(`${typeStr} ended · ${timeStr}`, targetId);
     };
 
-    const logCallMessage = (content) => {
-        const targetId = call?.from || callData?.receiverId;
+    const logCallMessage = (content, targetId) => {
         if (!targetId) return;
 
         import('../../utils/api').then(({ default: API }) => {

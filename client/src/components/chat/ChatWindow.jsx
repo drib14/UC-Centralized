@@ -337,12 +337,25 @@ const ChatWindow = ({ conversation, currentUser, socket, onBack, onMessageSent }
             );
         } else if (msg.type === 'call' || msg.type === 'video_call') {
             const isVideo = msg.type === 'video_call';
+            const isMissed = msg.content.toLowerCase().includes('missed');
+
             return (
-                <div className="d-flex align-items-center justify-content-center gap-2 text-secondary py-1" style={{width: '100%', minWidth: '200px'}}>
-                    <div className="bg-light rounded-pill px-3 py-2 d-flex align-items-center gap-2 border">
-                        {isVideo ? <FaVideo /> : <FaPhone />}
-                        <span>{isVideo ? 'Video Call' : 'Voice Call'} ended</span>
+                <div className="d-flex flex-column align-items-center justify-content-center gap-1 py-1" style={{width: '100%', minWidth: '200px'}}>
+                    <div className="bg-light rounded-pill px-3 py-2 d-flex align-items-center gap-2 border shadow-sm">
+                        {isVideo ? <FaVideo className={isMissed ? 'text-danger' : 'text-secondary'} /> : <FaPhone className={isMissed ? 'text-danger' : 'text-secondary'} />}
+                        <span className={isMissed ? 'text-danger fw-bold' : 'text-dark'}>
+                            {msg.content}
+                        </span>
                     </div>
+                    {/* Call Back Button */}
+                    {msg.sender._id !== currentUser._id && (
+                        <button
+                            className="btn btn-sm btn-outline-primary rounded-pill px-3 mt-1"
+                            onClick={() => startCall(otherUser._id, `${otherUser.firstName} ${otherUser.lastName}`, isVideo ? 'video' : 'audio')}
+                        >
+                            Call Back
+                        </button>
+                    )}
                 </div>
             );
         }
