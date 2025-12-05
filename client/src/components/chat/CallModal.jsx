@@ -30,6 +30,12 @@ const CallModal = () => {
 
     const isVideo = call?.type === 'video' || callData?.type === 'video';
 
+    // Helper to capture active call type safely
+    const getCallType = () => {
+        if (call?.type === 'video' || callData?.type === 'video') return 'video';
+        return 'audio';
+    };
+
     // Cleanup tracks on unmount or idle
     useEffect(() => {
         if (callStatus === 'idle') {
@@ -68,15 +74,16 @@ const CallModal = () => {
         const handleRejected = () => {
             toast.info("Call rejected");
             const target = callRef.current?.from || callDataRef.current?.receiverId;
-            logCallMessage("Missed Call", target);
+            const type = callRef.current?.type || callDataRef.current?.type || 'audio';
+            logCallMessage("Missed Call", target, type);
             endCallCleanup();
         };
 
         const handleEnded = () => {
             toast.info("Call ended");
             const target = callRef.current?.from || callDataRef.current?.receiverId;
-            // Use current start time for duration logic
-            logCallDuration(target);
+            const type = callRef.current?.type || callDataRef.current?.type || 'audio';
+            logCallDuration(target, type);
             endCallCleanup();
         };
 
@@ -223,7 +230,13 @@ const CallModal = () => {
             };
 
             // Fix: Ensure we are passing a valid object to RTCSessionDescription
-            await pc.setRemoteDescription(new RTCSessionDescription(call.signal));
+            // Normalize signal to handle potential extra properties or non-plain objects
+            const remoteSignal = {
+                type: call.signal.type,
+                sdp: call.signal.sdp
+            };
+
+            await pc.setRemoteDescription(new RTCSessionDescription(remoteSignal));
 
             const answer = await pc.createAnswer();
             await pc.setLocalDescription(answer);
@@ -245,33 +258,36 @@ const CallModal = () => {
     const rejectCall = () => {
         socket.emit('reject_call', { to: call.from });
         const target = call?.from || callData?.receiverId;
-        logCallMessage("Missed Call", target);
+        const type = getCallType();
+        logCallMessage("Missed Call", target, type);
         endCallCleanup();
     };
 
     const endCall = () => {
         const target = call?.from || callData?.receiverId;
         if (target) socket.emit('end_call', { to: target });
-        logCallDuration(target);
+        const type = getCallType();
+        logCallDuration(target, type);
         endCallCleanup();
     };
 
-    const logCallDuration = (targetId) => {
+    const logCallDuration = (targetId, type) => {
         if (!startTime) return;
         const duration = Math.floor((Date.now() - startTime) / 1000);
         const mins = Math.floor(duration / 60);
         const secs = duration % 60;
         const timeStr = `${mins}:${secs < 10 ? '0' : ''}${secs}`;
-        const typeStr = isVideo ? "Video Call" : "Voice Call";
-        logCallMessage(`${typeStr} ended · ${timeStr}`, targetId);
+
+        const typeStr = type === 'video' ? "Video Call" : "Voice Call";
+        logCallMessage(`${typeStr} ended · ${timeStr}`, targetId, type);
     };
 
-    const logCallMessage = (content, targetId) => {
+    const logCallMessage = (content, targetId, type) => {
         if (!targetId) return;
 
         import('../../utils/api').then(({ default: API }) => {
             API.createConversation(targetId).then(conv => {
-                API.sendMessage(conv._id, content, isVideo ? 'video_call' : 'call').catch(console.error);
+                API.sendMessage(conv._id, content, type === 'video' ? 'video_call' : 'call').catch(console.error);
             }).catch(console.error);
         });
     };
