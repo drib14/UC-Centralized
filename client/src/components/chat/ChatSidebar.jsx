@@ -51,13 +51,12 @@ const ChatSidebar = ({ conversations, selectedId, onSelect, onNewChat, currentUs
         );
     };
 
-    // Calculate unread count (mock for now, ideally backend provides it per conv)
+    // Calculate unread count
     const getUnreadCount = (conv) => {
         if (!conv.lastMessage) return 0;
-        // Logic depends on 'readBy' array in lastMessage
         const isRead = conv.lastMessage.readBy && conv.lastMessage.readBy.includes(currentUser._id);
+        // Only count if NOT me and NOT read
         return (!isRead && conv.lastMessage.sender !== currentUser._id) ? 1 : 0;
-        // Note: Real count needs backend aggregation 'unreadCount' per conversation
     };
 
     const formatTime = (date) => {
@@ -75,6 +74,21 @@ const ChatSidebar = ({ conversations, selectedId, onSelect, onNewChat, currentUs
 
     return (
         <div className="d-flex flex-column h-100">
+            {/* Mobile: Top Horizontal User List (Stories Style) */}
+            <div className="d-md-none d-flex gap-3 p-3 overflow-auto border-bottom bg-white" style={{whiteSpace: 'nowrap'}}>
+                {conversations.map(conv => {
+                    const other = getOtherParticipant(conv);
+                    return (
+                        <div key={conv._id} className="text-center" style={{minWidth: '60px'}} onClick={() => onSelect(conv)}>
+                            {renderAvatar(other)}
+                            <small className="d-block text-truncate mt-1" style={{maxWidth: '60px', fontSize: '0.7rem'}}>
+                                {other.firstName}
+                            </small>
+                        </div>
+                    );
+                })}
+            </div>
+
             <div className="p-3 border-bottom">
                 <div className="input-group">
                     <span className="input-group-text bg-light border-end-0"><FaSearch className="text-muted" /></span>

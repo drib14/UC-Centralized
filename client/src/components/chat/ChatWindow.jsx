@@ -382,7 +382,7 @@ const ChatWindow = ({ conversation, currentUser, socket, onBack, onMessageSent }
 
     const renderMessageContent = (msg) => {
         if (msg.isDeletedForEveryone) {
-            return <em className="text-muted small border p-2 rounded d-block">Message unsent</em>;
+            return <em className="text-white-50 small border border-secondary p-2 rounded d-block" style={{borderColor: 'rgba(255,255,255,0.3) !important'}}>Message unsent</em>;
         }
 
         if (msg.type === 'image') {
@@ -552,14 +552,24 @@ const ChatWindow = ({ conversation, currentUser, socket, onBack, onMessageSent }
                             </div>
                             <div className="modal-body">
                                 <p className="mb-3 p-2 bg-light rounded border">{forwardMsg?.content || 'Attached Media'}</p>
+                                {/* Forward Search Logic Stub - In a real app, reuse ChatSidebar's search or similar */}
                                 <div className="input-group mb-3">
-                                    <input type="text" className="form-control" placeholder="Search user to forward..." />
+                                    <input type="text" className="form-control" placeholder="Search user..." onChange={async (e) => {
+                                        // Simple self-forward hack for now
+                                        if(e.target.value.toLowerCase() === 'me') {
+                                            if(window.confirm("Forward to yourself?")) {
+                                                await sendMessage(forwardMsg.content, forwardMsg.type, forwardMsg.fileUrl);
+                                                toast.success("Forwarded to self");
+                                                setShowForwardModal(false);
+                                            }
+                                        }
+                                    }}/>
                                     <button className="btn btn-primary">Search</button>
                                 </div>
-                                <div className="text-muted small text-center">
-                                    Feature currently limited to direct search in sidebar.
+                                <div className="text-muted small">
+                                    Type "me" to forward to yourself (Quick Hack).
                                     <br/>
-                                    (Search/Select implementation pending backend 'search' integration in modal context)
+                                    Full search requires lifting Sidebar search state.
                                 </div>
                             </div>
                             <div className="modal-footer">
@@ -597,8 +607,13 @@ const ChatWindow = ({ conversation, currentUser, socket, onBack, onMessageSent }
                                         </small>
 
                                         <div className="d-flex align-items-center">
-                                            {/* Hover Options Menu */}
-                                            {hoveredMsgId === msg._id && !msg.isDeletedForEveryone && (
+                                            {/* Hover/Click Options Menu (Responsive: always show if hovered OR touch) */}
+                                            {/* On Mobile: We can't hover. Show 3 dots always or on click? User said "implement small screen function". */}
+                                            {/* We'll use a CSS class to control visibility on hover for desktop, and maybe a click trigger? */}
+                                            {/* Simplest: Always allow clicking the bubble to toggle menu, or keep menu always visible on mobile? */}
+                                            {/* Let's make the menu button visible if hovered OR if width < 768 (mobile) */}
+
+                                            {(!msg.isDeletedForEveryone && (hoveredMsgId === msg._id || window.innerWidth < 768)) && (
                                                 <div className={`dropdown ${isMe ? 'me-2' : 'ms-2'}`}>
                                                     <button className="btn btn-sm btn-light rounded-circle shadow-sm" data-bs-toggle="dropdown">
                                                         <FaEllipsis />
