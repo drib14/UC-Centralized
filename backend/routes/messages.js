@@ -56,10 +56,29 @@ router.post('/conversations', verifyToken, async (req, res) => {
         const senderId = req.user.id;
         const receiverId = req.body.receiverId;
 
-        // Check if conversation already exists
-        let conversation = await Conversation.findOne({
-            participants: { $all: [senderId, receiverId] }
-        });
+        // Check if conversation already exists (Strict Matching)
+        let query;
+        if (senderId === receiverId) {
+            // Self-chat: Find conv with exactly 2 participants, both being senderId (or however it's stored, usually [id, id])
+            // Wait, previous fix used $size: 2, $not: { $elemMatch: { $ne: senderId } }
+            // Let's re-apply that fix carefully.
+            query = {
+                participants: {
+                    $size: 2,
+                    $not: { $elemMatch: { $ne: senderId } }
+                }
+            };
+        } else {
+            // Normal chat: Find conv with exactly 2 participants, containing both IDs
+            query = {
+                participants: {
+                    $all: [senderId, receiverId],
+                    $size: 2
+                }
+            };
+        }
+
+        let conversation = await Conversation.findOne(query);
 
         if (!conversation) {
             conversation = new Conversation({

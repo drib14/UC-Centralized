@@ -263,11 +263,18 @@ const ChatWindow = ({ conversation, currentUser, socket, onBack, onMessageSent }
 
     const handleForwardSend = async (targetUser) => {
         try {
-            // Get/Create conversation logic - similar to logCallMessage,
-            // but we need the conversationId.
-            // Ideally we assume conversation creation is idempotent.
             const conv = await API.createConversation(targetUser._id);
-            await API.sendMessage(conv._id, forwardMsg.content, forwardMsg.type, forwardMsg.fileUrl);
+            const sentMsg = await API.sendMessage(conv._id, forwardMsg.content, forwardMsg.type, forwardMsg.fileUrl);
+
+            // Notify UI & Socket
+            onMessageSent(sentMsg); // Update Sidebar logic (ChatLayout)
+            if (socket) {
+                socket.emit('send_message', {
+                    ...sentMsg,
+                    receiverId: targetUser._id
+                });
+            }
+
             toast.success("Forwarded successfully");
             setShowForwardModal(false);
             setForwardSearchTerm('');
