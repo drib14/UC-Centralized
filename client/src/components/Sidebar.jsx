@@ -56,20 +56,30 @@ const Sidebar = () => {
     const iconClass = collapsed ? '' : 'me-2';
 
     return (
-        <div className={`sidebar ${collapsed ? 'collapsed' : ''} ${mobileActive ? 'active' : ''}`} id="sidebar">
-            <div className="sidebar-toggle-btn" onClick={toggleSidebar} id="sidebar-toggle">
-                 {isMobile
-                    ? (mobileActive ? <FaChevronLeft /> : <FaChevronRight />)
-                    : (collapsed ? <FaChevronRight /> : <FaChevronLeft />)
-                 }
-            </div>
+        <>
+            {/* Mobile Overlay */}
+            {isMobile && mobileActive && (
+                <div
+                    className="position-fixed top-0 start-0 w-100 h-100 bg-dark opacity-50"
+                    style={{ zIndex: 999 }}
+                    onClick={handleMobileClick}
+                ></div>
+            )}
 
-            <div className="sidebar-header">
+            <div className={`sidebar ${collapsed ? 'collapsed' : ''} ${mobileActive ? 'active' : ''}`} id="sidebar">
+                <div className="sidebar-toggle-btn" onClick={toggleSidebar} id="sidebar-toggle">
+                    {isMobile
+                        ? (mobileActive ? <FaChevronLeft /> : <FaChevronRight />)
+                        : (collapsed ? <FaChevronRight /> : <FaChevronLeft />)
+                    }
+                </div>
+
+                <div className="sidebar-header">
                 <img src={logo} className="logo-img" alt="Logo" />
                 <span className="sidebar-brand-text">UC-Central</span>
             </div>
 
-            <nav className="nav flex-column mt-3">
+            <nav className="nav flex-column mt-3 sidebar-nav">
                 {isAdmin ? (
                     <>
                         <NavLink to="/admin/dashboard" className={navLinkClass} onClick={handleMobileClick}><FaTableColumns className={iconClass} /> <span>Dashboard</span></NavLink>
@@ -104,13 +114,14 @@ const Sidebar = () => {
                 )}
             </nav>
 
-            <div className="sidebar-footer">
-                <button className={`btn w-100 border-0 bg-transparent text-danger d-flex align-items-center ${collapsed ? 'justify-content-center' : 'px-3'}`} onClick={() => { handleMobileClick(); logout(); }} style={{ height: '50px' }}>
-                    <FaRightFromBracket className={collapsed ? 'fs-5' : 'me-2 fs-5'} />
-                    {!collapsed && <span>Logout</span>}
-                </button>
+                <div className="sidebar-footer">
+                    <button className={`btn w-100 border-0 bg-transparent text-danger d-flex align-items-center ${collapsed ? 'justify-content-center' : 'px-3'}`} onClick={() => { handleMobileClick(); logout(); }} style={{ height: '50px' }}>
+                        <FaRightFromBracket className={collapsed ? 'fs-5' : 'me-2 fs-5'} />
+                        {!collapsed && <span>Logout</span>}
+                    </button>
+                </div>
             </div>
-        </div>
+        </>
     );
 };
 

@@ -5,7 +5,7 @@ import API from '../../utils/api';
 import { useSocket } from '../../context/SocketContext';
 import { toast } from 'react-toastify';
 
-const ChatSidebar = ({ conversations, selectedId, onSelect, onNewChat, currentUser }) => {
+const ChatSidebar = ({ conversations, selectedId, onSelect, onNewChat, currentUser, onDeleteConversation }) => {
     const [searchTerm, setSearchTerm] = useState('');
     const [searchResults, setSearchResults] = useState([]);
     const [isSearching, setIsSearching] = useState(false);
@@ -85,7 +85,7 @@ const ChatSidebar = ({ conversations, selectedId, onSelect, onNewChat, currentUs
         try {
             await API.deleteConversation(deleteConvId);
             toast.success("Conversation deleted");
-            window.location.reload(); // Quick sync
+            if (onDeleteConversation) onDeleteConversation(deleteConvId);
         } catch (err) {
             toast.error("Failed to delete");
         } finally {
@@ -188,7 +188,7 @@ const ChatSidebar = ({ conversations, selectedId, onSelect, onNewChat, currentUs
                                     style={{cursor: 'pointer', borderLeft: isActive ? '4px solid #0d6efd' : '4px solid transparent'}}
                                 >
                                     {renderAvatar(other)}
-                                    <div className="flex-grow-1 overflow-hidden">
+                                    <div className="flex-grow-1 position-relative" style={{minWidth: 0}}>
                                         <div className="d-flex justify-content-between align-items-center">
                                             <div className="d-flex align-items-center gap-1">
                                                 <h6 className={`mb-0 text-truncate ${unread ? 'fw-bold' : ''}`}>{other.firstName} {other.lastName}</h6>
@@ -208,44 +208,46 @@ const ChatSidebar = ({ conversations, selectedId, onSelect, onNewChat, currentUs
                                                     <span className="fst-italic">Start chatting...</span>
                                                 )}
                                             </small>
-                                            <div className="d-flex align-items-center position-relative">
+                                            <div className="d-flex align-items-center">
                                                 {unread > 0 && <span className="badge bg-danger rounded-pill ms-2">{unread}</span>}
 
                                                 {/* 3-Dot Menu Trigger */}
-                                                <div className="action-btn-wrapper ms-2">
+                                                {/* Increased margin-left (ms-3) for distance */}
+                                                <div className="action-btn-wrapper ms-3 position-relative">
                                                     <button
-                                                        className="btn btn-sm btn-link text-secondary p-0"
+                                                        className="btn btn-sm btn-link text-secondary p-2 rounded-circle" // Increased padding for easier click
                                                         onClick={(e) => {
                                                             e.stopPropagation();
                                                             setActiveMenuId(activeMenuId === conv._id ? null : conv._id);
                                                         }}
+                                                        style={{zIndex: 10}} // Ensure it's above other elements
                                                     >
-                                                        <FaEllipsisVertical />
+                                                        <FaEllipsisVertical size={16} />
                                                     </button>
-                                                </div>
 
-                                                {/* Custom Dropdown Menu */}
-                                                {activeMenuId === conv._id && (
-                                                    <>
-                                                        <div
-                                                            className="position-fixed top-0 start-0 w-100 h-100"
-                                                            style={{ zIndex: 1040 }}
-                                                            onClick={(e) => { e.stopPropagation(); setActiveMenuId(null); }}
-                                                        ></div>
-                                                        <div className="position-absolute bg-white shadow-sm rounded border py-1" style={{ right: 0, top: '100%', zIndex: 1050, minWidth: '160px' }}>
-                                                            <button className="dropdown-item btn btn-sm text-start" onClick={(e) => handleAction(e, 'read', conv)}>
-                                                                <FaCheck className="me-2 text-primary" /> Mark as read
-                                                            </button>
-                                                            <button className="dropdown-item btn btn-sm text-start" onClick={(e) => handleAction(e, 'mute', conv)}>
-                                                                {isMuted ? <><FaVolumeHigh className="me-2"/> Unmute</> : <><FaVolumeXmark className="me-2"/> Mute</>}
-                                                            </button>
-                                                            <div className="dropdown-divider my-1"></div>
-                                                            <button className="dropdown-item btn btn-sm text-start text-danger" onClick={(e) => handleAction(e, 'delete', conv)}>
-                                                                <FaTrash className="me-2"/> Delete
-                                                            </button>
-                                                        </div>
-                                                    </>
-                                                )}
+                                                     {/* Custom Dropdown Menu */}
+                                                    {activeMenuId === conv._id && (
+                                                        <>
+                                                            <div
+                                                                className="position-fixed top-0 start-0 w-100 h-100"
+                                                                style={{ zIndex: 1040, cursor: 'default' }}
+                                                                onClick={(e) => { e.stopPropagation(); setActiveMenuId(null); }}
+                                                            ></div>
+                                                            <div className="position-absolute bg-white shadow-sm rounded border py-1" style={{ right: 0, top: '100%', zIndex: 1050, minWidth: '160px' }}>
+                                                                <button className="dropdown-item btn btn-sm text-start" onClick={(e) => handleAction(e, 'read', conv)}>
+                                                                    <FaCheck className="me-2 text-primary" /> Mark as read
+                                                                </button>
+                                                                <button className="dropdown-item btn btn-sm text-start" onClick={(e) => handleAction(e, 'mute', conv)}>
+                                                                    {isMuted ? <><FaVolumeHigh className="me-2"/> Unmute</> : <><FaVolumeXmark className="me-2"/> Mute</>}
+                                                                </button>
+                                                                <div className="dropdown-divider my-1"></div>
+                                                                <button className="dropdown-item btn btn-sm text-start text-danger" onClick={(e) => handleAction(e, 'delete', conv)}>
+                                                                    <FaTrash className="me-2"/> Delete
+                                                                </button>
+                                                            </div>
+                                                        </>
+                                                    )}
+                                                </div>
                                             </div>
                                         </div>
                                     </div>

@@ -322,16 +322,19 @@ footer {
     border-radius: 8px;
 }
 
-.sidebar .nav {
-    flex: 1;
+.sidebar .nav, .sidebar .sidebar-nav {
+    flex: 1 1 auto;
     overflow-y: auto;
     overflow-x: hidden;
+    display: flex;
+    flex-direction: column;
+    min-height: 0; /* Important for flex scrolling */
 }
 
-.sidebar .nav::-webkit-scrollbar {
+.sidebar .nav::-webkit-scrollbar, .sidebar .sidebar-nav::-webkit-scrollbar {
     width: 4px;
 }
-.sidebar .nav::-webkit-scrollbar-thumb {
+.sidebar .nav::-webkit-scrollbar-thumb, .sidebar .sidebar-nav::-webkit-scrollbar-thumb {
     background: rgba(255,255,255,0.2);
     border-radius: 4px;
 }

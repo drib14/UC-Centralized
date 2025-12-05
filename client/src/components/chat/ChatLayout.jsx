@@ -111,6 +111,14 @@ const ChatLayout = () => {
         }
     };
 
+    const handleDeleteConversation = (convId) => {
+        setConversations(prev => prev.filter(c => c._id !== convId));
+        if (selectedConversation && selectedConversation._id === convId) {
+            setSelectedConversation(null);
+            setMobileShowChat(false);
+        }
+    };
+
     return (
         <div className="d-flex w-100 shadow-sm rounded overflow-hidden" style={{ height: 'calc(100vh - 100px)', border: '1px solid #dee2e6' }}>
             {/* Sidebar */}
@@ -121,6 +129,7 @@ const ChatLayout = () => {
                     onSelect={handleSelectConversation}
                     onNewChat={handleStartNewChat}
                     currentUser={user}
+                    onDeleteConversation={handleDeleteConversation}
                 />
             </div>
 
@@ -133,6 +142,7 @@ const ChatLayout = () => {
                         socket={socket}
                         onBack={() => setMobileShowChat(false)}
                         onMessageSent={updateConversationList}
+                        onDeleteConversation={handleDeleteConversation}
                     />
                 ) : (
                     <div className="h-100 d-flex flex-column align-items-center justify-content-center text-muted">
