@@ -66,10 +66,19 @@ const StudentEvents = () => {
 
     const isEnded = (event) => {
          const now = new Date();
-         const endDate = event.endDate ? new Date(event.endDate) : new Date(event.date);
-         const endTimeStr = event.endTime || event.time || '23:59';
-         const [h, m] = endTimeStr.split(':');
-         endDate.setHours(h, m);
+         // Parse dates properly
+         const eventDate = new Date(event.date);
+         const endDate = event.endDate ? new Date(event.endDate) : eventDate;
+
+         // If no endDate provided, use date + time or end of day
+         const timeStr = event.endTime || (event.endDate ? '23:59' : (event.time || '23:59'));
+
+         if (timeStr) {
+             const [h, m] = timeStr.split(':');
+             endDate.setHours(parseInt(h), parseInt(m));
+         } else {
+             endDate.setHours(23, 59, 59);
+         }
 
          return now > endDate;
     };
@@ -160,15 +169,28 @@ const StudentEvents = () => {
                     <h5 className="mb-0">{currentDate.toLocaleString('default', { month: 'long', year: 'numeric' })}</h5>
                     <button className="btn btn-sm btn-outline-secondary" onClick={() => setCurrentDate(new Date(year, month + 1))}>Next</button>
                 </div>
-                <div className="d-grid" style={{ gridTemplateColumns: 'repeat(7, 1fr)', gap: '5px' }}>
+                {/* Responsive Grid: overflow-auto for small screens or stack days if needed */}
+                <div className="d-grid calendar-grid" style={{ gap: '5px' }}>
                     {['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].map(day => (
                         <div key={day} className="text-center fw-bold small">{day}</div>
                     ))}
                     {days}
                 </div>
+                <style jsx="true">{`
+                    .calendar-grid {
+                        grid-template-columns: repeat(7, 1fr);
+                    }
+                    @media (max-width: 576px) {
+                        .calendar-day {
+                            min-height: 50px !important;
+                            font-size: 0.8rem;
+                            padding: 2px !important;
+                        }
+                    }
+                `}</style>
 
                 {/* Calendar Legend */}
-                <div className="mt-3 d-flex gap-3 justify-content-center small">
+                <div className="mt-3 d-flex gap-3 justify-content-center small flex-wrap">
                     <div className="d-flex align-items-center">
                         <div className="bg-primary" style={{width: '15px', height: '15px', marginRight: '5px'}}></div>
                         <span>Today's Date</span>
@@ -222,7 +244,7 @@ const StudentEvents = () => {
                         const ended = isEnded(event);
 
                         return (
-                            <div className="col-md-4 mb-4" key={event._id}>
+                            <div className="col-lg-4 col-md-6 col-12 mb-4" key={event._id}>
                                 <div className="card h-100">
                                     <img src={event.image || 'https://via.placeholder.com/300'} className="card-img-top" alt={event.title} style={{ height: '200px', objectFit: 'cover' }} />
                                     <div className="card-body d-flex flex-column">

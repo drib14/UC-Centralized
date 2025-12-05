@@ -467,67 +467,86 @@ const ChatWindow = ({ conversation, currentUser, socket, onBack, onMessageSent }
             return <em className="text-white-50 small border border-secondary p-2 rounded d-block" style={{borderColor: 'rgba(255,255,255,0.3) !important'}}>Message unsent</em>;
         }
 
+        // Helper to render individual file/media
+        const renderSingleAttachment = (att, index) => {
+             // Handle raw cloudinary strings that might lack type info in legacy data
+             // If att is just a string (legacy URL)
+             const url = att.url || att;
+             const type = att.type || (url.match(/\.(jpeg|jpg|gif|png)$/i) ? 'image' : url.match(/\.(mp4|webm)$/i) ? 'video' : 'file');
+             const name = att.name || url.split('/').pop() || 'File';
+             const size = att.size;
+
+             if (type === 'image') {
+                 return (
+                     <img
+                         key={index}
+                         src={url}
+                         alt="sent"
+                         className="img-fluid rounded"
+                         style={{maxHeight: '200px', cursor: 'pointer', maxWidth: '100%'}}
+                         onClick={() => setLightboxMedia({ url, type: 'image' })}
+                     />
+                 );
+             } else if (type === 'video') {
+                 return (
+                    <div
+                        key={index}
+                        className="position-relative d-flex align-items-center justify-content-center bg-dark rounded"
+                        style={{width: '200px', height: '150px', cursor: 'pointer'}}
+                        onClick={() => setLightboxMedia({ url, type: 'video' })}
+                    >
+                        <FaPlay className="text-white fs-1 opacity-75" />
+                        <video src={url} className="w-100 h-100 object-fit-cover rounded opacity-50" />
+                    </div>
+                 );
+             } else if (type === 'audio') {
+                const isPlaying = playingAudio === url;
+                return (
+                    <div key={index} className="d-flex align-items-center gap-3 p-1" style={{minWidth: '200px'}}>
+                        <button
+                            className="btn btn-light rounded-circle shadow-sm d-flex align-items-center justify-content-center"
+                            style={{width: '40px', height: '40px', color: '#0084ff'}}
+                            onClick={() => toggleAudio(url)}
+                        >
+                            {isPlaying ? <FaPause /> : <FaPlay />}
+                        </button>
+                        <audio ref={el => audioRefs.current[url] = el} src={url} hidden />
+                        <span className="small text-muted">Voice Message</span>
+                    </div>
+                );
+             } else {
+                 // File Card Template - Clickable Card
+                 return (
+                     <a
+                        key={index}
+                        href={url}
+                        download
+                        target="_blank"
+                        rel="noreferrer"
+                        className="text-decoration-none text-dark"
+                     >
+                        <div className="d-flex align-items-center gap-3 p-3 bg-light rounded border file-card-hover" style={{minWidth: '200px', cursor: 'pointer'}}>
+                             <div className="bg-secondary bg-opacity-10 p-2 rounded text-primary">
+                                 <FaFile size={24} />
+                             </div>
+                             <div className="d-flex flex-column flex-grow-1 overflow-hidden">
+                                 <strong className="text-truncate" style={{maxWidth: '150px'}} title={name}>{name}</strong>
+                                 {size && <small className="text-muted">{(size / 1024 / 1024).toFixed(2) + ' MB'}</small>}
+                             </div>
+                             <div className="btn btn-sm btn-light border rounded-circle">
+                                 <FaArrowLeft className="text-secondary" style={{transform: 'rotate(-90deg)'}} />
+                             </div>
+                        </div>
+                     </a>
+                 );
+             }
+        };
+
         // Handle Attachments (New Way)
         if (msg.attachments && msg.attachments.length > 0) {
             return (
                 <div className="d-flex flex-column gap-2">
-                    {msg.attachments.map((att, i) => {
-                         if (att.type === 'image') {
-                             return (
-                                 <img
-                                     key={i}
-                                     src={att.url}
-                                     alt="sent"
-                                     className="img-fluid rounded"
-                                     style={{maxHeight: '200px', cursor: 'pointer', maxWidth: '100%'}}
-                                     onClick={() => setLightboxMedia({ url: att.url, type: 'image' })}
-                                 />
-                             );
-                         } else if (att.type === 'video') {
-                             return (
-                                <div
-                                    key={i}
-                                    className="position-relative d-flex align-items-center justify-content-center bg-dark rounded"
-                                    style={{width: '200px', height: '150px', cursor: 'pointer'}}
-                                    onClick={() => setLightboxMedia({ url: att.url, type: 'video' })}
-                                >
-                                    <FaPlay className="text-white fs-1 opacity-75" />
-                                    <video src={att.url} className="w-100 h-100 object-fit-cover rounded opacity-50" />
-                                </div>
-                             );
-                         } else if (att.type === 'audio') {
-                            const isPlaying = playingAudio === att.url;
-                            return (
-                                <div key={i} className="d-flex align-items-center gap-3 p-1" style={{minWidth: '200px'}}>
-                                    <button
-                                        className="btn btn-light rounded-circle shadow-sm d-flex align-items-center justify-content-center"
-                                        style={{width: '40px', height: '40px', color: '#0084ff'}}
-                                        onClick={() => toggleAudio(att.url)}
-                                    >
-                                        {isPlaying ? <FaPause /> : <FaPlay />}
-                                    </button>
-                                    <audio ref={el => audioRefs.current[att.url] = el} src={att.url} hidden />
-                                    <span className="small text-muted">Voice Message</span>
-                                </div>
-                            );
-                         } else {
-                             // File Card Template
-                             return (
-                                 <div key={i} className="d-flex align-items-center gap-3 p-3 bg-light rounded border" style={{minWidth: '200px'}}>
-                                     <div className="bg-secondary bg-opacity-10 p-2 rounded text-primary">
-                                         <FaFile size={24} />
-                                     </div>
-                                     <div className="d-flex flex-column flex-grow-1 overflow-hidden">
-                                         <strong className="text-truncate" style={{maxWidth: '150px'}} title={att.name}>{att.name || 'File'}</strong>
-                                         <small className="text-muted">{att.size ? (att.size / 1024 / 1024).toFixed(2) + ' MB' : 'Unknown size'}</small>
-                                     </div>
-                                     <a href={att.url} download target="_blank" rel="noreferrer" className="btn btn-sm btn-light border rounded-circle">
-                                         <FaArrowLeft className="text-secondary" style={{transform: 'rotate(-90deg)'}} />
-                                     </a>
-                                 </div>
-                             );
-                         }
-                    })}
+                    {msg.attachments.map((att, i) => renderSingleAttachment(att, i))}
                     {msg.content && <div style={{whiteSpace: 'pre-wrap'}}>{msg.content}</div>}
                     {msg.isEdited && <span className="text-muted small fst-italic ms-1">(edited)</span>}
                 </div>
@@ -535,17 +554,17 @@ const ChatWindow = ({ conversation, currentUser, socket, onBack, onMessageSent }
         }
 
         // Legacy Support (Old Way)
-        if (msg.type === 'image') {
-            return (
-                <img
-                    src={msg.fileUrl}
-                    alt="sent"
-                    className="img-fluid rounded"
-                    style={{maxHeight: '200px', cursor: 'pointer'}}
-                    onClick={() => setLightboxMedia({ url: msg.fileUrl, type: 'image' })}
-                />
-            );
-        } else if (msg.type === 'video_call' && !msg.content.includes('ended')) {
+        if (msg.type === 'file' || msg.type === 'image' || msg.type === 'video') {
+             // Treat as single attachment
+             const legacyAtt = {
+                 url: msg.fileUrl,
+                 type: msg.type,
+                 name: 'Attachment'
+             };
+             return renderSingleAttachment(legacyAtt, 0);
+        }
+
+        if (msg.type === 'video_call' && !msg.content.includes('ended')) {
              return (
                 <div
                     className="position-relative d-flex align-items-center justify-content-center bg-dark rounded"

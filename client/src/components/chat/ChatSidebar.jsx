@@ -212,15 +212,17 @@ const ChatSidebar = ({ conversations, selectedId, onSelect, onNewChat, currentUs
                                                 {unread > 0 && <span className="badge bg-danger rounded-pill ms-2">{unread}</span>}
 
                                                 {/* 3-Dot Menu Trigger */}
-                                                <div className="action-btn-wrapper ms-2">
+                                                {/* Increased margin-left (ms-3) for distance */}
+                                                <div className="action-btn-wrapper ms-3">
                                                     <button
-                                                        className="btn btn-sm btn-link text-secondary p-0"
+                                                        className="btn btn-sm btn-link text-secondary p-2 rounded-circle" // Increased padding for easier click
                                                         onClick={(e) => {
                                                             e.stopPropagation();
                                                             setActiveMenuId(activeMenuId === conv._id ? null : conv._id);
                                                         }}
+                                                        style={{zIndex: 2}} // Ensure it's above other elements
                                                     >
-                                                        <FaEllipsisVertical />
+                                                        <FaEllipsisVertical size={16} />
                                                     </button>
                                                 </div>
 
