@@ -36,6 +36,29 @@ router.get('/conversations', verifyToken, async (req, res) => {
     }
 });
 
+// Get total unread message count
+router.get('/unread-count', verifyToken, async (req, res) => {
+    try {
+        const conversations = await Conversation.find({
+            participants: { $in: [req.user.id] },
+            hiddenFor: { $ne: req.user.id }
+        }).populate('lastMessage');
+
+        let count = 0;
+        conversations.forEach(conv => {
+            if (conv.lastMessage &&
+                conv.lastMessage.sender.toString() !== req.user.id &&
+                !conv.lastMessage.readBy.includes(req.user.id)) {
+                count++;
+            }
+        });
+
+        res.status(200).json({ count });
+    } catch (err) {
+        res.status(500).json(err);
+    }
+});
+
 // Mute/Unmute Conversation
 router.put('/conversations/:id/mute', verifyToken, async (req, res) => {
     try {
@@ -298,7 +321,7 @@ router.post('/', verifyToken, async (req, res) => {
         await Conversation.findByIdAndUpdate(conversationId, {
             lastMessage: savedMessage._id,
             updatedAt: Date.now(),
-            $pull: { hiddenFor: receiverId } // Unhide for recipient if they deleted it
+            $pull: { hiddenFor: { $in: [receiverId, req.user.id] } } // Unhide for both sender and recipient
         });
 
         // Populate sender info for the socket event or frontend update

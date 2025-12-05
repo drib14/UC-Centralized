@@ -158,6 +158,10 @@ class API {
         return this.request('/messages/conversations');
     }
 
+    static getUnreadMessageCount() {
+        return this.request('/messages/unread-count');
+    }
+
     static deleteConversation(id) {
         return this.request(`/messages/conversations/${id}`, 'DELETE');
     }

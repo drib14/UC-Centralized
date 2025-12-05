@@ -2,6 +2,7 @@ import React, { createContext, useState, useEffect, useContext } from 'react';
 import io from 'socket.io-client';
 import { toast } from 'react-toastify';
 import { useAuth } from './AuthContext';
+import API from '../utils/api';
 
 const SocketContext = createContext();
 
@@ -19,6 +20,18 @@ export const SocketProvider = ({ children }) => {
 
     useEffect(() => {
         if (user) {
+            // Fetch initial counts
+            const fetchCounts = async () => {
+                try {
+                    // API.getNotifications() // If implemented
+                    const msgData = await API.getUnreadMessageCount();
+                    setUnreadMessageCount(msgData.count || 0);
+                } catch (e) {
+                    console.error("Failed to fetch unread counts", e);
+                }
+            };
+            fetchCounts();
+
             // Force connection URL if needed, but relative '/' usually works with proxy
             const newSocket = io(window.location.origin.replace('5173', '5000'), {
                 transports: ['websocket'], // Force websocket
