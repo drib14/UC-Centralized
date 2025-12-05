@@ -240,7 +240,7 @@ router.delete('/:id', verifyToken, async (req, res) => {
 // Send a message
 router.post('/', verifyToken, async (req, res) => {
     try {
-        const { conversationId, content, type, fileUrl } = req.body;
+        const { conversationId, content, type, fileUrl, attachments } = req.body;
 
         // Block check
         const conversation = await Conversation.findById(conversationId);
@@ -264,6 +264,7 @@ router.post('/', verifyToken, async (req, res) => {
             content: content || '',
             type: type || 'text',
             fileUrl: fileUrl || '',
+            attachments: attachments || [],
             readBy: [req.user.id]
         });
 

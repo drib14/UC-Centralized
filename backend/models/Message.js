@@ -22,6 +22,12 @@ const messageSchema = new mongoose.Schema({
     fileUrl: {
         type: String
     },
+    attachments: [{
+        url: String,
+        type: String, // 'image', 'video', 'file'
+        name: String,
+        size: Number
+    }],
     readBy: [{
         type: mongoose.Schema.Types.ObjectId,
         ref: 'User'
