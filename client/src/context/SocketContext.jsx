@@ -1,6 +1,6 @@
 import React, { createContext, useState, useEffect, useContext } from 'react';
 import io from 'socket.io-client';
-import { toast } from 'react-toastify'; // Import toast
+import { toast } from 'react-toastify';
 import { useAuth } from './AuthContext';
 
 const SocketContext = createContext();
@@ -57,16 +57,6 @@ export const SocketProvider = ({ children }) => {
 
             // Global Message Listener (for toasts when not in chat)
             newSocket.on('receive_message', (data) => {
-                // If we are not in the chat page (or generic handler), show toast
-                // Note: The ChatWindow will handle the specific conversation update.
-                // We can check URL or state, but for now let's just show a toast if the user
-                // isn't actively looking at this specific conversation?
-                // Hard to know exact "active conversation" here without more global state.
-                // Simple approach: Always toast, unless we filter it in the component.
-
-                // Let's rely on the fact that if a user is in the chat, they see it.
-                // If they are elsewhere, a toast is nice.
-                // Ideally, we'd check window.location.pathname.
                 if (!window.location.pathname.includes('/messages')) {
                     toast.info(`New message from ${data.sender.firstName}: ${data.content.substring(0, 20)}...`);
                 }
@@ -89,3 +79,5 @@ export const SocketProvider = ({ children }) => {
         </SocketContext.Provider>
     );
 };
+
+export default SocketProvider; // Default export for HMR compatibility

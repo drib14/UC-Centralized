@@ -1,7 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { FaArrowLeft, FaPaperPlane, FaImage, FaMicrophone, FaStop, FaPlay, FaPause, FaCheckDouble } from 'react-icons/fa';
+import {
+    FaArrowLeft, FaPaperPlane, FaImage, FaMicrophone, FaStop,
+    FaPlay, FaPause, FaCheckDouble, FaVideo, FaPhone, FaEllipsisVertical,
+    FaCircleInfo, FaBan
+} from 'react-icons/fa6';
 import API from '../../utils/api';
 import { useSocket } from '../../context/SocketContext';
+import { toast } from 'react-toastify';
 
 const ChatWindow = ({ conversation, currentUser, socket, onBack, onMessageSent }) => {
     const [messages, setMessages] = useState([]);
@@ -14,6 +19,7 @@ const ChatWindow = ({ conversation, currentUser, socket, onBack, onMessageSent }
     const [playingAudio, setPlayingAudio] = useState(null); // URL of currently playing audio
     const [isTyping, setIsTyping] = useState(false); // If other user is typing
     const [typingTimeout, setTypingTimeout] = useState(null); // For local debouncing
+    const [showOptions, setShowOptions] = useState(false); // Dropdown state
 
     const { onlineUsers } = useSocket();
 
@@ -187,8 +193,10 @@ const ChatWindow = ({ conversation, currentUser, socket, onBack, onMessageSent }
                 clearInterval(timerRef.current);
                 setRecordingTime(0);
 
+                // Create Blob with specific type
                 const blob = new Blob(chunks, { type: 'audio/webm' });
-                const file = new File([blob], "voice_msg.webm", { type: 'audio/webm' });
+                // Explicitly name the file with extension
+                const file = new File([blob], `voice_msg_${Date.now()}.webm`, { type: 'audio/webm' });
 
                 setUploading(true);
                 try {
@@ -302,22 +310,43 @@ const ChatWindow = ({ conversation, currentUser, socket, onBack, onMessageSent }
     return (
         <div className="d-flex flex-column h-100">
             {/* Header */}
-            <div className="p-3 border-bottom bg-white d-flex align-items-center shadow-sm" style={{height: '70px'}}>
-                <button className="btn btn-link text-dark d-md-none me-2" onClick={onBack}>
-                    <FaArrowLeft />
-                </button>
-                {renderAvatar(otherUser, 40)}
-                <div className="ms-3">
-                    <h6 className="mb-0">{otherUser.firstName} {otherUser.lastName}</h6>
-                    <div className="d-flex align-items-center gap-2">
-                        {isOnline ? (
-                            <small className="text-success d-flex align-items-center gap-1">
-                                <span className="bg-success rounded-circle" style={{width:8, height:8}}></span> Active Now
-                            </small>
-                        ) : (
-                            <small className="text-muted">Last active {otherUser.lastSeen ? new Date(otherUser.lastSeen).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}) : 'recently'}</small>
-                        )}
-                        <small className="text-muted border-start ps-2">{totalSent} messages sent</small>
+            <div className="p-3 border-bottom bg-white d-flex align-items-center justify-content-between shadow-sm" style={{height: '70px'}}>
+                <div className="d-flex align-items-center">
+                    <button className="btn btn-link text-dark d-md-none me-2" onClick={onBack}>
+                        <FaArrowLeft />
+                    </button>
+                    {renderAvatar(otherUser, 40)}
+                    <div className="ms-3">
+                        <h6 className="mb-0">{otherUser.firstName} {otherUser.lastName}</h6>
+                        <div className="d-flex align-items-center gap-2">
+                            {isOnline ? (
+                                <small className="text-success d-flex align-items-center gap-1">
+                                    <span className="bg-success rounded-circle" style={{width:8, height:8}}></span> Active Now
+                                </small>
+                            ) : (
+                                <small className="text-muted">Last active {otherUser.lastSeen ? new Date(otherUser.lastSeen).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}) : 'recently'}</small>
+                            )}
+                            {/* <small className="text-muted border-start ps-2">{totalSent} messages sent</small> */}
+                        </div>
+                    </div>
+                </div>
+
+                {/* Actions */}
+                <div className="d-flex align-items-center gap-3">
+                    <button className="btn btn-light text-primary rounded-circle" title="Voice Call" onClick={() => toast.info("Voice Call feature coming soon!")}>
+                        <FaPhone />
+                    </button>
+                    <button className="btn btn-light text-primary rounded-circle" title="Video Call" onClick={() => toast.info("Video Call feature coming soon!")}>
+                        <FaVideo />
+                    </button>
+                    <div className="dropdown">
+                        <button className="btn btn-light text-secondary rounded-circle" onClick={() => setShowOptions(!showOptions)} data-bs-toggle="dropdown">
+                            <FaEllipsisVertical />
+                        </button>
+                        <ul className={`dropdown-menu dropdown-menu-end ${showOptions ? 'show' : ''}`}>
+                            <li><button className="dropdown-item" onClick={() => toast.info("Profile view coming soon")}><FaCircleInfo className="me-2" /> View Profile</button></li>
+                            <li><button className="dropdown-item text-danger" onClick={() => toast.error("Block feature coming soon")}><FaBan className="me-2" /> Block User</button></li>
+                        </ul>
                     </div>
                 </div>
             </div>

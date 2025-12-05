@@ -5,11 +5,17 @@ const { verifyToken } = require('../middleware/auth');
 const parser = require('../config/cloudinary');
 
 // Upload File
-router.post('/upload', verifyToken, parser.single('file'), (req, res) => {
-    if (!req.file) {
-        return res.status(400).json({ message: "No file uploaded" });
-    }
-    res.status(200).json({ url: req.file.path });
+router.post('/upload', verifyToken, (req, res, next) => {
+    parser.single('file')(req, res, (err) => {
+        if (err) {
+            console.error("Upload Error:", err);
+            return res.status(500).json({ message: "File upload failed", error: err.message || err });
+        }
+        if (!req.file) {
+            return res.status(400).json({ message: "No file uploaded" });
+        }
+        res.status(200).json({ url: req.file.path });
+    });
 });
 
 // Get all conversations for current user
