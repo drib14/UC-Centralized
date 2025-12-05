@@ -55,12 +55,19 @@ router.put('/conversations/:id/mute', verifyToken, async (req, res) => {
     }
 });
 
-// Delete Conversation (Hide)
+// Delete Conversation (Hide) and Clear Messages
 router.delete('/conversations/:id', verifyToken, async (req, res) => {
     try {
         await Conversation.findByIdAndUpdate(req.params.id, {
             $addToSet: { hiddenFor: req.user.id }
         });
+
+        // Also mark all messages in this conversation as deleted for this user
+        await Message.updateMany(
+            { conversationId: req.params.id },
+            { $addToSet: { deletedFor: req.user.id } }
+        );
+
         res.status(200).json("Conversation deleted");
     } catch (err) {
         res.status(500).json(err);

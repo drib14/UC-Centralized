@@ -79,7 +79,7 @@ const Sidebar = () => {
                 <span className="sidebar-brand-text">UC-Central</span>
             </div>
 
-            <nav className="nav flex-column mt-3">
+            <nav className="nav flex-column mt-3 sidebar-nav">
                 {isAdmin ? (
                     <>
                         <NavLink to="/admin/dashboard" className={navLinkClass} onClick={handleMobileClick}><FaTableColumns className={iconClass} /> <span>Dashboard</span></NavLink>

@@ -9,7 +9,7 @@ import API from '../../utils/api';
 import { useSocket } from '../../context/SocketContext';
 import { toast } from 'react-toastify';
 
-const ChatWindow = ({ conversation, currentUser, socket, onBack, onMessageSent }) => {
+const ChatWindow = ({ conversation, currentUser, socket, onBack, onMessageSent, onDeleteConversation }) => {
     const [messages, setMessages] = useState([]);
     const [newMessage, setNewMessage] = useState('');
     const [loading, setLoading] = useState(false);
@@ -284,8 +284,7 @@ const ChatWindow = ({ conversation, currentUser, socket, onBack, onMessageSent }
         try {
             await API.deleteConversation(conversation._id);
             toast.success("Conversation deleted");
-            // Redirect or clear selection
-            window.location.reload(); // Quick fix to reset state
+            if (onDeleteConversation) onDeleteConversation(conversation._id);
         } catch (err) {
             toast.error("Failed to delete conversation");
         }
@@ -462,15 +461,16 @@ const ChatWindow = ({ conversation, currentUser, socket, onBack, onMessageSent }
         );
     };
 
-    const renderMessageContent = (msg) => {
+    const renderMessageContent = (msg, isMe) => {
         if (msg.isDeletedForEveryone) {
-            return <em className="text-white-50 small border border-secondary p-2 rounded d-block" style={{borderColor: 'rgba(255,255,255,0.3) !important'}}>Message unsent</em>;
+            return (
+                <div className={`p-3 rounded-4 shadow-sm ${isMe ? 'bg-primary text-white' : 'bg-white text-dark'}`}>
+                    <em className="text-white-50 small d-block">Message unsent</em>
+                </div>
+            );
         }
 
-        // Helper to render individual file/media
-        const renderSingleAttachment = (att, index) => {
-             // Handle raw cloudinary strings that might lack type info in legacy data
-             // If att is just a string (legacy URL)
+        const renderSingleAttachment = (att, index, isLegacy=false) => {
              const url = att.url || att;
              const type = att.type || (url.match(/\.(jpeg|jpg|gif|png)$/i) ? 'image' : url.match(/\.(mp4|webm)$/i) ? 'video' : 'file');
              const name = att.name || url.split('/').pop() || 'File';
@@ -482,7 +482,7 @@ const ChatWindow = ({ conversation, currentUser, socket, onBack, onMessageSent }
                          key={index}
                          src={url}
                          alt="sent"
-                         className="img-fluid rounded"
+                         className="img-fluid rounded shadow-sm"
                          style={{maxHeight: '200px', cursor: 'pointer', maxWidth: '100%'}}
                          onClick={() => setLightboxMedia({ url, type: 'image' })}
                      />
@@ -491,7 +491,7 @@ const ChatWindow = ({ conversation, currentUser, socket, onBack, onMessageSent }
                  return (
                     <div
                         key={index}
-                        className="position-relative d-flex align-items-center justify-content-center rounded"
+                        className="position-relative d-flex align-items-center justify-content-center rounded shadow-sm"
                         style={{width: '200px', height: '150px', cursor: 'pointer', backgroundColor: '#000'}}
                         onClick={() => setLightboxMedia({ url, type: 'video' })}
                     >
@@ -500,22 +500,23 @@ const ChatWindow = ({ conversation, currentUser, socket, onBack, onMessageSent }
                     </div>
                  );
              } else if (type === 'audio') {
+                 // Audio kept in bubble or custom styling? User said media bubble.
+                 // We'll wrap audio in a small card to keep controls visible
                 const isPlaying = playingAudio === url;
                 return (
-                    <div key={index} className="d-flex align-items-center gap-3 p-1" style={{minWidth: '200px'}}>
+                    <div key={index} className="d-flex align-items-center gap-3 p-2 rounded shadow-sm bg-white border" style={{minWidth: '220px'}}>
                         <button
-                            className="btn btn-light rounded-circle shadow-sm d-flex align-items-center justify-content-center"
-                            style={{width: '40px', height: '40px', color: '#0084ff'}}
+                            className="btn btn-primary rounded-circle shadow-sm d-flex align-items-center justify-content-center"
+                            style={{width: '40px', height: '40px'}}
                             onClick={() => toggleAudio(url)}
                         >
-                            {isPlaying ? <FaPause /> : <FaPlay />}
+                            {isPlaying ? <FaPause className="text-white" /> : <FaPlay className="text-white" />}
                         </button>
                         <audio ref={el => audioRefs.current[url] = el} src={url} hidden />
-                        <span className="small text-muted">Voice Message</span>
+                        <span className="small text-dark">Voice Message</span>
                     </div>
                 );
              } else {
-                 // File Card Template - Dark Theme Messenger Style
                  return (
                      <a
                         key={index}
@@ -524,9 +525,8 @@ const ChatWindow = ({ conversation, currentUser, socket, onBack, onMessageSent }
                         target="_blank"
                         rel="noreferrer"
                         className="text-decoration-none"
-                        style={{color: 'inherit'}}
                      >
-                        <div className="d-flex align-items-center gap-3 p-3 rounded" style={{minWidth: '220px', cursor: 'pointer', backgroundColor: '#333', color: '#fff'}}>
+                        <div className="d-flex align-items-center gap-3 p-3 rounded shadow-sm" style={{minWidth: '220px', cursor: 'pointer', backgroundColor: '#333', color: '#fff'}}>
                              <div className="d-flex align-items-center justify-content-center rounded-circle" style={{width: '40px', height: '40px', backgroundColor: 'rgba(255,255,255,0.1)'}}>
                                  <FaFile size={20} className="text-white" />
                              </div>
@@ -540,73 +540,41 @@ const ChatWindow = ({ conversation, currentUser, socket, onBack, onMessageSent }
              }
         };
 
-        // Handle Attachments (New Way)
+        const elements = [];
+
+        // Handle Attachments
         if (msg.attachments && msg.attachments.length > 0) {
-            return (
-                <div className="d-flex flex-column gap-2">
-                    {msg.attachments.map((att, i) => renderSingleAttachment(att, i))}
-                    {msg.content && <div style={{whiteSpace: 'pre-wrap'}}>{msg.content}</div>}
-                    {msg.isEdited && <span className="text-muted small fst-italic ms-1">(edited)</span>}
-                </div>
-            );
+            msg.attachments.forEach((att, i) => {
+                elements.push(renderSingleAttachment(att, i));
+            });
+        } else if (['image', 'video', 'file', 'audio'].includes(msg.type)) {
+             elements.push(renderSingleAttachment({ url: msg.fileUrl, type: msg.type, name: 'Attachment' }, 0, true));
         }
 
-        // Legacy Support (Old Way)
-        if (msg.type === 'file' || msg.type === 'image' || msg.type === 'video') {
-             // Treat as single attachment
-             const legacyAtt = {
-                 url: msg.fileUrl,
-                 type: msg.type,
-                 name: 'Attachment'
-             };
-             return renderSingleAttachment(legacyAtt, 0);
-        }
-
-        if (msg.type === 'video_call' && !msg.content.includes('ended')) {
-             return (
-                <div
-                    className="position-relative d-flex align-items-center justify-content-center bg-dark rounded"
-                    style={{width: '200px', height: '150px', cursor: 'pointer'}}
-                    onClick={() => setLightboxMedia({ url: msg.fileUrl, type: 'video' })}
-                >
-                    <FaPlay className="text-white fs-1 opacity-75" />
-                    <video src={msg.fileUrl} className="w-100 h-100 object-fit-cover rounded opacity-50" />
-                </div>
-             );
-        } else if (msg.type === 'audio') {
-            const isPlaying = playingAudio === msg.fileUrl;
-            return (
-                <div className="d-flex align-items-center gap-3 p-1" style={{minWidth: '200px'}}>
-                    <button
-                        className="btn btn-light rounded-circle shadow-sm d-flex align-items-center justify-content-center"
-                        style={{width: '40px', height: '40px', color: '#0084ff'}}
-                        onClick={() => toggleAudio(msg.fileUrl)}
-                    >
-                        {isPlaying ? <FaPause /> : <FaPlay />}
-                    </button>
-                    <div className="d-flex flex-column flex-grow-1">
-                         {/* Visualization omitted for brevity in legacy */}
+        // Handle Text
+        if (msg.content && msg.type !== 'image' && msg.type !== 'video' && msg.type !== 'file' && msg.type !== 'audio') {
+             // If call/video_call system message
+             if (msg.type === 'call' || msg.type === 'video_call') {
+                const isVideo = msg.type === 'video_call';
+                const isMissed = msg.content.toLowerCase().includes('missed');
+                elements.push(
+                    <div key="call" className="d-flex flex-column align-items-center justify-content-center gap-1 py-1" style={{width: '100%', minWidth: '200px'}}>
+                        <div className="bg-light rounded-pill px-3 py-2 d-flex align-items-center gap-2 border shadow-sm">
+                            {isVideo ? <FaVideo className={isMissed ? 'text-danger' : 'text-secondary'} /> : <FaPhone className={isMissed ? 'text-danger' : 'text-secondary'} />}
+                            <span className={isMissed ? 'text-danger fw-bold' : 'text-dark'}>{msg.content}</span>
+                        </div>
                     </div>
-                    <audio ref={el => audioRefs.current[msg.fileUrl] = el} src={msg.fileUrl} hidden />
-                </div>
-            );
-        } else if (msg.type === 'call' || msg.type === 'video_call') {
-            const isVideo = msg.type === 'video_call';
-            const isMissed = msg.content.toLowerCase().includes('missed');
-
-            return (
-                <div className="d-flex flex-column align-items-center justify-content-center gap-1 py-1" style={{width: '100%', minWidth: '200px'}}>
-                    <div className="bg-light rounded-pill px-3 py-2 d-flex align-items-center gap-2 border shadow-sm">
-                        {isVideo ? <FaVideo className={isMissed ? 'text-danger' : 'text-secondary'} /> : <FaPhone className={isMissed ? 'text-danger' : 'text-secondary'} />}
-                        <span className={isMissed ? 'text-danger fw-bold' : 'text-dark'}>
-                            {msg.content}
-                        </span>
+                );
+             } else {
+                 elements.push(
+                    <div key="text" className={`p-3 rounded-4 shadow-sm ${isMe ? 'bg-primary text-white' : 'bg-white text-dark'}`} style={{wordWrap: 'break-word'}}>
+                        <div style={{whiteSpace: 'pre-wrap'}}>{msg.content} {msg.isEdited && <span className="small fst-italic ms-1" style={{opacity: 0.7}}>(edited)</span>}</div>
                     </div>
-                </div>
-            );
+                 );
+             }
         }
 
-        return <div style={{whiteSpace: 'pre-wrap'}}>{msg.content} {msg.isEdited && <span className="text-muted small fst-italic ms-1">(edited)</span>}</div>;
+        return elements;
     };
 
     return (
@@ -919,11 +887,8 @@ const ChatWindow = ({ conversation, currentUser, socket, onBack, onMessageSent }
                                                     <button className="btn btn-secondary" onClick={() => setEditingMsgId(null)}>Cancel</button>
                                                 </div>
                                             ) : (
-                                                <div
-                                                    className={`p-3 rounded-4 shadow-sm ${isMe ? 'bg-primary text-white' : 'bg-white text-dark'}`}
-                                                    style={{wordWrap: 'break-word'}}
-                                                >
-                                                    {renderMessageContent(msg)}
+                                                <div className={`d-flex flex-column gap-1 ${isMe ? 'align-items-end' : 'align-items-start'}`}>
+                                                    {renderMessageContent(msg, isMe)}
                                                 </div>
                                             )}
                                         </div>
