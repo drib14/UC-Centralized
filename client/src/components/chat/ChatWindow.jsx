@@ -658,7 +658,7 @@ const ChatWindow = ({ conversation, currentUser, socket, onBack, onMessageSent }
 
                                         {/* Reactions Display */}
                                         {msg.reactions && msg.reactions.length > 0 && (
-                                            <div className="d-flex gap-1 mt-1 position-absolute" style={{bottom: '-10px', [isMe ? 'right' : 'left']: '0'}}>
+                                            <div className="d-flex gap-1 mt-1 position-absolute" style={{bottom: '-10px', [isMe ? 'left' : 'right']: '0'}}>
                                                 {Object.entries(msg.reactions.reduce((acc, r) => { acc[r.emoji] = (acc[r.emoji] || 0) + 1; return acc; }, {})).map(([emoji, count]) => (
                                                     <span key={emoji} className="badge bg-light text-dark border shadow-sm rounded-pill" style={{fontSize: '0.7rem'}}>
                                                         {emoji} {count}
