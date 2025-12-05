@@ -119,6 +119,11 @@ io.on("connection", async (socket) => {
     socket.on("call_busy", (data) => {
         socket.to(data.to).emit("call_busy");
     });
+
+    socket.on("ice_candidate", (data) => {
+        // data: { to, candidate }
+        socket.to(data.to).emit("ice_candidate", data.candidate);
+    });
 });
 
 // Middleware
