@@ -16,8 +16,7 @@ const ChatSidebar = ({ conversations, selectedId, onSelect, onNewChat, currentUs
         if (query.length > 2) {
             try {
                 const results = await API.searchUsers(query);
-                // Filter out current user
-                setSearchResults(results.filter(u => u._id !== currentUser._id));
+                setSearchResults(results);
                 setIsSearching(true);
             } catch (err) {
                 console.error(err);
@@ -29,7 +28,8 @@ const ChatSidebar = ({ conversations, selectedId, onSelect, onNewChat, currentUs
     };
 
     const getOtherParticipant = (conv) => {
-        return conv.participants.find(p => p._id !== currentUser._id) || {};
+        // If self-chat, find returns undefined, so fallback to first participant (me)
+        return conv.participants.find(p => p._id !== currentUser._id) || conv.participants[0] || {};
     };
 
     const renderAvatar = (user) => {
@@ -76,8 +76,21 @@ const ChatSidebar = ({ conversations, selectedId, onSelect, onNewChat, currentUs
         <div className="d-flex flex-column h-100">
             {/* Mobile: Top Horizontal User List (Stories Style) */}
             <div className="d-md-none d-flex gap-3 p-3 overflow-auto border-bottom bg-white" style={{whiteSpace: 'nowrap'}}>
+                {/* Current User */}
+                <div className="text-center" style={{minWidth: '60px'}} onClick={() => onNewChat(currentUser)}>
+                    {renderAvatar(currentUser)}
+                    <small className="d-block text-truncate mt-1 text-muted" style={{maxWidth: '60px', fontSize: '0.7rem'}}>
+                        You
+                    </small>
+                </div>
+
                 {conversations.map(conv => {
                     const other = getOtherParticipant(conv);
+                    // Skip if 'other' is me (self chat), already rendered above?
+                    // Actually, if I have a self-chat conversation, 'getOtherParticipant' might return me.
+                    // Let's allow duplication for now or filter?
+                    // If conv.participants has 2 'me', find returns 'me'.
+
                     return (
                         <div key={conv._id} className="text-center" style={{minWidth: '60px'}} onClick={() => onSelect(conv)}>
                             {renderAvatar(other)}

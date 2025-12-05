@@ -42,7 +42,7 @@ const ChatWindow = ({ conversation, currentUser, socket, onBack, onMessageSent }
     const audioRefs = useRef({}); // Map audio URLs to audio elements
     const timerRef = useRef(null); // For recording timer
 
-    const otherUser = conversation.participants.find(p => p._id !== currentUser._id) || {};
+    const otherUser = conversation.participants.find(p => p._id !== currentUser._id) || conversation.participants[0] || {};
     const isOnline = onlineUsers.has(otherUser._id);
     const totalSent = messages.filter(m => (m.sender._id === otherUser._id || m.sender === otherUser._id)).length;
 

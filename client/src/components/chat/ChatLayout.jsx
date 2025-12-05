@@ -20,16 +20,30 @@ const ChatLayout = () => {
     useEffect(() => {
         if (!socket) return;
 
-        socket.on('receive_message', (data) => {
-            // Update last message in conversation list
+        const handleReceiveMessage = (data) => {
             updateConversationList(data);
+        };
 
-            // If current conversation is active, it will be updated by ChatWindow logic or we can trigger re-fetch?
-            // Actually, ChatWindow will append. We just need to bubble up the conversation to top.
-        });
+        const handleReadUpdate = (data) => {
+            // data: { conversationId, readBy }
+            setConversations(prev => prev.map(c => {
+                if (c._id === data.conversationId && c.lastMessage) {
+                    // Update readBy of last message if it matches
+                    const msg = c.lastMessage;
+                    if (!msg.readBy.includes(data.readBy)) {
+                        return { ...c, lastMessage: { ...msg, readBy: [...msg.readBy, data.readBy] } };
+                    }
+                }
+                return c;
+            }));
+        };
+
+        socket.on('receive_message', handleReceiveMessage);
+        socket.on('messages_read_update', handleReadUpdate);
 
         return () => {
-            socket.off('receive_message');
+            socket.off('receive_message', handleReceiveMessage);
+            socket.off('messages_read_update', handleReadUpdate);
         };
     }, [socket, conversations]);
 

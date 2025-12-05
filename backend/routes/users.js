@@ -9,13 +9,15 @@ router.get('/search', verifyToken, async (req, res) => {
         const query = req.query.q;
         if (!query) return res.status(400).json({ message: "Query is required" });
 
-        const users = await User.find({
+        const searchCriteria = {
             $or: [
                 { firstName: { $regex: query, $options: 'i' } },
                 { lastName: { $regex: query, $options: 'i' } },
                 { studentId: { $regex: query, $options: 'i' } }
             ]
-        }).select('firstName lastName studentId profileImage role');
+        };
+
+        const users = await User.find(searchCriteria).select('firstName lastName studentId profileImage role');
 
         res.status(200).json(users);
     } catch (err) {
