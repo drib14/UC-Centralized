@@ -9,14 +9,18 @@ const ChatWindow = ({ conversation, currentUser, socket, onBack, onMessageSent }
     const [loading, setLoading] = useState(false);
     const [isRecording, setIsRecording] = useState(false);
     const [mediaRecorder, setMediaRecorder] = useState(null);
-    const [audioChunks, setAudioChunks] = useState([]);
+    const [recordingTime, setRecordingTime] = useState(0); // Timer for recording
     const [uploading, setUploading] = useState(false);
     const [playingAudio, setPlayingAudio] = useState(null); // URL of currently playing audio
+    const [isTyping, setIsTyping] = useState(false); // If other user is typing
+    const [typingTimeout, setTypingTimeout] = useState(null); // For local debouncing
+
     const { onlineUsers } = useSocket();
 
     const messagesEndRef = useRef(null);
     const fileInputRef = useRef(null);
     const audioRefs = useRef({}); // Map audio URLs to audio elements
+    const timerRef = useRef(null); // For recording timer
 
     const otherUser = conversation.participants.find(p => p._id !== currentUser._id) || {};
     const isOnline = onlineUsers.has(otherUser._id);
@@ -66,14 +70,30 @@ const ChatWindow = ({ conversation, currentUser, socket, onBack, onMessageSent }
             }
         };
 
+        const handleTyping = (data) => {
+            if (data.senderId === otherUser._id) {
+                setIsTyping(true);
+            }
+        };
+
+        const handleStopTyping = (data) => {
+            if (data.senderId === otherUser._id) {
+                setIsTyping(false);
+            }
+        };
+
         socket.on('receive_message', handleReceive);
         socket.on('messages_read_update', handleReadUpdate);
+        socket.on('user_typing', handleTyping);
+        socket.on('user_stop_typing', handleStopTyping);
 
         return () => {
             socket.off('receive_message', handleReceive);
             socket.off('messages_read_update', handleReadUpdate);
+            socket.off('user_typing', handleTyping);
+            socket.off('user_stop_typing', handleStopTyping);
         };
-    }, [socket, conversation._id]);
+    }, [socket, conversation._id, otherUser._id]);
 
     const loadMessages = async () => {
         setLoading(true);
@@ -94,9 +114,30 @@ const ChatWindow = ({ conversation, currentUser, socket, onBack, onMessageSent }
         }, 100);
     };
 
+    const handleInputChange = (e) => {
+        setNewMessage(e.target.value);
+
+        if (socket) {
+            socket.emit('typing', { receiverId: otherUser._id, senderId: currentUser._id });
+
+            if (typingTimeout) clearTimeout(typingTimeout);
+
+            const timeout = setTimeout(() => {
+                socket.emit('stop_typing', { receiverId: otherUser._id, senderId: currentUser._id });
+            }, 2000);
+
+            setTypingTimeout(timeout);
+        }
+    };
+
     const handleSend = async (e) => {
         e.preventDefault();
         if (!newMessage.trim()) return;
+
+        // Stop typing immediately
+        if (typingTimeout) clearTimeout(typingTimeout);
+        if (socket) socket.emit('stop_typing', { receiverId: otherUser._id, senderId: currentUser._id });
+
         await sendMessage(newMessage, 'text');
         setNewMessage('');
     };
@@ -143,6 +184,9 @@ const ChatWindow = ({ conversation, currentUser, socket, onBack, onMessageSent }
 
             recorder.ondataavailable = e => chunks.push(e.data);
             recorder.onstop = async () => {
+                clearInterval(timerRef.current);
+                setRecordingTime(0);
+
                 const blob = new Blob(chunks, { type: 'audio/webm' });
                 const file = new File([blob], "voice_msg.webm", { type: 'audio/webm' });
 
@@ -160,6 +204,12 @@ const ChatWindow = ({ conversation, currentUser, socket, onBack, onMessageSent }
             recorder.start();
             setMediaRecorder(recorder);
             setIsRecording(true);
+            setRecordingTime(0);
+
+            timerRef.current = setInterval(() => {
+                setRecordingTime(prev => prev + 1);
+            }, 1000);
+
         } catch (err) {
             console.error("Mic access denied", err);
             alert("Could not access microphone.");
@@ -171,7 +221,14 @@ const ChatWindow = ({ conversation, currentUser, socket, onBack, onMessageSent }
             mediaRecorder.stop();
             setIsRecording(false);
             setMediaRecorder(null);
+            clearInterval(timerRef.current);
         }
+    };
+
+    const formatDuration = (seconds) => {
+        const mins = Math.floor(seconds / 60);
+        const secs = seconds % 60;
+        return `${mins}:${secs < 10 ? '0' : ''}${secs}`;
     };
 
     const toggleAudio = (url) => {
@@ -208,13 +265,32 @@ const ChatWindow = ({ conversation, currentUser, socket, onBack, onMessageSent }
             return <img src={msg.fileUrl} alt="sent" className="img-fluid rounded" style={{maxHeight: '200px'}} />;
         } else if (msg.type === 'audio') {
             const isPlaying = playingAudio === msg.fileUrl;
+            // Facebook-like audio player
             return (
-                <div className="d-flex align-items-center gap-2" style={{minWidth: '150px'}}>
-                    <button className="btn btn-sm btn-light rounded-circle" onClick={() => toggleAudio(msg.fileUrl)}>
+                <div className="d-flex align-items-center gap-3 p-1" style={{minWidth: '200px'}}>
+                    <button
+                        className="btn btn-light rounded-circle shadow-sm d-flex align-items-center justify-content-center"
+                        style={{width: '40px', height: '40px', color: '#0084ff'}}
+                        onClick={() => toggleAudio(msg.fileUrl)}
+                    >
                         {isPlaying ? <FaPause /> : <FaPlay />}
                     </button>
-                    <div className="flex-grow-1 bg-secondary rounded" style={{height: '4px'}}>
-                        <div className={`bg-white rounded ${isPlaying ? 'progress-bar-animated progress-bar-striped' : ''}`} style={{height: '100%', width: isPlaying ? '100%' : '0%'}}></div>
+                    <div className="d-flex flex-column flex-grow-1">
+                        {/* Fake Waveform Visual */}
+                        <div className="d-flex align-items-center gap-1" style={{height: '20px'}}>
+                             {[...Array(20)].map((_, i) => (
+                                 <div
+                                    key={i}
+                                    className="rounded-pill"
+                                    style={{
+                                        width: '3px',
+                                        height: `${Math.random() * 15 + 5}px`,
+                                        backgroundColor: isPlaying ? '#0084ff' : '#ccc',
+                                        opacity: isPlaying ? (i % 2 === 0 ? 1 : 0.6) : 0.5
+                                    }}
+                                 />
+                             ))}
+                        </div>
                     </div>
                     <audio ref={el => audioRefs.current[msg.fileUrl] = el} src={msg.fileUrl} hidden />
                 </div>
@@ -284,13 +360,33 @@ const ChatWindow = ({ conversation, currentUser, socket, onBack, onMessageSent }
                                 </div>
                             );
                         })}
+                        {isTyping && (
+                             <div className="d-flex align-items-center gap-2 ms-5 mb-2">
+                                <div className="bg-light p-2 rounded-4 shadow-sm">
+                                    <div className="typing-dots">
+                                        <span></span><span></span><span></span>
+                                    </div>
+                                </div>
+                                <small className="text-muted" style={{fontSize: '0.7rem'}}>typing...</small>
+                             </div>
+                        )}
                         <div ref={messagesEndRef} />
                     </div>
                 )}
             </div>
 
             {/* Input */}
-            <div className="p-3 bg-white border-top">
+            <div className="p-3 bg-white border-top position-relative">
+                {isRecording && (
+                     <div className="position-absolute start-0 end-0 bottom-0 bg-white d-flex align-items-center justify-content-center border-top shadow-sm" style={{height: '100%', zIndex: 10}}>
+                         <div className="text-danger fw-bold animate-pulse d-flex align-items-center gap-2">
+                             <div className="rounded-circle bg-danger" style={{width:10, height:10}}></div>
+                             Recording... {formatDuration(recordingTime)}
+                         </div>
+                         <button className="btn btn-sm btn-secondary ms-4 rounded-pill" onClick={stopRecording}>Stop & Send</button>
+                     </div>
+                )}
+
                 <form onSubmit={handleSend} className="d-flex gap-2 align-items-center">
                     <input type="file" accept="image/*" className="d-none" ref={fileInputRef} onChange={handleFileSelect} />
                     <button type="button" className="btn btn-light text-secondary rounded-circle" onClick={() => fileInputRef.current.click()} disabled={uploading}>
@@ -311,7 +407,7 @@ const ChatWindow = ({ conversation, currentUser, socket, onBack, onMessageSent }
                         className="form-control rounded-pill bg-light border-0"
                         placeholder={uploading ? "Uploading..." : "Aa"}
                         value={newMessage}
-                        onChange={(e) => setNewMessage(e.target.value)}
+                        onChange={handleInputChange}
                         disabled={uploading}
                     />
 
