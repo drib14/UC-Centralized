@@ -183,15 +183,22 @@ router.put('/:id/react', verifyToken, async (req, res) => {
         const message = await Message.findById(req.params.id);
         if (!message) return res.status(404).json("Message not found");
 
+        // Find any existing reaction by this user
         const existingReactionIndex = message.reactions.findIndex(
-            r => r.user.toString() === req.user.id && r.emoji === emoji
+            r => r.user.toString() === req.user.id
         );
 
         if (existingReactionIndex > -1) {
-            // Remove
-            message.reactions.splice(existingReactionIndex, 1);
+            const existingReaction = message.reactions[existingReactionIndex];
+            if (existingReaction.emoji === emoji) {
+                // Same emoji: Remove (Toggle off)
+                message.reactions.splice(existingReactionIndex, 1);
+            } else {
+                // Different emoji: Replace
+                message.reactions[existingReactionIndex].emoji = emoji;
+            }
         } else {
-            // Add
+            // New reaction
             message.reactions.push({ user: req.user.id, emoji });
         }
 

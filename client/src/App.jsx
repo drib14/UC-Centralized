@@ -108,6 +108,7 @@ function App() {
                             <Route path="pos" element={<AdminPOS />} />
                             <Route path="messages" element={<AdminMessages />} />
                             <Route path="notifications" element={<Notifications />} />
+                            <Route path="profile" element={<StudentProfile />} />
                         </Route>
 
                          {/* Catch all */}

@@ -13,7 +13,8 @@ export const SocketProvider = ({ children }) => {
     const [socket, setSocket] = useState(null);
     const [onlineUsers, setOnlineUsers] = useState(new Set());
     const [notifications, setNotifications] = useState([]);
-    const [unreadCount, setUnreadCount] = useState(0);
+    const [unreadCount, setUnreadCount] = useState(0); // Notification count
+    const [unreadMessageCount, setUnreadMessageCount] = useState(0); // Message count
     const { user } = useAuth();
 
     useEffect(() => {
@@ -55,12 +56,16 @@ export const SocketProvider = ({ children }) => {
                 });
             });
 
-            // Global Message Listener (for toasts when not in chat)
+            // Global Message Listener (for toasts and badges)
             newSocket.on('receive_message', (data) => {
                 if (!window.location.pathname.includes('/messages')) {
                     toast.info(`New message from ${data.sender.firstName}: ${data.content.substring(0, 20)}...`);
+                    setUnreadMessageCount(prev => prev + 1);
                 }
             });
+
+            // Listen for read updates to decrement count?
+            // This is tricky without fetching. We'll rely on the Message page to reset it.
 
             setSocket(newSocket);
 
@@ -74,7 +79,7 @@ export const SocketProvider = ({ children }) => {
     }, [user]);
 
     return (
-        <SocketContext.Provider value={{ socket, onlineUsers, notifications, setNotifications, unreadCount, setUnreadCount }}>
+        <SocketContext.Provider value={{ socket, onlineUsers, notifications, setNotifications, unreadCount, setUnreadCount, unreadMessageCount, setUnreadMessageCount }}>
             {children}
         </SocketContext.Provider>
     );

@@ -8,13 +8,14 @@ import { useAuth } from '../../context/AuthContext';
 
 const ChatLayout = () => {
     const { user } = useAuth();
-    const { socket } = useSocket();
+    const { socket, setUnreadMessageCount } = useSocket();
     const [conversations, setConversations] = useState([]);
     const [selectedConversation, setSelectedConversation] = useState(null);
     const [mobileShowChat, setMobileShowChat] = useState(false); // For mobile responsiveness
 
     useEffect(() => {
         loadConversations();
+        setUnreadMessageCount(0); // Clear unread count when entering messages
     }, []);
 
     // Persist selection on refresh

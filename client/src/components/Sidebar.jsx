@@ -12,7 +12,7 @@ import {
 const Sidebar = () => {
     const { user, logout } = useAuth();
     const { getCount } = useCart();
-    const { unreadCount } = useSocket();
+    const { unreadCount, unreadMessageCount } = useSocket();
     const [collapsed, setCollapsed] = useState(false);
     const [mobileActive, setMobileActive] = useState(false);
     const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
@@ -89,7 +89,10 @@ const Sidebar = () => {
                         <NavLink to="/admin/announcements" className={navLinkClass} onClick={handleMobileClick}><FaBullhorn className={iconClass} /> <span>Announcements</span></NavLink>
                         <NavLink to="/admin/orders" className={navLinkClass} onClick={handleMobileClick}><FaClipboardList className={iconClass} /> <span>Orders</span></NavLink>
                         <NavLink to="/admin/pos" className={navLinkClass} onClick={handleMobileClick}><FaCashRegister className={iconClass} /> <span>POS</span></NavLink>
-                        <NavLink to="/admin/messages" className={navLinkClass} onClick={handleMobileClick}><FaEnvelope className={iconClass} /> <span>Messages</span></NavLink>
+                        <NavLink to="/admin/messages" className={navLinkClass} onClick={handleMobileClick}>
+                            <FaEnvelope className={iconClass} /> <span>Messages</span>
+                            {!collapsed && unreadMessageCount > 0 && <span className="badge bg-danger ms-auto">{unreadMessageCount}</span>}
+                        </NavLink>
                         <NavLink to="/admin/notifications" className={navLinkClass} onClick={handleMobileClick}>
                              <FaBell className={iconClass} /> <span>Notifications</span>
                              {!collapsed && unreadCount > 0 && <span className="badge bg-danger ms-auto">{unreadCount}</span>}
@@ -101,7 +104,10 @@ const Sidebar = () => {
                         <NavLink to="/student/dashboard" className={navLinkClass} onClick={handleMobileClick}><FaTableColumns className={iconClass} /> <span>Dashboard</span></NavLink>
                         <NavLink to="/student/events" className={navLinkClass} onClick={handleMobileClick}><FaCalendarDays className={iconClass} /> <span>Events</span></NavLink>
                         <NavLink to="/student/merch" className={navLinkClass} onClick={handleMobileClick}><FaShirt className={iconClass} /> <span>Merch Store</span></NavLink>
-                        <NavLink to="/student/messages" className={navLinkClass} onClick={handleMobileClick}><FaEnvelope className={iconClass} /> <span>Messages</span></NavLink>
+                        <NavLink to="/student/messages" className={navLinkClass} onClick={handleMobileClick}>
+                            <FaEnvelope className={iconClass} /> <span>Messages</span>
+                            {!collapsed && unreadMessageCount > 0 && <span className="badge bg-danger ms-auto">{unreadMessageCount}</span>}
+                        </NavLink>
                         <NavLink to="/student/notifications" className={navLinkClass} onClick={handleMobileClick}>
                              <FaBell className={iconClass} /> <span>Notifications</span>
                              {!collapsed && unreadCount > 0 && <span className="badge bg-danger ms-auto">{unreadCount}</span>}

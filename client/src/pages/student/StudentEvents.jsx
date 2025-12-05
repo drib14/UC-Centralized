@@ -170,20 +170,26 @@ const StudentEvents = () => {
                     <button className="btn btn-sm btn-outline-secondary" onClick={() => setCurrentDate(new Date(year, month + 1))}>Next</button>
                 </div>
                 {/* Responsive Grid: overflow-auto for small screens or stack days if needed */}
-                <div className="d-grid calendar-grid" style={{ gap: '5px' }}>
-                    {['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].map(day => (
-                        <div key={day} className="text-center fw-bold small">{day}</div>
-                    ))}
-                    {days}
+                <div className="calendar-scroll-container">
+                    <div className="d-grid calendar-grid" style={{ gap: '5px' }}>
+                        {['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].map(day => (
+                            <div key={day} className="text-center fw-bold small">{day}</div>
+                        ))}
+                        {days}
+                    </div>
                 </div>
                 <style jsx="true">{`
                     .calendar-grid {
                         grid-template-columns: repeat(7, 1fr);
+                        min-width: 300px; /* Ensure minimum width to prevent squishing */
+                    }
+                    .calendar-scroll-container {
+                        overflow-x: auto; /* Allow scrolling on very small screens if needed */
                     }
                     @media (max-width: 576px) {
                         .calendar-day {
-                            min-height: 50px !important;
-                            font-size: 0.8rem;
+                            min-height: 60px !important;
+                            font-size: 0.75rem;
                             padding: 2px !important;
                         }
                     }
