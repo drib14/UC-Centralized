@@ -395,7 +395,13 @@ const ChatWindow = ({ conversation, currentUser, socket, onBack, onMessageSent }
                 setUploading(true);
                 try {
                     const { url } = await API.uploadFile(file);
-                    await sendMessage('', 'audio', url);
+                    // Use attachments logic for consistency
+                    await sendMessage('', 'text', null, [{
+                        url,
+                        type: 'audio',
+                        name: 'Voice Message',
+                        size: file.size
+                    }]);
                 } catch (err) {
                     console.error("Audio upload failed", err);
                 } finally {
@@ -611,7 +617,7 @@ const ChatWindow = ({ conversation, currentUser, socket, onBack, onMessageSent }
                             ) : (
                                 <small className="text-muted">Last active {otherUser.lastSeen ? new Date(otherUser.lastSeen).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}) : 'recently'}</small>
                             )}
-                            {/* <small className="text-muted border-start ps-2">{totalSent} messages sent</small> */}
+                            <small className="text-muted border-start ps-2">{totalSent} messages sent</small>
                         </div>
                     </div>
                 </div>

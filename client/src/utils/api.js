@@ -174,8 +174,8 @@ class API {
         return this.request('/messages/conversations', 'POST', { receiverId });
     }
 
-    static sendMessage(conversationId, content, type = 'text', fileUrl = null) {
-        return this.request('/messages', 'POST', { conversationId, content, type, fileUrl });
+    static sendMessage(conversationId, content, type = 'text', fileUrl = null, attachments = []) {
+        return this.request('/messages', 'POST', { conversationId, content, type, fileUrl, attachments });
     }
 
     static editMessage(id, content) {
