@@ -9,7 +9,15 @@ const conversationSchema = new mongoose.Schema({
     lastMessage: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'Message'
-    }
+    },
+    mutedBy: [{
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User'
+    }],
+    hiddenFor: [{
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User'
+    }]
 }, { timestamps: true });
 
 // Ensure unique conversation between specific participants

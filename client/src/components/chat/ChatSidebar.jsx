@@ -1,12 +1,14 @@
 import React, { useState } from 'react';
-import { FaSearch } from 'react-icons/fa';
+import { FaSearch, FaEllipsisVertical, FaTrash, FaCheck, FaVolumeXmark, FaVolumeHigh } from 'react-icons/fa6';
 import API from '../../utils/api';
 import { useSocket } from '../../context/SocketContext';
+import { toast } from 'react-toastify';
 
 const ChatSidebar = ({ conversations, selectedId, onSelect, onNewChat, currentUser }) => {
     const [searchTerm, setSearchTerm] = useState('');
     const [searchResults, setSearchResults] = useState([]);
     const [isSearching, setIsSearching] = useState(false);
+    const [deleteConvId, setDeleteConvId] = useState(null); // ID for delete modal
     const { onlineUsers } = useSocket();
 
     const handleSearch = async (e) => {
@@ -55,8 +57,45 @@ const ChatSidebar = ({ conversations, selectedId, onSelect, onNewChat, currentUs
     const getUnreadCount = (conv) => {
         if (!conv.lastMessage) return 0;
         const isRead = conv.lastMessage.readBy && conv.lastMessage.readBy.includes(currentUser._id);
-        // Only count if NOT me and NOT read
         return (!isRead && conv.lastMessage.sender !== currentUser._id) ? 1 : 0;
+    };
+
+    const handleAction = async (e, action, conv) => {
+        e.stopPropagation();
+        try {
+            if (action === 'delete') {
+                setDeleteConvId(conv._id);
+            } else if (action === 'mute') {
+                await API.muteConversation(conv._id);
+                // Trigger reload or update local state logic?
+                // ChatLayout manages conversations. We can't update it easily from here without a callback.
+                // Assuming ChatLayout will refresh or we force a reload.
+                // Or simply: toast success and let it be (icon update requires parent state update).
+                // Actually, backend returns updated conv. Ideally we update parent.
+                // For now, simpler: reload page or rely on next fetch.
+                toast.success("Conversation mute toggled");
+                window.location.reload(); // Quick fix for state sync
+            } else if (action === 'read') {
+                await API.markMessagesRead(conv._id);
+                // Socket event usually handles this update in Layout
+                toast.success("Marked as read");
+            }
+        } catch (err) {
+            console.error(err);
+        }
+    };
+
+    const confirmDelete = async () => {
+        if (!deleteConvId) return;
+        try {
+            await API.deleteConversation(deleteConvId);
+            toast.success("Conversation deleted");
+            window.location.reload(); // Quick sync
+        } catch (err) {
+            toast.error("Failed to delete");
+        } finally {
+            setDeleteConvId(null);
+        }
     };
 
     const formatTime = (date) => {
@@ -143,19 +182,23 @@ const ChatSidebar = ({ conversations, selectedId, onSelect, onNewChat, currentUs
                             const other = getOtherParticipant(conv);
                             const isActive = selectedId === conv._id;
                             const unread = getUnreadCount(conv);
+                            const isMuted = conv.mutedBy && conv.mutedBy.includes(currentUser._id);
                             const contentPreview = conv.lastMessage?.type === 'image' ? '📷 sent a photo' : conv.lastMessage?.type === 'audio' ? '🎤 sent a voice message' : conv.lastMessage?.content;
 
                             return (
                                 <li
                                     key={conv._id}
-                                    className={`list-group-item list-group-item-action cursor-pointer d-flex align-items-center gap-3 py-3 ${isActive ? 'bg-light' : ''}`}
+                                    className={`list-group-item list-group-item-action cursor-pointer d-flex align-items-center gap-3 py-3 position-relative group-hover-trigger ${isActive ? 'bg-light' : ''}`}
                                     onClick={() => onSelect(conv)}
                                     style={{cursor: 'pointer', borderLeft: isActive ? '4px solid #0d6efd' : '4px solid transparent'}}
                                 >
                                     {renderAvatar(other)}
                                     <div className="flex-grow-1 overflow-hidden">
                                         <div className="d-flex justify-content-between align-items-center">
-                                            <h6 className={`mb-0 text-truncate ${unread ? 'fw-bold' : ''}`}>{other.firstName} {other.lastName}</h6>
+                                            <div className="d-flex align-items-center gap-1">
+                                                <h6 className={`mb-0 text-truncate ${unread ? 'fw-bold' : ''}`}>{other.firstName} {other.lastName}</h6>
+                                                {isMuted && <FaVolumeXmark className="text-secondary" size={12} />}
+                                            </div>
                                             {conv.lastMessage && (
                                                 <small className={`${unread ? 'text-primary fw-bold' : 'text-muted'}`} style={{fontSize: '0.75rem'}}>
                                                     {formatTime(conv.updatedAt)}
@@ -170,9 +213,24 @@ const ChatSidebar = ({ conversations, selectedId, onSelect, onNewChat, currentUs
                                                     <span className="fst-italic">Start chatting...</span>
                                                 )}
                                             </small>
-                                            {unread > 0 && (
-                                                <span className="badge bg-danger rounded-pill ms-2">{unread}</span>
-                                            )}
+                                            <div className="d-flex align-items-center">
+                                                {unread > 0 && <span className="badge bg-danger rounded-pill ms-2">{unread}</span>}
+
+                                                {/* 3-Dot Menu */}
+                                                <div className="dropdown ms-2" onClick={e => e.stopPropagation()}>
+                                                    <button className="btn btn-sm btn-link text-secondary p-0" data-bs-toggle="dropdown">
+                                                        <FaEllipsisVertical />
+                                                    </button>
+                                                    <ul className="dropdown-menu shadow-sm">
+                                                        <li><button className="dropdown-item" onClick={(e) => handleAction(e, 'read', conv)}><FaCheck className="me-2" /> Mark as read</button></li>
+                                                        <li><button className="dropdown-item" onClick={(e) => handleAction(e, 'mute', conv)}>
+                                                            {isMuted ? <><FaVolumeHigh className="me-2"/> Unmute</> : <><FaVolumeXmark className="me-2"/> Mute</>}
+                                                        </button></li>
+                                                        <li><hr className="dropdown-divider"/></li>
+                                                        <li><button className="dropdown-item text-danger" onClick={(e) => handleAction(e, 'delete', conv)}><FaTrash className="me-2"/> Delete</button></li>
+                                                    </ul>
+                                                </div>
+                                            </div>
                                         </div>
                                     </div>
                                 </li>
@@ -181,6 +239,26 @@ const ChatSidebar = ({ conversations, selectedId, onSelect, onNewChat, currentUs
                     </ul>
                 )}
             </div>
+
+            {/* Delete Confirmation Modal */}
+            {deleteConvId && (
+                <div className="modal fade show d-block" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>
+                    <div className="modal-dialog modal-dialog-centered modal-sm">
+                        <div className="modal-content">
+                            <div className="modal-header border-0 pb-0">
+                                <h5 className="modal-title">Delete Conversation?</h5>
+                            </div>
+                            <div className="modal-body text-muted small">
+                                This will remove the conversation from your list. It will reappear if they message you again.
+                            </div>
+                            <div className="modal-footer border-0 pt-0">
+                                <button className="btn btn-link text-secondary text-decoration-none" onClick={() => setDeleteConvId(null)}>Cancel</button>
+                                <button className="btn btn-danger" onClick={confirmDelete}>Delete</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };

@@ -158,6 +158,14 @@ class API {
         return this.request('/messages/conversations');
     }
 
+    static deleteConversation(id) {
+        return this.request(`/messages/conversations/${id}`, 'DELETE');
+    }
+
+    static muteConversation(id) {
+        return this.request(`/messages/conversations/${id}/mute`, 'PUT');
+    }
+
     static getMessages(conversationId) {
         return this.request(`/messages/${conversationId}`);
     }

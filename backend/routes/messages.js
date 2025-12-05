@@ -23,13 +23,45 @@ router.post('/upload', verifyToken, (req, res, next) => {
 router.get('/conversations', verifyToken, async (req, res) => {
     try {
         const conversations = await Conversation.find({
-            participants: { $in: [req.user.id] }
+            participants: { $in: [req.user.id] },
+            hiddenFor: { $ne: req.user.id } // Filter out hidden/deleted
         })
         .populate('participants', 'firstName lastName profileImage role studentId department program email')
         .populate('lastMessage')
         .sort({ updatedAt: -1 });
 
         res.status(200).json(conversations);
+    } catch (err) {
+        res.status(500).json(err);
+    }
+});
+
+// Mute/Unmute Conversation
+router.put('/conversations/:id/mute', verifyToken, async (req, res) => {
+    try {
+        const conversation = await Conversation.findById(req.params.id);
+        if (!conversation) return res.status(404).json("Conversation not found");
+
+        const index = conversation.mutedBy.indexOf(req.user.id);
+        if (index > -1) {
+            conversation.mutedBy.splice(index, 1);
+        } else {
+            conversation.mutedBy.push(req.user.id);
+        }
+        await conversation.save();
+        res.status(200).json(conversation);
+    } catch (err) {
+        res.status(500).json(err);
+    }
+});
+
+// Delete Conversation (Hide)
+router.delete('/conversations/:id', verifyToken, async (req, res) => {
+    try {
+        await Conversation.findByIdAndUpdate(req.params.id, {
+            $addToSet: { hiddenFor: req.user.id }
+        });
+        res.status(200).json("Conversation deleted");
     } catch (err) {
         res.status(500).json(err);
     }
@@ -239,7 +271,8 @@ router.post('/', verifyToken, async (req, res) => {
 
         await Conversation.findByIdAndUpdate(conversationId, {
             lastMessage: savedMessage._id,
-            updatedAt: Date.now()
+            updatedAt: Date.now(),
+            $pull: { hiddenFor: receiverId } // Unhide for recipient if they deleted it
         });
 
         // Populate sender info for the socket event or frontend update

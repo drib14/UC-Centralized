@@ -37,6 +37,7 @@ const ChatWindow = ({ conversation, currentUser, socket, onBack, onMessageSent }
     const [deleteCandidateMsg, setDeleteCandidateMsg] = useState(null); // Msg pending deletion
     const [showDeleteModal, setShowDeleteModal] = useState(false);
     const [lightboxMedia, setLightboxMedia] = useState(null); // { url, type }
+    const [showDeleteConvModal, setShowDeleteConvModal] = useState(false);
     const [reactingMsgId, setReactingMsgId] = useState(null); // Which msg is having reactions toggled
 
     const { onlineUsers } = useSocket();
@@ -245,6 +246,17 @@ const ChatWindow = ({ conversation, currentUser, socket, onBack, onMessageSent }
             setShowOptions(false);
         } catch (err) {
             toast.error("Action failed");
+        }
+    };
+
+    const handleDeleteConversation = async () => {
+        try {
+            await API.deleteConversation(conversation._id);
+            toast.success("Conversation deleted");
+            // Redirect or clear selection
+            window.location.reload(); // Quick fix to reset state
+        } catch (err) {
+            toast.error("Failed to delete conversation");
         }
     };
 
@@ -529,10 +541,34 @@ const ChatWindow = ({ conversation, currentUser, socket, onBack, onMessageSent }
                             <li><button className={`dropdown-item ${blocked ? 'text-success' : 'text-danger'}`} onClick={handleBlock}>
                                 <FaBan className="me-2" /> {blocked ? "Unblock User" : "Block User"}
                             </button></li>
+                            <li><hr className="dropdown-divider"/></li>
+                            <li><button className="dropdown-item text-danger" onClick={() => { setShowDeleteConvModal(true); setShowOptions(false); }}>
+                                <FaTrash className="me-2" /> Delete Conversation
+                            </button></li>
                         </ul>
                     </div>
                 </div>
             </div>
+
+            {/* Delete Conversation Modal */}
+            {showDeleteConvModal && (
+                <div className="modal fade show d-block" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>
+                    <div className="modal-dialog modal-dialog-centered modal-sm">
+                        <div className="modal-content">
+                            <div className="modal-header border-0 pb-0">
+                                <h5 className="modal-title">Delete Conversation?</h5>
+                            </div>
+                            <div className="modal-body text-muted small">
+                                This will remove the conversation from your list. It will reappear if they message you again.
+                            </div>
+                            <div className="modal-footer border-0 pt-0">
+                                <button className="btn btn-link text-secondary text-decoration-none" onClick={() => setShowDeleteConvModal(false)}>Cancel</button>
+                                <button className="btn btn-danger" onClick={handleDeleteConversation}>Delete</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             {/* Profile Modal */}
             {showProfile && (
