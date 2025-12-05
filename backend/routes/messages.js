@@ -78,7 +78,8 @@ router.delete('/conversations/:id', verifyToken, async (req, res) => {
 router.get('/:conversationId', verifyToken, async (req, res) => {
     try {
         const messages = await Message.find({
-            conversationId: req.params.conversationId
+            conversationId: req.params.conversationId,
+            deletedFor: { $ne: req.user.id } // Filter out messages deleted for this user
         })
         .populate('sender', 'firstName lastName profileImage')
         .sort({ createdAt: 1 });

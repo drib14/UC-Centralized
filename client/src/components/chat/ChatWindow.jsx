@@ -394,13 +394,13 @@ const ChatWindow = ({ conversation, currentUser, socket, onBack, onMessageSent, 
                 setUploading(true);
                 try {
                     const { url } = await API.uploadFile(file);
-                    // Use attachments logic for consistency
-                    await sendMessage('', 'text', null, [{
+                    const attachment = {
                         url,
                         type: 'audio',
                         name: 'Voice Message',
                         size: file.size
-                    }]);
+                    };
+                    await sendMessage('', 'audio', url, [attachment]);
                 } catch (err) {
                     console.error("Audio upload failed", err);
                 } finally {
@@ -471,7 +471,7 @@ const ChatWindow = ({ conversation, currentUser, socket, onBack, onMessageSent, 
         if (msg.isDeletedForEveryone) {
             return (
                 <div className={`p-3 rounded-4 shadow-sm ${isMe ? 'bg-primary text-white' : 'bg-white text-dark'}`}>
-                    <em className="text-white-50 small d-block">Message unsent</em>
+                    <em className={`small d-block ${isMe ? 'text-white-50' : 'text-muted'}`}>Message unsent</em>
                 </div>
             );
         }
@@ -602,7 +602,7 @@ const ChatWindow = ({ conversation, currentUser, socket, onBack, onMessageSent, 
                             ) : (
                                 <small className="text-muted">Last active {otherUser.lastSeen ? new Date(otherUser.lastSeen).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}) : 'recently'}</small>
                             )}
-                            <small className="text-muted border-start ps-2">{totalSent} messages sent</small>
+                            {/* <small className="text-muted border-start ps-2">{totalSent} messages sent</small> */}
                         </div>
                     </div>
                 </div>
@@ -959,8 +959,10 @@ const ChatWindow = ({ conversation, currentUser, socket, onBack, onMessageSent, 
                         <div className="d-flex gap-2 p-2 overflow-auto bg-white border-bottom">
                             {selectedFiles.map((file, i) => (
                                 <div key={i} className="position-relative flex-shrink-0" style={{width: '80px', height: '80px'}}>
-                                    {file.type === 'image' || file.type === 'video' ? (
+                                    {file.type === 'image' ? (
                                         <img src={file.preview} alt="prev" className="w-100 h-100 rounded object-fit-cover border" />
+                                    ) : file.type === 'video' ? (
+                                        <video src={file.preview} className="w-100 h-100 rounded object-fit-cover border" />
                                     ) : (
                                         <div className="w-100 h-100 rounded bg-light border d-flex flex-column align-items-center justify-content-center text-center p-1">
                                             <FaFile className="text-muted mb-1" />

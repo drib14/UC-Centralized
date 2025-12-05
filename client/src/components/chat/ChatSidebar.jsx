@@ -233,16 +233,16 @@ const ChatSidebar = ({ conversations, selectedId, onSelect, onNewChat, currentUs
                                                                 style={{ zIndex: 1040, cursor: 'default' }}
                                                                 onClick={(e) => { e.stopPropagation(); setActiveMenuId(null); }}
                                                             ></div>
-                                                            <div className="position-absolute bg-white shadow-sm rounded border py-1" style={{ right: 0, top: '100%', zIndex: 1050, minWidth: '160px' }}>
-                                                                <button className="dropdown-item btn btn-sm text-start" onClick={(e) => handleAction(e, 'read', conv)}>
-                                                                    <FaCheck className="me-2 text-primary" /> Mark as read
+                                                            <div className="position-absolute bg-white shadow rounded-3 border py-2" style={{ right: 0, top: '120%', zIndex: 1050, minWidth: '180px' }}>
+                                                                <button className="dropdown-item btn btn-sm text-start px-3 py-2 d-flex align-items-center" onClick={(e) => handleAction(e, 'read', conv)}>
+                                                                    <FaCheck className="me-2 text-primary" size={14} /> <span>Mark as read</span>
                                                                 </button>
-                                                                <button className="dropdown-item btn btn-sm text-start" onClick={(e) => handleAction(e, 'mute', conv)}>
-                                                                    {isMuted ? <><FaVolumeHigh className="me-2"/> Unmute</> : <><FaVolumeXmark className="me-2"/> Mute</>}
+                                                                <button className="dropdown-item btn btn-sm text-start px-3 py-2 d-flex align-items-center" onClick={(e) => handleAction(e, 'mute', conv)}>
+                                                                    {isMuted ? <><FaVolumeHigh className="me-2" size={14}/> <span>Unmute</span></> : <><FaVolumeXmark className="me-2" size={14}/> <span>Mute</span></>}
                                                                 </button>
-                                                                <div className="dropdown-divider my-1"></div>
-                                                                <button className="dropdown-item btn btn-sm text-start text-danger" onClick={(e) => handleAction(e, 'delete', conv)}>
-                                                                    <FaTrash className="me-2"/> Delete
+                                                                <div className="dropdown-divider my-1 mx-2"></div>
+                                                                <button className="dropdown-item btn btn-sm text-start text-danger px-3 py-2 d-flex align-items-center" onClick={(e) => handleAction(e, 'delete', conv)}>
+                                                                    <FaTrash className="me-2" size={14} /> <span>Delete</span>
                                                                 </button>
                                                             </div>
                                                         </>
