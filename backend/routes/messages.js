@@ -117,6 +117,40 @@ router.put('/:id', verifyToken, async (req, res) => {
     }
 });
 
+// Toggle Reaction
+router.put('/:id/react', verifyToken, async (req, res) => {
+    try {
+        const { emoji } = req.body;
+        const message = await Message.findById(req.params.id);
+        if (!message) return res.status(404).json("Message not found");
+
+        const existingReactionIndex = message.reactions.findIndex(
+            r => r.user.toString() === req.user.id && r.emoji === emoji
+        );
+
+        if (existingReactionIndex > -1) {
+            // Remove
+            message.reactions.splice(existingReactionIndex, 1);
+        } else {
+            // Add
+            message.reactions.push({ user: req.user.id, emoji });
+        }
+
+        const updatedMessage = await message.save();
+        await updatedMessage.populate('sender', 'firstName lastName profileImage'); // Repopulate for frontend
+
+        // Notify
+        const io = req.app.get('io');
+        const conversation = await Conversation.findById(message.conversationId);
+        const receiver = conversation.participants.find(p => p.toString() !== req.user.id);
+        if (receiver) io.to(receiver.toString()).emit("message_updated", updatedMessage);
+
+        res.status(200).json(updatedMessage);
+    } catch (err) {
+        res.status(500).json(err);
+    }
+});
+
 // Delete Message
 router.delete('/:id', verifyToken, async (req, res) => {
     try {

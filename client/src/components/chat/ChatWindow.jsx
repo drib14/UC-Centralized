@@ -2,8 +2,9 @@ import React, { useState, useEffect, useRef } from 'react';
 import {
     FaArrowLeft, FaPaperPlane, FaImage, FaMicrophone, FaStop,
     FaPlay, FaPause, FaCheckDouble, FaVideo, FaPhone, FaEllipsisVertical,
-    FaCircleInfo, FaBan, FaTrash, FaPen, FaShare, FaEllipsis
+    FaCircleInfo, FaBan, FaTrash, FaPen, FaShare, FaEllipsis, FaFaceSmile, FaFile, FaPlus
 } from 'react-icons/fa6';
+import EmojiPicker from 'emoji-picker-react';
 import API from '../../utils/api';
 import { useSocket } from '../../context/SocketContext';
 import { toast } from 'react-toastify';
@@ -20,8 +21,10 @@ const ChatWindow = ({ conversation, currentUser, socket, onBack, onMessageSent }
     const [isTyping, setIsTyping] = useState(false); // If other user is typing
     const [typingTimeout, setTypingTimeout] = useState(null); // For local debouncing
     const [showOptions, setShowOptions] = useState(false); // Dropdown state
-    const [blocked, setBlocked] = useState(false); // If current user blocked other
-    const [showProfile, setShowProfile] = useState(false); // Profile modal
+    const [blocked, setBlocked] = useState(false); // I blocked them
+    const [isBlocked, setIsBlocked] = useState(false); // They blocked me
+    const [showProfile, setShowProfile] = useState(false);
+    const [showEmojiPicker, setShowEmojiPicker] = useState(false);
 
     // Message Actions
     const [editingMsgId, setEditingMsgId] = useState(null);
@@ -59,12 +62,9 @@ const ChatWindow = ({ conversation, currentUser, socket, onBack, onMessageSent }
 
     const checkBlockStatus = async () => {
         try {
-            const me = await API.getMyDetails();
-            if (me.blockedUsers && me.blockedUsers.includes(otherUser._id)) {
-                setBlocked(true);
-            } else {
-                setBlocked(false);
-            }
+            const status = await API.getBlockStatus(otherUser._id);
+            setBlocked(status.iBlockedThem);
+            setIsBlocked(status.theyBlockedMe);
         } catch (err) { console.error(err); }
     };
 
@@ -251,12 +251,45 @@ const ChatWindow = ({ conversation, currentUser, socket, onBack, onMessageSent }
         setUploading(true);
         try {
             const { url } = await API.uploadFile(file);
-            await sendMessage('', 'image', url);
+            let type = 'image';
+            if (file.type.startsWith('audio')) type = 'audio';
+            else if (file.type.startsWith('video')) type = 'video_call'; // Using video_call type for now or just generic link? 'image' renders as img.
+            // Actually, we should check mime. 'image' -> img tag.
+            // Non-image -> generic file link.
+            // Since backend supports broad uploads now, we should handle rendering.
+            // Let's use 'image' for images, 'audio' for audio msg, 'text' for generic files (as link).
+            // Or better: Use type='text' and put URL in content? Or 'file' type?
+            // Existing types: text, image, audio, call, video_call.
+            // If it's a PDF/Video, 'image' type rendering will fail (<img> tag).
+            // I'll use 'text' with the URL as content for now if not image/audio.
+
+            if (file.type.startsWith('image')) {
+                await sendMessage('', 'image', url);
+            } else if (file.type.startsWith('audio')) {
+                await sendMessage('', 'audio', url);
+            } else {
+                // Send as text link
+                await sendMessage(url, 'text');
+            }
         } catch (err) {
             console.error("Upload failed", err);
-            alert("Failed to upload image.");
+            toast.error("Failed to upload file.");
         } finally {
             setUploading(false);
+        }
+    };
+
+    const onEmojiClick = (emojiObject) => {
+        setNewMessage(prev => prev + emojiObject.emoji);
+        setShowEmojiPicker(false);
+    };
+
+    const handleReaction = async (msgId, emoji) => {
+        try {
+            const updated = await API.toggleReaction(msgId, emoji);
+            setMessages(prev => prev.map(m => m._id === msgId ? updated : m));
+        } catch (err) {
+            console.error(err);
         }
     };
 
@@ -571,6 +604,13 @@ const ChatWindow = ({ conversation, currentUser, socket, onBack, onMessageSent }
                                                         <FaEllipsis />
                                                     </button>
                                                     <ul className="dropdown-menu shadow-sm">
+                                                        {/* Reaction Menu Item */}
+                                                        <li><div className="dropdown-item d-flex gap-2">
+                                                            {['👍', '❤️', '😂', '😮', '😢', '😠'].map(emoji => (
+                                                                <span key={emoji} style={{cursor:'pointer'}} onClick={() => handleReaction(msg._id, emoji)}>{emoji}</span>
+                                                            ))}
+                                                        </div></li>
+                                                        <li><hr className="dropdown-divider"/></li>
                                                         <li><button className="dropdown-item" onClick={() => { setForwardMsg(msg); setShowForwardModal(true); }}>
                                                             <FaShare className="me-2 text-primary" /> Forward
                                                         </button></li>
@@ -615,6 +655,17 @@ const ChatWindow = ({ conversation, currentUser, socket, onBack, onMessageSent }
                                             </small>
                                             {isMe && isSeen && <FaCheckDouble className="text-primary" size={12} title="Seen" />}
                                         </div>
+
+                                        {/* Reactions Display */}
+                                        {msg.reactions && msg.reactions.length > 0 && (
+                                            <div className="d-flex gap-1 mt-1 position-absolute" style={{bottom: '-10px', [isMe ? 'right' : 'left']: '0'}}>
+                                                {Object.entries(msg.reactions.reduce((acc, r) => { acc[r.emoji] = (acc[r.emoji] || 0) + 1; return acc; }, {})).map(([emoji, count]) => (
+                                                    <span key={emoji} className="badge bg-light text-dark border shadow-sm rounded-pill" style={{fontSize: '0.7rem'}}>
+                                                        {emoji} {count}
+                                                    </span>
+                                                ))}
+                                            </div>
+                                        )}
                                     </div>
                                 </div>
                             );
@@ -634,47 +685,69 @@ const ChatWindow = ({ conversation, currentUser, socket, onBack, onMessageSent }
                 )}
             </div>
 
-            {/* Input */}
-            <div className="p-3 bg-white border-top position-relative">
-                {isRecording && (
-                     <div className="position-absolute start-0 end-0 bottom-0 bg-white d-flex align-items-center justify-content-center border-top shadow-sm" style={{height: '100%', zIndex: 10}}>
-                         <div className="text-danger fw-bold animate-pulse d-flex align-items-center gap-2">
-                             <div className="rounded-circle bg-danger" style={{width:10, height:10}}></div>
-                             Recording... {formatDuration(recordingTime)}
-                         </div>
-                         <button className="btn btn-sm btn-secondary ms-4 rounded-pill" onClick={stopRecording}>Stop & Send</button>
-                     </div>
-                )}
+            {/* Input Area */}
+            {blocked ? (
+                <div className="p-4 bg-light border-top text-center text-muted">
+                    <p>You have blocked this user.</p>
+                    <button className="btn btn-outline-danger btn-sm" onClick={handleBlock}>Unblock</button>
+                </div>
+            ) : isBlocked ? (
+                <div className="p-4 bg-light border-top text-center text-muted">
+                    <p>You cannot reply to this conversation.</p>
+                </div>
+            ) : (
+                <div className="p-3 bg-white border-top position-relative">
+                    {/* Emoji Picker Popover */}
+                    {showEmojiPicker && (
+                        <div className="position-absolute bottom-100 start-0 mb-2 ms-3 shadow-lg">
+                            <EmojiPicker onEmojiClick={onEmojiClick} />
+                        </div>
+                    )}
 
-                <form onSubmit={handleSend} className="d-flex gap-2 align-items-center">
-                    <input type="file" accept="image/*" className="d-none" ref={fileInputRef} onChange={handleFileSelect} />
-                    <button type="button" className="btn btn-light text-secondary rounded-circle" onClick={() => fileInputRef.current.click()} disabled={uploading}>
-                        <FaImage size={20} />
-                    </button>
+                    {isRecording && (
+                        <div className="position-absolute start-0 end-0 bottom-0 bg-white d-flex align-items-center justify-content-center border-top shadow-sm" style={{height: '100%', zIndex: 10}}>
+                            <div className="text-danger fw-bold animate-pulse d-flex align-items-center gap-2">
+                                <div className="rounded-circle bg-danger" style={{width:10, height:10}}></div>
+                                Recording... {formatDuration(recordingTime)}
+                            </div>
+                            <button className="btn btn-sm btn-secondary ms-4 rounded-pill" onClick={stopRecording}>Stop & Send</button>
+                        </div>
+                    )}
 
-                    <button
-                        type="button"
-                        className={`btn rounded-circle ${isRecording ? 'btn-danger' : 'btn-light text-secondary'}`}
-                        onClick={isRecording ? stopRecording : startRecording}
-                        disabled={uploading}
-                    >
-                        {isRecording ? <FaStop size={16} /> : <FaMicrophone size={20} />}
-                    </button>
+                    <form onSubmit={handleSend} className="d-flex gap-2 align-items-center">
+                        <button type="button" className="btn btn-light text-secondary rounded-circle" onClick={() => setShowEmojiPicker(!showEmojiPicker)}>
+                            <FaFaceSmile size={20} className="text-warning" />
+                        </button>
 
-                    <input
-                        type="text"
-                        className="form-control rounded-pill bg-light border-0"
-                        placeholder={uploading ? "Uploading..." : "Aa"}
-                        value={newMessage}
-                        onChange={handleInputChange}
-                        disabled={uploading}
-                    />
+                        <input type="file" className="d-none" ref={fileInputRef} onChange={handleFileSelect} />
+                        <button type="button" className="btn btn-light text-secondary rounded-circle" onClick={() => fileInputRef.current.click()} disabled={uploading}>
+                            <FaPlus size={20} />
+                        </button>
 
-                    <button type="submit" className="btn btn-primary rounded-circle d-flex align-items-center justify-content-center" style={{width:'40px', height:'40px'}} disabled={!newMessage.trim() && !uploading}>
-                        <FaPaperPlane />
-                    </button>
-                </form>
-            </div>
+                        <button
+                            type="button"
+                            className={`btn rounded-circle ${isRecording ? 'btn-danger' : 'btn-light text-secondary'}`}
+                            onClick={isRecording ? stopRecording : startRecording}
+                            disabled={uploading}
+                        >
+                            {isRecording ? <FaStop size={16} /> : <FaMicrophone size={20} />}
+                        </button>
+
+                        <input
+                            type="text"
+                            className="form-control rounded-pill bg-light border-0"
+                            placeholder={uploading ? "Uploading..." : "Aa"}
+                            value={newMessage}
+                            onChange={handleInputChange}
+                            disabled={uploading}
+                        />
+
+                        <button type="submit" className="btn btn-primary rounded-circle d-flex align-items-center justify-content-center" style={{width:'40px', height:'40px'}} disabled={!newMessage.trim() && !uploading}>
+                            <FaPaperPlane />
+                        </button>
+                    </form>
+                </div>
+            )}
         </div>
     );
 };

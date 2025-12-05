@@ -178,6 +178,14 @@ class API {
         return this.request(`/messages/${id}?mode=${mode}`, 'DELETE');
     }
 
+    static toggleReaction(id, emoji) {
+        return this.request(`/messages/${id}/react`, 'PUT', { emoji });
+    }
+
+    static getBlockStatus(userId) {
+        return this.request(`/users/${userId}/block-status`);
+    }
+
     static uploadFile(file) {
         const formData = new FormData();
         formData.append('file', file);

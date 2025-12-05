@@ -56,6 +56,24 @@ router.get('/me/details', verifyToken, async (req, res) => {
     }
 });
 
+// GET BLOCK STATUS (Bidirectional)
+router.get('/:id/block-status', verifyToken, async (req, res) => {
+    try {
+        const otherUserId = req.params.id;
+        const myId = req.user.id;
+
+        const me = await User.findById(myId).select('blockedUsers');
+        const other = await User.findById(otherUserId).select('blockedUsers');
+
+        res.status(200).json({
+            iBlockedThem: me.blockedUsers.includes(otherUserId),
+            theyBlockedMe: other.blockedUsers.includes(myId)
+        });
+    } catch (err) {
+        res.status(500).json(err);
+    }
+});
+
 // GET ALL (Admins Only)
 router.get('/', verifyAdmin, async (req, res) => {
     try {

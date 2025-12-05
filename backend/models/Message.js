@@ -37,7 +37,14 @@ const messageSchema = new mongoose.Schema({
     isEdited: {
         type: Boolean,
         default: false
-    }
+    },
+    reactions: [{
+        user: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: 'User'
+        },
+        emoji: String
+    }]
 }, { timestamps: true });
 
 module.exports = mongoose.model('Message', messageSchema);
