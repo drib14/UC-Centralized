@@ -1,10 +1,12 @@
 import React, { useEffect, useState } from 'react';
-import { Outlet } from 'react-router-dom';
+import { Outlet, useLocation } from 'react-router-dom';
 import Sidebar from './Sidebar';
 import Navbar from './Navbar';
 
 const Layout = () => {
     const [collapsed, setCollapsed] = useState(false);
+    const location = useLocation();
+    const isChatPage = location.pathname.includes('/messages');
 
     useEffect(() => {
         const checkState = () => {
@@ -35,9 +37,9 @@ const Layout = () => {
     return (
         <div id="wrapper">
             <Sidebar />
-            <div id="page-content-wrapper" className={collapsed ? 'collapsed' : ''}>
+            <div id="page-content-wrapper" className={`${collapsed ? 'collapsed' : ''} ${isChatPage ? 'chat-page-wrapper' : ''}`}>
                 {/* Navbar removed as per request to fit content */}
-                <div className="container-fluid">
+                <div className={isChatPage ? 'h-100 p-0' : 'container-fluid'}>
                     <Outlet />
                 </div>
             </div>

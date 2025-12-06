@@ -860,8 +860,8 @@ const ChatWindow = ({ conversation, currentUser, socket, onBack, onMessageSent, 
                                 <div
                                     key={idx}
                                     className={`d-flex gap-2 message-container ${isMe ? 'flex-row-reverse' : ''}`}
-                                    onMouseEnter={() => setHoveredMsgId(msg._id)}
-                                    onMouseLeave={() => setHoveredMsgId(null)}
+                                    onMouseEnter={() => window.innerWidth >= 768 && setHoveredMsgId(msg._id)}
+                                    onMouseLeave={() => window.innerWidth >= 768 && setHoveredMsgId(null)}
                                     onClick={() => {
                                         if (window.innerWidth < 768) {
                                             setHoveredMsgId(prev => prev === msg._id ? null : msg._id);
@@ -870,7 +870,7 @@ const ChatWindow = ({ conversation, currentUser, socket, onBack, onMessageSent, 
                                 >
                                     {renderAvatar(isMe ? currentUser : otherUser, 35)}
 
-                                    <div className={`d-flex flex-column ${isMe ? 'align-items-end' : 'align-items-start'}`} style={{maxWidth: '70%', position: 'relative'}}>
+                                    <div className={`d-flex flex-column ${isMe ? 'align-items-end' : 'align-items-start'}`} style={{maxWidth: window.innerWidth <= 768 ? 'calc(100% - 60px)' : '70%', position: 'relative'}}>
                                         <small className="text-muted mb-1" style={{fontSize: '0.75rem'}}>
                                             {isMe ? 'You' : msg.sender.firstName}
                                         </small>
@@ -880,6 +880,7 @@ const ChatWindow = ({ conversation, currentUser, socket, onBack, onMessageSent, 
                                             {(!msg.isDeletedForEveryone && hoveredMsgId === msg._id) && (
                                                 <div
                                                     className="d-flex align-items-center gap-2 position-absolute"
+                                                    onClick={(e) => e.stopPropagation()} // Prevent closing on click
                                                     style={{
                                                         [isMe ? 'right' : 'left']: '100%',
                                                         marginRight: isMe ? '10px' : 0,
@@ -1070,35 +1071,58 @@ const ChatWindow = ({ conversation, currentUser, socket, onBack, onMessageSent, 
                             <FaFaceSmile size={20} className="text-warning" />
                         </button>
 
-                        {/* Hide extra actions on mobile focus */}
+                        {/* File Button (Hidden on mobile focus) */}
                         {(!isInputFocused || window.innerWidth > 768) && (
                             <>
                                 <input type="file" className="d-none" multiple ref={fileInputRef} onChange={handleFileSelect} />
                                 <button type="button" className="btn btn-light text-secondary rounded-circle" onClick={() => fileInputRef.current.click()} disabled={uploading}>
                                     <FaPlus size={20} />
                                 </button>
-
-                                <button
-                                    type="button"
-                                    className={`btn rounded-circle ${isRecording ? 'btn-danger' : 'btn-light text-secondary'}`}
-                                    onClick={isRecording ? stopRecording : startRecording}
-                                    disabled={uploading}
-                                >
-                                    {isRecording ? <FaStop size={16} /> : <FaMicrophone size={20} />}
-                                </button>
                             </>
                         )}
 
-                        <input
-                            type="text"
-                            className="form-control rounded-pill bg-light border-0"
-                            placeholder={uploading ? "Uploading..." : "Aa"}
-                            value={newMessage}
-                            onChange={handleInputChange}
-                            onFocus={() => setIsInputFocused(true)}
-                            onBlur={() => setTimeout(() => setIsInputFocused(false), 200)} // Delay to allow button clicks
-                            disabled={uploading}
-                        />
+                        {/* Input Wrapper */}
+                        <div className="position-relative flex-grow-1 transition-width" style={{ transition: 'all 0.3s ease' }}>
+                            <input
+                                type="text"
+                                className="form-control rounded-pill bg-light border-0 pe-5" // Add padding for mic
+                                placeholder={uploading ? "Uploading..." : "Aa"}
+                                value={newMessage}
+                                onChange={handleInputChange}
+                                onFocus={() => setIsInputFocused(true)}
+                                onBlur={() => setTimeout(() => setIsInputFocused(false), 200)}
+                                disabled={uploading}
+                            />
+                            {/* Mic Button (Inside Input on Focus, or Outside? User said inside if expanded) */}
+                            {/* If expanded (isInputFocused), we show mic inside. */}
+                            {/* If NOT expanded, we show mic outside? Or inside always? */}
+                            {/* User: "place the mic inside chat box if the chat box expand" */}
+                            {/* Implies if not expanded, it might be outside. But moving DOM elements is jumpy. */}
+                            {/* Better UX: Always inside? Or Only visible inside when expanded? */}
+                            {/* Let's try: If focused, show inside. If not focused, show outside (like before). */}
+                            {isInputFocused && window.innerWidth <= 768 && (
+                                <button
+                                    type="button"
+                                    className={`btn btn-link position-absolute top-50 end-0 translate-middle-y text-secondary p-0 me-3 ${isRecording ? 'text-danger' : ''}`}
+                                    onClick={isRecording ? stopRecording : startRecording}
+                                    disabled={uploading}
+                                >
+                                    {isRecording ? <FaStop size={16} /> : <FaMicrophone size={16} />}
+                                </button>
+                            )}
+                        </div>
+
+                        {/* Mic Button (Outside when not focused on mobile, or always on desktop) */}
+                        {(!isInputFocused || window.innerWidth > 768) && (
+                             <button
+                                type="button"
+                                className={`btn rounded-circle ${isRecording ? 'btn-danger' : 'btn-light text-secondary'}`}
+                                onClick={isRecording ? stopRecording : startRecording}
+                                disabled={uploading}
+                            >
+                                {isRecording ? <FaStop size={16} /> : <FaMicrophone size={20} />}
+                            </button>
+                        )}
 
                         <button type="submit" className="btn btn-primary rounded-circle d-flex align-items-center justify-content-center" style={{width:'40px', height:'40px'}} disabled={(!newMessage.trim() && selectedFiles.length === 0) || uploading}>
                             <FaPaperPlane />

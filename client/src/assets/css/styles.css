@@ -349,7 +349,11 @@ footer {
     }
     #page-content-wrapper {
         margin-left: 0 !important;
-        padding: 10px;
+        padding: 10px; /* Restore padding for non-chat pages */
+    }
+
+    #page-content-wrapper.chat-page-wrapper {
+        padding: 0 !important; /* Remove padding only for chat page */
     }
     .sidebar.collapsed {
         min-width: 250px; /* Reset width on mobile if class persists */
@@ -385,8 +389,8 @@ footer {
 
 @media (max-width: 768px) {
     .chat-layout-container {
-        height: calc(100dvh - 20px); /* Use dvh for mobile browsers */
-        border: none !important; /* Remove border on mobile for full width look */
+        height: 100dvh; /* Full viewport height */
+        border: none !important;
         border-radius: 0 !important;
     }
 
