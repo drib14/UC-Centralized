@@ -71,7 +71,12 @@ io.on("connection", async (socket) => {
 
     socket.on("send_message", (data) => {
         // data: { conversationId, senderId, receiverId, content, ... }
+        // Emit to both sender and receiver to update their UIs if they are in the conversation
+        // Actually, the sender updates optimistically or via API response.
+        // We mainly need to notify the receiver.
+        // However, if the sender has multiple tabs open, they should also receive it.
         socket.to(data.receiverId).emit("receive_message", data);
+        socket.to(data.senderId).emit("receive_message", data);
     });
 
     socket.on("typing", (data) => {
