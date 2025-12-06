@@ -4,6 +4,7 @@ import { FaEllipsisVertical, FaTrash, FaCheck, FaVolumeXmark, FaVolumeHigh } fro
 import API from '../../utils/api';
 import { useSocket } from '../../context/SocketContext';
 import { toast } from 'react-toastify';
+import ActiveUsersList from './ActiveUsersList';
 
 const ChatSidebar = ({ conversations, selectedId, onSelect, onNewChat, currentUser, onDeleteConversation, onUpdateConversation }) => {
     const [searchTerm, setSearchTerm] = useState('');
@@ -133,35 +134,8 @@ const ChatSidebar = ({ conversations, selectedId, onSelect, onNewChat, currentUs
 
     return (
         <div className="d-flex flex-column h-100">
-            {/* Mobile: Top Horizontal User List (Stories Style) */}
-            <div className="d-md-none d-flex gap-3 p-3 overflow-auto border-bottom bg-white" style={{whiteSpace: 'nowrap'}}>
-                {/* Current User */}
-                <div className="text-center" style={{minWidth: '60px'}} onClick={() => onNewChat(currentUser)}>
-                    {renderAvatar(currentUser)}
-                    <small className="d-block text-truncate mt-1 text-muted" style={{maxWidth: '60px', fontSize: '0.7rem'}}>
-                        You
-                    </small>
-                </div>
-
-                {conversations.map(conv => {
-                    const other = getOtherParticipant(conv);
-                    // Skip if 'other' is me (avoid duplicate "You" entry)
-                    if (other._id === currentUser._id) return null;
-
-                    return (
-                        <div key={conv._id} className="text-center" style={{minWidth: '60px'}} onClick={() => {
-                            onSelect(conv);
-                            setActiveMenuId(null);
-                            if (getUnreadCount(conv) > 0) setUnreadMessageCount(prev => Math.max(0, prev - 1));
-                        }}>
-                            {renderAvatar(other)}
-                            <small className="d-block text-truncate mt-1" style={{maxWidth: '60px', fontSize: '0.7rem'}}>
-                                {other.firstName}
-                            </small>
-                        </div>
-                    );
-                })}
-            </div>
+            {/* Mobile: Top Horizontal Active User List */}
+            <ActiveUsersList currentUser={currentUser} />
 
             <div className="p-3 border-bottom">
                 <div className="input-group">

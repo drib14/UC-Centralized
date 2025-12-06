@@ -50,6 +50,9 @@ const ChatWindow = ({ conversation, currentUser, socket, onBack, onMessageSent, 
     const timerRef = useRef(null); // For recording timer
     const [recordingStartTime, setRecordingStartTime] = useState(0); // To measure actual duration
     const [isInputFocused, setIsInputFocused] = useState(false); // Mobile focus state
+    const touchTimer = useRef(null); // Long press timer
+    const lastTap = useRef(0); // For double tap detection
+    const singleTapTimer = useRef(null);
 
     const otherUser = conversation.participants.find(p => p._id !== currentUser._id) || conversation.participants[0] || {};
     const isOnline = onlineUsers.has(otherUser._id);
@@ -394,6 +397,46 @@ const ChatWindow = ({ conversation, currentUser, socket, onBack, onMessageSent, 
         }
     };
 
+    const handleQuickReaction = async (msg) => {
+        // Toggle Heart Emoji
+        const myReaction = msg.reactions?.find(r => (r.user._id === currentUser._id || r.user === currentUser._id));
+
+        // If already reacted with Heart, remove it? The current API toggleReaction handles toggle.
+        // We will just send '❤️'. If it's there, it removes. If another emoji is there, it replaces.
+        await handleReaction(msg._id, '❤️');
+    };
+
+    // Unified Touch Handler (Double Tap & Long Press)
+    const handleTouchStart = (msgId) => {
+        touchTimer.current = setTimeout(() => {
+            // Long Press
+            if (window.innerWidth < 768) {
+                setHoveredMsgId(prev => prev === msgId ? null : msgId);
+            }
+        }, 500);
+    };
+
+    const handleTouchEnd = (e, msg, singleTapAction) => {
+        clearTimeout(touchTimer.current);
+        const currentTime = new Date().getTime();
+        const tapLength = currentTime - lastTap.current;
+
+        if (tapLength < 300 && tapLength > 0) {
+            // Double Tap -> React
+            e.preventDefault();
+            if (singleTapTimer.current) clearTimeout(singleTapTimer.current);
+            handleQuickReaction(msg);
+        } else {
+            // Single Tap -> Trigger Action if passed (Delayed)
+            if (singleTapAction) {
+                singleTapTimer.current = setTimeout(() => {
+                    singleTapAction();
+                }, 300);
+            }
+        }
+        lastTap.current = currentTime;
+    };
+
     // Voice Recorder Logic
     const startRecording = async () => {
         try {
@@ -457,7 +500,7 @@ const ChatWindow = ({ conversation, currentUser, socket, onBack, onMessageSent, 
     };
 
     const formatDuration = (seconds) => {
-        if (!seconds || isNaN(seconds) || seconds > 3600) return "0:00"; // Fallback for weird data
+        if (!seconds || isNaN(seconds) || seconds > 3600) return "0:00";
         const mins = Math.floor(seconds / 60);
         const secs = Math.floor(seconds % 60);
         return `${mins}:${secs < 10 ? '0' : ''}${secs}`;
@@ -492,32 +535,6 @@ const ChatWindow = ({ conversation, currentUser, socket, onBack, onMessageSent, 
         );
     };
 
-    // Unified Touch Handler (Double Tap & Long Press)
-    const handleTouchStart = (msgId) => {
-        touchTimer.current = setTimeout(() => {
-            // Long Press
-            if (window.innerWidth < 768) {
-                setHoveredMsgId(prev => prev === msgId ? null : msgId);
-            }
-        }, 500);
-    };
-
-    const handleTouchEnd = (e, actionCallback) => {
-        clearTimeout(touchTimer.current);
-        const currentTime = new Date().getTime();
-        const tapLength = currentTime - lastTap.current;
-
-        if (tapLength < 300 && tapLength > 0) {
-            // Double Tap -> React
-            e.preventDefault();
-            setReactingMsgId(reactingMsgId ? null : actionCallback.msgId);
-        } else {
-            // Single Tap -> Trigger Action if passed
-            if (actionCallback && actionCallback.fn) actionCallback.fn();
-        }
-        lastTap.current = currentTime;
-    };
-
     const renderMessageContent = (msg, isMe) => {
         if (msg.isDeletedForEveryone) {
             return (
@@ -533,22 +550,20 @@ const ChatWindow = ({ conversation, currentUser, socket, onBack, onMessageSent, 
              const name = att.name || url.split('/').pop() || 'File';
              const size = att.size;
 
-             // Wrapper for touch logic
+             // Touch wrapper props
              const wrapProps = {
                  onTouchStart: () => handleTouchStart(msg._id),
                  onTouchEnd: (e) => {
                      let actionFn = null;
                      if (type === 'image' || type === 'video') actionFn = () => setLightboxMedia({ url, type });
-                     // File single tap? Download happens naturally via <a> unless blocked.
-                     // On mobile, maybe we want download.
-                     handleTouchEnd(e, { msgId: msg._id, fn: actionFn });
+                     handleTouchEnd(e, msg, actionFn);
                  },
-                 // Desktop fallback
                  onClick: () => {
                      if (window.innerWidth >= 768) {
                         if (type === 'image' || type === 'video') setLightboxMedia({ url, type });
                      }
-                 }
+                 },
+                 onDoubleClick: () => handleQuickReaction(msg)
              };
 
              if (type === 'image') {
@@ -583,7 +598,8 @@ const ChatWindow = ({ conversation, currentUser, socket, onBack, onMessageSent, 
                         className="d-flex align-items-center gap-2 p-2 rounded-pill shadow-sm bg-white border"
                         style={{minWidth: '180px', maxWidth: '240px'}}
                         onTouchStart={() => handleTouchStart(msg._id)}
-                        onTouchEnd={(e) => handleTouchEnd(e, { msgId: msg._id, fn: null })}
+                        onTouchEnd={(e) => handleTouchEnd(e, msg, null)}
+                        onDoubleClick={() => handleQuickReaction(msg)}
                     >
                         <button
                             className="btn btn-primary rounded-circle shadow-sm d-flex align-items-center justify-content-center"
@@ -618,8 +634,9 @@ const ChatWindow = ({ conversation, currentUser, socket, onBack, onMessageSent, 
                      <div
                         key={index}
                         onTouchStart={() => handleTouchStart(msg._id)}
-                        onTouchEnd={(e) => handleTouchEnd(e, { msgId: msg._id, fn: () => window.open(url, '_blank') })}
+                        onTouchEnd={(e) => handleTouchEnd(e, msg, () => window.open(url, '_blank'))}
                         onClick={() => window.innerWidth >= 768 && window.open(url, '_blank')}
+                        onDoubleClick={() => handleQuickReaction(msg)}
                      >
                         <div className="d-flex align-items-center gap-2 p-2 rounded shadow-sm" style={{minWidth: '160px', maxWidth: '220px', cursor: 'pointer', backgroundColor: '#333', color: '#fff'}}>
                              <div className="d-flex align-items-center justify-content-center rounded-circle" style={{width: '35px', height: '35px', backgroundColor: 'rgba(255,255,255,0.1)'}}>
@@ -667,7 +684,8 @@ const ChatWindow = ({ conversation, currentUser, socket, onBack, onMessageSent, 
                         className={`p-3 rounded-4 shadow-sm ${isMe ? 'bg-primary text-white' : 'bg-white text-dark'}`}
                         style={{wordWrap: 'break-word', userSelect: 'none'}}
                         onTouchStart={() => handleTouchStart(msg._id)}
-                        onTouchEnd={(e) => handleTouchEnd(e, { msgId: msg._id, fn: null })}
+                        onTouchEnd={(e) => handleTouchEnd(e, msg, null)}
+                        onDoubleClick={() => handleQuickReaction(msg)}
                     >
                         <div style={{whiteSpace: 'pre-wrap'}}>{msg.content} {msg.isEdited && <span className="small fst-italic ms-1" style={{opacity: 0.7}}>(edited)</span>}</div>
                     </div>

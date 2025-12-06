@@ -7,17 +7,22 @@ const { verifyAdmin, verifyToken } = require('../middleware/auth');
 router.get('/search', verifyToken, async (req, res) => {
     try {
         const query = req.query.q;
-        if (!query) return res.status(400).json({ message: "Query is required" });
+        let searchCriteria = {};
 
-        const searchCriteria = {
-            $or: [
-                { firstName: { $regex: query, $options: 'i' } },
-                { lastName: { $regex: query, $options: 'i' } },
-                { studentId: { $regex: query, $options: 'i' } }
-            ]
-        };
+        if (query && query.trim() !== '') {
+            searchCriteria = {
+                $or: [
+                    { firstName: { $regex: query, $options: 'i' } },
+                    { lastName: { $regex: query, $options: 'i' } },
+                    { studentId: { $regex: query, $options: 'i' } }
+                ]
+            };
+        }
 
-        const users = await User.find(searchCriteria).select('firstName lastName studentId profileImage role');
+        // Return top 50 users if no query (for active list)
+        const users = await User.find(searchCriteria)
+            .select('firstName lastName studentId profileImage role isOnline lastSeen')
+            .limit(50);
 
         res.status(200).json(users);
     } catch (err) {
