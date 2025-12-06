@@ -14,7 +14,10 @@ const CreateGroupModal = ({ show, onHide }) => {
     const handleSearch = async (e) => {
         const q = e.target.value;
         setSearchTerm(q);
-        if(!q) return setSearchResults([]);
+        if(!q) {
+            setSearchResults([]);
+            return;
+        }
         try {
             const res = await API.get(`/messages/search/global?q=${q}`);
             setSearchResults(res.users);
@@ -32,15 +35,24 @@ const CreateGroupModal = ({ show, onHide }) => {
     const createGroup = async () => {
         if (!name || selectedUsers.length === 0) return toast.error("Name and members required");
         try {
+            // Ensure payload matches backend expectation: groupName, groupPhoto, participants, isGroup
             const res = await API.post('/messages/conversations', {
                 isGroup: true,
                 groupName: name,
                 participants: selectedUsers.map(u => u._id)
             });
+
+            // Backend returns 201 created.
             setSelectedConversation(res);
             onHide();
             toast.success("Group created");
-        } catch(e) { toast.error("Failed to create group"); }
+            setName('');
+            setSelectedUsers([]);
+            setSearchTerm('');
+        } catch(e) {
+            console.error(e);
+            toast.error("Failed to create group");
+        }
     };
 
     return (
@@ -59,21 +71,26 @@ const CreateGroupModal = ({ show, onHide }) => {
                     <Form.Control value={searchTerm} onChange={handleSearch} placeholder="Search users..." />
                     <div className="list-group mt-2" style={{maxHeight: 200, overflowY: 'auto'}}>
                         {searchResults.map(u => (
-                            <div key={u._id} className="list-group-item cursor-pointer d-flex justify-content-between" onClick={() => toggleUser(u)}>
+                            <div key={u._id} className="list-group-item cursor-pointer d-flex justify-content-between align-items-center" onClick={() => toggleUser(u)}>
                                 <span>{u.firstName} {u.lastName}</span>
-                                {selectedUsers.find(s => s._id === u._id) && <span className="text-primary">Selected</span>}
+                                {selectedUsers.find(s => s._id === u._id) ?
+                                    <span className="text-primary fw-bold">✓</span> :
+                                    <span className="text-muted">+</span>
+                                }
                             </div>
                         ))}
                     </div>
                 </Form.Group>
 
-                <div className="d-flex gap-2 flex-wrap">
-                    {selectedUsers.map(u => (
-                        <span key={u._id} className="badge bg-primary rounded-pill p-2" onClick={() => toggleUser(u)}>
-                            {u.firstName} x
-                        </span>
-                    ))}
-                </div>
+                {selectedUsers.length > 0 && (
+                    <div className="d-flex gap-2 flex-wrap mt-3">
+                        {selectedUsers.map(u => (
+                            <span key={u._id} className="badge bg-primary rounded-pill p-2 cursor-pointer" onClick={() => toggleUser(u)}>
+                                {u.firstName} ✕
+                            </span>
+                        ))}
+                    </div>
+                )}
             </Modal.Body>
             <Modal.Footer>
                 <Button variant="secondary" onClick={onHide}>Cancel</Button>

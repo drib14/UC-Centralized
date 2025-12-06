@@ -48,6 +48,8 @@ export const CallProvider = ({ children }) => {
         try {
             const currentStream = await navigator.mediaDevices.getUserMedia({ video: call.isVideo, audio: true });
             setLocalStream(currentStream);
+
+            // Assign to ref immediately
             if (myVideo.current) myVideo.current.srcObject = currentStream;
 
             const peer = createPeerConnection();
@@ -62,15 +64,6 @@ export const CallProvider = ({ children }) => {
                     socket.emit('ice_candidate', { to: call.from, candidate: event.candidate });
                 }
             };
-
-            // Signal logic would normally involve offer/answer exchange via setRemoteDescription
-            // Since we are doing native, we need to handle the signaling manually or use a wrapper.
-            // However, native WebRTC is verbose. Let's try to simplify.
-            // Actually, for a quick implementation without `simple-peer`, we need:
-            // 1. setRemoteDescription(offer)
-            // 2. createAnswer
-            // 3. setLocalDescription
-            // 4. emit answer
 
             await peer.setRemoteDescription(new RTCSessionDescription(call.signal));
             const answer = await peer.createAnswer();
@@ -103,7 +96,10 @@ export const CallProvider = ({ children }) => {
             setIsVideoCall(isVideo);
             const currentStream = await navigator.mediaDevices.getUserMedia({ video: isVideo, audio: true });
             setLocalStream(currentStream);
+
+            // Assign to ref immediately
             if (myVideo.current) myVideo.current.srcObject = currentStream;
+
             setShowCallModal(true);
 
             const peer = createPeerConnection();
@@ -185,12 +181,8 @@ export const CallProvider = ({ children }) => {
         if (callTimeoutRef.current) clearTimeout(callTimeoutRef.current);
 
         if (connectionRef.current) {
-            // Notify if we are the caller ending it prematurely, or in call
-            // Using a generic 'end_call' signal which server routes to 'to'.
-            // We need to know who 'to' is.
             const target = call.from || outgoingCallTarget;
             if (target) {
-                // Calculate duration if needed, or simple end
                 socket.emit('end_call', { to: target, from: user._id });
             }
             connectionRef.current.close();

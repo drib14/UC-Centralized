@@ -3,23 +3,27 @@ import API from '../../utils/api';
 import { useChat } from '../../context/ChatContext';
 import { useAuth } from '../../context/AuthContext';
 import UserAvatar from './UserAvatar';
+import { toast } from 'react-toastify';
 
 const RightPanel = () => {
     const { selectedConversation } = useChat();
     const { user } = useAuth();
     const [media, setMedia] = useState([]);
+    const [files, setFiles] = useState([]);
     const [activeTab, setActiveTab] = useState('overview'); // overview, media, files
 
     useEffect(() => {
         if (selectedConversation) {
-            loadMedia();
+            loadData('media');
+            loadData('docs');
         }
     }, [selectedConversation]);
 
-    const loadMedia = async () => {
+    const loadData = async (type) => {
         try {
-            const res = await API.get(`/messages/${selectedConversation._id}/media`);
-            setMedia(res);
+            const res = await API.get(`/messages/${selectedConversation._id}/media?type=${type}`);
+            if (type === 'media') setMedia(res);
+            else setFiles(res);
         } catch(e) { console.error(e); }
     };
 
@@ -27,6 +31,8 @@ const RightPanel = () => {
 
     let title = "";
     let image = null;
+    let otherUser = null;
+
     if (selectedConversation.type === 'group') {
         title = selectedConversation.name;
         image = selectedConversation.image;
@@ -34,12 +40,22 @@ const RightPanel = () => {
         const other = selectedConversation.participants.find(p => p._id !== user._id) || selectedConversation.participants[0];
         title = `${other.firstName} ${other.lastName}`;
         image = other.profileImage;
+        otherUser = other;
     }
+
+    const handleBlock = async () => {
+        if (!otherUser) return;
+        if (!window.confirm(`Block ${otherUser.firstName}?`)) return;
+        try {
+            await API.put(`/users/${otherUser._id}/block`);
+            toast.success("User blocked");
+        } catch(e) { toast.error("Failed to block"); }
+    };
 
     return (
         <div className="d-flex flex-column h-100 border-start bg-white">
             <div className="p-4 d-flex flex-column align-items-center border-bottom">
-                <UserAvatar user={{ firstName: title, lastName: '', profileImage: image }} size={80} />
+                <UserAvatar user={selectedConversation.type === 'group' ? { firstName: title, profileImage: image } : otherUser} size={80} />
                 <h5 className="mt-2 mb-0 fw-bold text-center">{title}</h5>
                 <small className="text-muted">{selectedConversation.type === 'group' ? 'Group' : 'Student'}</small>
             </div>
@@ -53,43 +69,56 @@ const RightPanel = () => {
             <div className="flex-grow-1 overflow-auto p-3">
                 {activeTab === 'overview' && (
                     <div className="d-flex flex-column gap-2">
-                        {/* Options */}
-                        <button className="btn btn-light w-100 text-start">Search in Conversation</button>
-                        <button className="btn btn-light w-100 text-start">Change Theme</button>
-                        <button className="btn btn-light w-100 text-start">Notifications</button>
+                        <button className="btn btn-light w-100 text-start" onClick={() => toast.info("Search coming soon")}>Search in Conversation</button>
+                        <button className="btn btn-light w-100 text-start" onClick={() => toast.info("Theme settings coming soon")}>Change Theme</button>
+                        <button className="btn btn-light w-100 text-start" onClick={() => toast.info("Notification settings coming soon")}>Notifications</button>
 
                         {selectedConversation.type === 'group' && (
                             <div className="mt-3">
-                                <h6 className="fw-bold">Members</h6>
-                                {selectedConversation.participants.map(p => (
-                                    <div key={p._id} className="d-flex align-items-center gap-2 mb-2">
-                                        <UserAvatar user={p} size={30} />
-                                        <small>{p.firstName} {p.lastName}</small>
-                                        {selectedConversation.admins.includes(p._id) && <span className="badge bg-secondary ms-auto">Admin</span>}
-                                    </div>
-                                ))}
+                                <h6 className="fw-bold">Members ({selectedConversation.participants.length})</h6>
+                                <div className="d-flex flex-column gap-2 mt-2">
+                                    {selectedConversation.participants.map(p => (
+                                        <div key={p._id} className="d-flex align-items-center gap-2">
+                                            <UserAvatar user={p} size={30} />
+                                            <small className="text-truncate">{p.firstName} {p.lastName}</small>
+                                            {selectedConversation.admins.includes(p._id) && <span className="badge bg-secondary ms-auto" style={{fontSize: '0.6em'}}>Admin</span>}
+                                        </div>
+                                    ))}
+                                </div>
                             </div>
                         )}
 
-                        <div className="mt-4 border-top pt-3">
-                            <button className="btn btn-outline-danger w-100 mb-2">Block</button>
-                            <button className="btn btn-danger w-100">Report</button>
-                        </div>
+                        {selectedConversation.type !== 'group' && (
+                            <div className="mt-4 border-top pt-3">
+                                <button className="btn btn-outline-danger w-100 mb-2" onClick={handleBlock}>Block</button>
+                                <button className="btn btn-danger w-100" onClick={() => toast.error("Report submitted")}>Report</button>
+                            </div>
+                        )}
                     </div>
                 )}
 
                 {activeTab === 'media' && (
                     <div className="row g-2">
-                        {media.filter(m => ['image', 'video'].includes(m.type)).map(m => (
+                        {media.length > 0 ? media.map(m => (
                             <div key={m._id} className="col-4">
                                 {m.type === 'image' ? (
-                                    <img src={m.url} className="img-fluid rounded square-crop" style={{aspectRatio: '1/1', objectFit: 'cover'}} />
+                                    <img src={m.url} className="img-fluid rounded square-crop" style={{aspectRatio: '1/1', objectFit: 'cover', cursor: 'pointer'}} onClick={() => window.open(m.url, '_blank')} />
                                 ) : (
                                     <video src={m.url} className="img-fluid rounded" />
                                 )}
                             </div>
-                        ))}
-                        {media.length === 0 && <div className="text-center text-muted w-100">No media shared</div>}
+                        )) : <div className="text-center text-muted w-100">No media shared</div>}
+                    </div>
+                )}
+
+                {activeTab === 'files' && (
+                    <div className="d-flex flex-column gap-2">
+                        {files.length > 0 ? files.map(f => (
+                            <div key={f._id} className="d-flex align-items-center gap-2 p-2 border rounded bg-light cursor-pointer" onClick={() => window.open(f.url, '_blank')}>
+                                <div className="text-truncate fw-bold" style={{maxWidth: '80%'}}>{f.name}</div>
+                                <small className="ms-auto text-muted">Download</small>
+                            </div>
+                        )) : <div className="text-center text-muted w-100">No files shared</div>}
                     </div>
                 )}
             </div>
