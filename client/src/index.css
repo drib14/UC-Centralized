@@ -91,11 +91,11 @@ code {
     justify-content: center;
     transition: background-color 0.2s;
     cursor: pointer;
-    color: #0084ff; /* Messenger Blue default, can be overridden */
+    color: #003399; /* UC Blue */
 }
 
 .btn-messenger:hover {
-    background-color: #f0f2f5;
+    background-color: #e6e6e6; /* Slightly darker gray for better visibility */
 }
 
 .btn-messenger.text-muted {

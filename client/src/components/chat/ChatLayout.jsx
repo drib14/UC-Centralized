@@ -123,11 +123,17 @@ const ChatLayout = () => {
             <style>{`
                 .chat-sidebar-wrapper {
                     width: 360px;
-                    min-width: 300px;
+                    min-width: 360px; /* Fixed width on desktop */
+                    max-width: 360px;
+                }
+                .chat-window-wrapper {
+                    min-width: 0; /* Prevents flex item from overflowing */
                 }
                 @media (max-width: 768px) {
                     .chat-sidebar-wrapper {
                         width: 100%;
+                        min-width: 100%;
+                        max-width: 100%;
                     }
                 }
             `}</style>

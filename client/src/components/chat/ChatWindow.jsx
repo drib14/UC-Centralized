@@ -3,7 +3,9 @@ import {
     FaPhone, FaVideo, FaCircleInfo, FaImages, FaFaceSmile, FaPlus, FaThumbsUp, FaPaperPlane, FaArrowLeft,
     FaPlay, FaPause, FaFile, FaReply, FaTrash, FaLocationDot, FaSquarePollVertical, FaMicrophone, FaEllipsisVertical, FaStop, FaXmark
 } from 'react-icons/fa6';
+import { FaStickyNote } from 'react-icons/fa'; // Sticker Icon
 import EmojiPicker from 'emoji-picker-react';
+import { useSwipeable } from 'react-swipeable';
 import { useCall } from '../../context/CallContext';
 import API from '../../utils/api';
 import { toast } from 'react-toastify';
@@ -11,11 +13,13 @@ import UserAvatar from './UserAvatar';
 import PollModal from './PollModal';
 import MediaPreview from './MediaPreview';
 import ChatInfoModal from './ChatInfoModal';
+import StickerPicker from './StickerPicker';
 
 const ChatWindow = ({ conversation, currentUser, socket, onBack, onMessageSent, onDeleteConversation }) => {
     const [newMessage, setNewMessage] = useState('');
     const [messages, setMessages] = useState([]);
     const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+    const [showStickerPicker, setShowStickerPicker] = useState(false);
     const [lightboxMedia, setLightboxMedia] = useState(null);
     const [isUploading, setIsUploading] = useState(false);
     const [menuOpenId, setMenuOpenId] = useState(null);
@@ -44,6 +48,17 @@ const ChatWindow = ({ conversation, currentUser, socket, onBack, onMessageSent, 
     const messagesEndRef = useRef(null);
     const audioRefs = useRef({});
     const [playingAudio, setPlayingAudio] = useState(null);
+
+    // Swipe Handlers
+    const swipeHandlers = useSwipeable({
+        onSwipedRight: (eventData) => {
+            // Basic implementation: if swiped on a message, reply to last visible?
+            // React-swipeable is usually component-based.
+            // Since we need to swipe specific messages, we'd wrap each message.
+            // But let's keep it simple: Swipe anywhere on chat doesn't make sense.
+            // We need to apply this per message row. See render below.
+        }
+    });
 
     useEffect(() => {
         loadMessages();
@@ -429,6 +444,15 @@ const ChatWindow = ({ conversation, currentUser, socket, onBack, onMessageSent, 
                 />
             );
         }
+        if (type === 'sticker') {
+            return (
+                <img
+                    key={index} src={url} alt="sticker"
+                    className="cursor-pointer hover-scale"
+                    style={{width: 120, height: 120, objectFit: 'contain'}}
+                />
+            );
+        }
         if (type === 'video') {
             return (
                 <div key={index} className="position-relative rounded-3 overflow-hidden cursor-pointer" onClick={() => setLightboxMedia({url, type})}>
@@ -465,9 +489,32 @@ const ChatWindow = ({ conversation, currentUser, socket, onBack, onMessageSent, 
         );
     };
 
-    // --- Double Tap & Long Press ---
+    // --- Double Tap & Long Press & Swipe ---
     const tapTimeout = useRef(null);
     const lastTap = useRef(0);
+
+    // Simple Swipe Logic (Touch Only)
+    const touchStartRef = useRef(null);
+    const touchEndRef = useRef(null);
+
+    const onTouchStart = (e) => {
+        touchEndRef.current = null;
+        touchStartRef.current = e.targetTouches[0].clientX;
+    }
+
+    const onTouchMove = (e) => {
+        touchEndRef.current = e.targetTouches[0].clientX;
+    }
+
+    const onTouchEnd = (msg) => {
+        if (!touchStartRef.current || !touchEndRef.current) return;
+        const distance = touchStartRef.current - touchEndRef.current;
+        const isSwipeRight = distance < -50; // Drag right
+
+        if (isSwipeRight) {
+            setReplyTo(msg);
+        }
+    }
 
     const handleTouchStart = (msg) => {
         const now = Date.now();
@@ -502,7 +549,7 @@ const ChatWindow = ({ conversation, currentUser, socket, onBack, onMessageSent, 
 
     return (
         <div className="d-flex h-100 w-100 overflow-hidden">
-            <div className="d-flex flex-column h-100 w-100 flex-grow-1 bg-white position-relative" onClick={() => { setMenuOpenId(null); setShowPlusMenu(false); }}>
+            <div className="d-flex flex-column h-100 w-100 flex-grow-1 bg-white position-relative" onClick={() => { setMenuOpenId(null); setShowPlusMenu(false); setShowStickerPicker(false); }}>
                 {/* Header */}
                 <div className="p-2 border-bottom d-flex align-items-center justify-content-between shadow-sm flex-shrink-0" style={{height: '60px'}}>
                     <div className="d-flex align-items-center">
@@ -541,6 +588,9 @@ const ChatWindow = ({ conversation, currentUser, socket, onBack, onMessageSent, 
                                 key={msg._id}
                                 className={`d-flex align-items-center gap-2 ${isMe ? 'flex-row-reverse' : ''} mb-1 position-relative message-row`}
                                 onContextMenu={(e) => { e.preventDefault(); setMenuOpenId(msg._id); }}
+                                onTouchStart={onTouchStart}
+                                onTouchMove={onTouchMove}
+                                onTouchEnd={() => onTouchEnd(msg)}
                             >
                                 {!isMe && (
                                     <div style={{width: 28}}>
@@ -627,6 +677,16 @@ const ChatWindow = ({ conversation, currentUser, socket, onBack, onMessageSent, 
                             </div>
                         )}
 
+                        {/* Sticker Picker */}
+                        {showStickerPicker && (
+                            <div className="position-absolute bottom-100 start-0 mb-2 ms-3 shadow-lg z-3">
+                                <StickerPicker onSelect={(url) => {
+                                    handleSend('', 'sticker', null, [{ url, type: 'sticker' }]);
+                                    setShowStickerPicker(false);
+                                }} />
+                            </div>
+                        )}
+
                         {/* Plus Menu Popup */}
                         {showPlusMenu && (
                              <div className="position-absolute bottom-100 start-0 mb-2 ms-2 bg-white shadow-lg rounded-3 p-2 z-3 d-flex flex-column gap-2" style={{minWidth: 150}}>
@@ -650,6 +710,9 @@ const ChatWindow = ({ conversation, currentUser, socket, onBack, onMessageSent, 
                         <div className="btn-messenger" onClick={() => fileInputRef.current.click()}>
                              <FaImages className="text-primary" size={20} />
                         </div>
+                        <div className="btn-messenger" onClick={() => { setShowStickerPicker(!showStickerPicker); setShowEmojiPicker(false); }}>
+                             <FaStickyNote className="text-primary" size={20} />
+                        </div>
 
                         <div className="flex-grow-1 bg-light rounded-pill px-3 py-2 d-flex align-items-center">
                             {isRecording ? (
@@ -668,7 +731,7 @@ const ChatWindow = ({ conversation, currentUser, socket, onBack, onMessageSent, 
                                         onChange={e => setNewMessage(e.target.value)}
                                         onKeyDown={e => e.key === 'Enter' && (selectedFiles.length > 0 ? handleUploadAndSend() : handleSend())}
                                     />
-                                    <div className="btn-messenger text-primary" style={{width:30, height:30}} onClick={() => setShowEmojiPicker(!showEmojiPicker)}>
+                                    <div className="btn-messenger text-primary" style={{width:30, height:30}} onClick={() => { setShowEmojiPicker(!showEmojiPicker); setShowStickerPicker(false); }}>
                                          <FaFaceSmile size={20} />
                                     </div>
                                 </>

@@ -1,13 +1,38 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { FaPenToSquare, FaEllipsis, FaTrash, FaBellSlash } from 'react-icons/fa6';
 import { FaSearch } from 'react-icons/fa';
 import ActiveUsersList from './ActiveUsersList';
 import UserAvatar from './UserAvatar';
 import { toast } from 'react-toastify';
+import API from '../../utils/api';
 
 const ChatSidebar = ({ conversations, selectedId, onSelect, onNewChat, onDeleteConversation, currentUser }) => {
     const [search, setSearch] = useState('');
     const [showMenuId, setShowMenuId] = useState(null);
+    const [messageResults, setMessageResults] = useState([]);
+    const [isSearching, setIsSearching] = useState(false);
+
+    useEffect(() => {
+        const searchMessages = async () => {
+            if (!search.trim()) {
+                setMessageResults([]);
+                return;
+            }
+            setIsSearching(true);
+            try {
+                // Assuming API.get supports params or we construct URL
+                const results = await API.get(`/messages/search/content?q=${encodeURIComponent(search)}`);
+                setMessageResults(results);
+            } catch (err) {
+                console.error("Search failed", err);
+            } finally {
+                setIsSearching(false);
+            }
+        };
+
+        const timeoutId = setTimeout(searchMessages, 500); // Debounce
+        return () => clearTimeout(timeoutId);
+    }, [search]);
 
     const filteredConversations = conversations.filter(c => {
         const other = c.participants.find(p => p._id !== currentUser._id) || c.participants[0];
@@ -32,7 +57,21 @@ const ChatSidebar = ({ conversations, selectedId, onSelect, onNewChat, onDeleteC
         e.stopPropagation();
         toast.info("Notifications muted for this conversation");
         setShowMenuId(null);
-        // Call API here if backend supports per-conversation mute
+    };
+
+    const handleMessageResultClick = (result) => {
+        // Find conversation from local list if possible, or trigger selection via ID
+        // The parent onSelect handles the switch. Ideally, we pass the full conversation object.
+        // But search results might only contain conversationId.
+        // We need to match it with existing 'conversations' prop or fetch it.
+        const existingConv = conversations.find(c => c._id === result.conversationId);
+        if (existingConv) {
+            onSelect(existingConv);
+        } else {
+            // Should not happen often if we only search "my conversations", but safe fallback needed?
+            // Maybe fetch it? For now, just toast if not found in list (e.g. if list is paginated)
+            // But since 'conversations' prop is "all conversations", it should be there.
+        }
     };
 
     return (
@@ -62,15 +101,61 @@ const ChatSidebar = ({ conversations, selectedId, onSelect, onNewChat, onDeleteC
                 </div>
             </div>
 
-            {/* Active Users (Horizontal) */}
-            <ActiveUsersList currentUser={currentUser} />
+            {/* Active Users (Horizontal) - Hide when searching */}
+            {!search && <ActiveUsersList currentUser={currentUser} />}
 
-            {/* Conversation List */}
+            {/* Content Area */}
             <div className="flex-grow-1 overflow-auto px-2" onClick={() => setShowMenuId(null)}>
-                {filteredConversations.length === 0 && (
-                    <div className="text-center text-muted mt-5">No conversations found</div>
+
+                {/* Search Results Mode */}
+                {search && (
+                    <div className="d-flex flex-column gap-3">
+                        {/* People Results */}
+                        {filteredConversations.length > 0 && (
+                            <div>
+                                <h6 className="px-2 text-muted small fw-bold mt-2">People</h6>
+                                {filteredConversations.map(conv => {
+                                    const other = conv.participants.find(p => p._id !== currentUser._id) || c.participants[0];
+                                    return (
+                                        <div key={conv._id} className="d-flex align-items-center p-2 rounded-3 cursor-pointer hover-bg-light" onClick={() => onSelect(conv)}>
+                                            <UserAvatar user={other} size={40} />
+                                            <div className="ms-3">
+                                                <div className="fw-bold">{other.firstName} {other.lastName}</div>
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        )}
+
+                        {/* Message Results */}
+                        {messageResults.length > 0 && (
+                            <div>
+                                <h6 className="px-2 text-muted small fw-bold mt-2">Messages</h6>
+                                {messageResults.map(msg => (
+                                    <div key={msg._id} className="d-flex align-items-center p-2 rounded-3 cursor-pointer hover-bg-light" onClick={() => handleMessageResultClick(msg)}>
+                                        <UserAvatar user={msg.sender} size={40} />
+                                        <div className="ms-3 min-width-0">
+                                            <div className="fw-bold small">
+                                                {msg.sender._id === currentUser._id ? 'You' : msg.sender.firstName}
+                                                <span className="text-muted fw-normal"> &bull; {new Date(msg.createdAt).toLocaleDateString()}</span>
+                                            </div>
+                                            <div className="text-truncate text-muted small">{msg.content}</div>
+                                            <div className="text-muted" style={{fontSize: '0.7rem'}}>In chat with {msg.otherUser ? msg.otherUser.firstName : 'Unknown'}</div>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+
+                        {filteredConversations.length === 0 && messageResults.length === 0 && !isSearching && (
+                            <div className="text-center text-muted mt-4">No results found</div>
+                        )}
+                    </div>
                 )}
-                {filteredConversations.map(conv => {
+
+                {/* Standard List Mode */}
+                {!search && conversations.map(conv => {
                     const other = conv.participants.find(p => p._id !== currentUser._id) || conv.participants[0];
                     const isActive = selectedId === conv._id;
                     const isUnread = conv.unread;
@@ -101,6 +186,7 @@ const ChatSidebar = ({ conversations, selectedId, onSelect, onNewChat, onDeleteC
                                          conv.lastMessage?.type === 'video' ? 'Sent a video' :
                                          conv.lastMessage?.type === 'file' ? 'Sent a file' :
                                          conv.lastMessage?.type === 'audio' ? 'Sent a voice message' :
+                                         conv.lastMessage?.type === 'sticker' ? 'Sent a sticker' :
                                          (conv.lastMessage?.content || 'Started a chat')}
                                     </small>
                                     <small className="text-muted ms-1 flex-shrink-0" style={{fontSize: '0.7rem'}}>

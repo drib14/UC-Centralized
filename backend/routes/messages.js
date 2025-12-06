@@ -453,4 +453,55 @@ router.post('/', verifyToken, async (req, res) => {
     }
 });
 
+// Search Message Content
+router.get('/search/content', verifyToken, async (req, res) => {
+    try {
+        const query = req.query.q;
+        if (!query || query.trim() === '') return res.status(200).json([]);
+
+        // Find messages where sender or receiver is me AND content matches
+        // But message schema only has 'sender'. We need to filter by conversations I'm in.
+
+        // 1. Find my conversations
+        const myConversations = await Conversation.find({
+            participants: { $in: [req.user.id] },
+            hiddenFor: { $ne: req.user.id }
+        }).select('_id');
+
+        const conversationIds = myConversations.map(c => c._id);
+
+        // 2. Search messages in those conversations
+        const messages = await Message.find({
+            conversationId: { $in: conversationIds },
+            content: { $regex: query, $options: 'i' },
+            type: 'text', // Only search text messages
+            deletedFor: { $ne: req.user.id },
+            isDeletedForEveryone: false
+        })
+        .populate('sender', 'firstName lastName profileImage')
+        .populate('conversationId', 'participants') // To get the other user's info
+        .sort({ createdAt: -1 })
+        .limit(20);
+
+        // Transform for frontend
+        const results = await Promise.all(messages.map(async (msg) => {
+            const conversation = await Conversation.findById(msg.conversationId).populate('participants', 'firstName lastName profileImage');
+            const otherUser = conversation.participants.find(p => p._id.toString() !== req.user.id);
+            return {
+                _id: msg._id,
+                content: msg.content,
+                createdAt: msg.createdAt,
+                sender: msg.sender,
+                conversationId: msg.conversationId._id,
+                otherUser: otherUser // For displaying who the chat is with
+            };
+        }));
+
+        res.status(200).json(results);
+    } catch (err) {
+        console.error(err);
+        res.status(500).json(err);
+    }
+});
+
 module.exports = router;

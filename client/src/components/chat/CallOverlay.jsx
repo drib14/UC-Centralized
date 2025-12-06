@@ -53,15 +53,22 @@ const CallOverlay = () => {
                     {/* Local Video (PiP) */}
                     {isVideoCall && (
                         <div className="position-absolute top-0 end-0 m-3 shadow-lg rounded overflow-hidden" style={{width: '120px', height: '160px', zIndex: 2}}>
-                            <video playsInline muted ref={myVideo} autoPlay className="w-100 h-100 object-fit-cover" />
+                            <video
+                                playsInline
+                                muted
+                                ref={myVideo}
+                                autoPlay
+                                className="w-100 h-100 object-fit-cover"
+                                style={{ transform: 'scaleX(-1)' }}
+                            />
                         </div>
                     )}
 
                     {/* Controls */}
                     <div className="position-absolute bottom-0 start-50 translate-middle-x mb-4 d-flex gap-3 bg-dark bg-opacity-50 p-3 rounded-pill">
-                        <button className="btn btn-light rounded-circle p-3"><FaMicrophone /></button>
-                        {isVideoCall && <button className="btn btn-light rounded-circle p-3"><FaVideo /></button>}
-                        <button className="btn btn-danger rounded-circle p-3 px-4" onClick={leaveCall}><FaPhoneSlash /></button>
+                        <button className="btn btn-light d-flex align-items-center justify-content-center" style={{width: 50, height: 50, borderRadius: '50%'}}><FaMicrophone size={20} /></button>
+                        {isVideoCall && <button className="btn btn-light d-flex align-items-center justify-content-center" style={{width: 50, height: 50, borderRadius: '50%'}}><FaVideo size={20} /></button>}
+                        <button className="btn btn-danger d-flex align-items-center justify-content-center" style={{width: 50, height: 50, borderRadius: '50%'}} onClick={leaveCall}><FaPhoneSlash size={20} /></button>
                     </div>
                 </div>
             )}
