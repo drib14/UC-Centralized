@@ -107,9 +107,9 @@ export const CallProvider = ({ children }) => {
             setShowCallModal(true);
 
             const peer = createPeerConnection();
+            const iceCandidateQueue = [];
 
             // Store candidates until remote description is set to avoid "No remoteDescription" error
-            const iceQueue = [];
             peer.onicecandidate = (event) => {
                 if (event.candidate) {
                     socket.emit('ice_candidate', { to: id, candidate: event.candidate });
@@ -143,7 +143,6 @@ export const CallProvider = ({ children }) => {
                 if (!callAccepted) {
                     socket.emit('call_missed', { from: user._id, to: id });
                     leaveCall();
-                    // Optionally show toast "No answer"
                 }
             }, 30000);
 
@@ -152,20 +151,23 @@ export const CallProvider = ({ children }) => {
                 clearTimeout(callTimeoutRef.current);
                 await peer.setRemoteDescription(new RTCSessionDescription(signal));
 
-                // Process queued candidates if any (though usually we receive them after accepted)
+                // Process queued candidates
+                while (iceCandidateQueue.length > 0) {
+                    const candidate = iceCandidateQueue.shift();
+                    try {
+                        await peer.addIceCandidate(new RTCIceCandidate(candidate));
+                    } catch (e) {
+                        console.error("Error adding queued ice candidate", e);
+                    }
+                }
             });
 
             socket.on('ice_candidate', async (candidate) => {
                 try {
-                    // Only add if remote description is set
                     if (peer.remoteDescription) {
                         await peer.addIceCandidate(new RTCIceCandidate(candidate));
                     } else {
-                        // Queue it? Ideally logic flows: Offer -> Answer -> Candidates.
-                        // If candidates come before answer, we must queue or wait.
-                        // For simplicity, native webrtc might buffer or throw.
-                        // Adding a check prevents the crash.
-                        console.warn("Received candidate before remote description");
+                        iceCandidateQueue.push(candidate);
                     }
                 } catch (e) {
                     console.error("Error adding ice candidate", e);

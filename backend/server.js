@@ -136,7 +136,7 @@ io.on("connection", async (socket) => {
                         conversationId: conv._id,
                         sender: data.from,
                         content: durationText,
-                        type: 'system',
+                        type: 'call_log', // Use 'call_log' to ensure rich styling
                         readBy: [data.from]
                     });
                     await sysMsg.save();
