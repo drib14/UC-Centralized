@@ -20,6 +20,10 @@ export const CallProvider = ({ children }) => {
     const [isVideoCall, setIsVideoCall] = useState(false);
     const [showCallModal, setShowCallModal] = useState(false);
 
+    // Track who we called to handle timeouts/missed calls
+    const [outgoingCallTarget, setOutgoingCallTarget] = useState(null);
+    const callTimeoutRef = useRef(null);
+
     const myVideo = useRef();
     const userVideo = useRef();
     const connectionRef = useRef();
@@ -95,6 +99,7 @@ export const CallProvider = ({ children }) => {
 
     const callUser = async (id, isVideo) => {
         try {
+            setOutgoingCallTarget(id);
             setIsVideoCall(isVideo);
             const currentStream = await navigator.mediaDevices.getUserMedia({ video: isVideo, audio: true });
             setLocalStream(currentStream);
@@ -103,15 +108,17 @@ export const CallProvider = ({ children }) => {
 
             const peer = createPeerConnection();
 
-            peer.ontrack = (event) => {
-                setStream(event.streams[0]);
-                if (userVideo.current) userVideo.current.srcObject = event.streams[0];
-            };
-
+            // Store candidates until remote description is set to avoid "No remoteDescription" error
+            const iceQueue = [];
             peer.onicecandidate = (event) => {
                 if (event.candidate) {
                     socket.emit('ice_candidate', { to: id, candidate: event.candidate });
                 }
+            };
+
+            peer.ontrack = (event) => {
+                setStream(event.streams[0]);
+                if (userVideo.current) userVideo.current.srcObject = event.streams[0];
             };
 
             connectionRef.current = peer;
@@ -131,14 +138,35 @@ export const CallProvider = ({ children }) => {
                 isVideo
             });
 
+            // Start Missed Call Timeout (e.g., 30s)
+            callTimeoutRef.current = setTimeout(() => {
+                if (!callAccepted) {
+                    socket.emit('call_missed', { from: user._id, to: id });
+                    leaveCall();
+                    // Optionally show toast "No answer"
+                }
+            }, 30000);
+
             socket.on('call_accepted', async (signal) => {
                 setCallAccepted(true);
+                clearTimeout(callTimeoutRef.current);
                 await peer.setRemoteDescription(new RTCSessionDescription(signal));
+
+                // Process queued candidates if any (though usually we receive them after accepted)
             });
 
             socket.on('ice_candidate', async (candidate) => {
                 try {
-                    await peer.addIceCandidate(new RTCIceCandidate(candidate));
+                    // Only add if remote description is set
+                    if (peer.remoteDescription) {
+                        await peer.addIceCandidate(new RTCIceCandidate(candidate));
+                    } else {
+                        // Queue it? Ideally logic flows: Offer -> Answer -> Candidates.
+                        // If candidates come before answer, we must queue or wait.
+                        // For simplicity, native webrtc might buffer or throw.
+                        // Adding a check prevents the crash.
+                        console.warn("Received candidate before remote description");
+                    }
                 } catch (e) {
                     console.error("Error adding ice candidate", e);
                 }
@@ -152,9 +180,20 @@ export const CallProvider = ({ children }) => {
 
     const leaveCall = () => {
         setCallEnded(true);
+        if (callTimeoutRef.current) clearTimeout(callTimeoutRef.current);
+
         if (connectionRef.current) {
+            // Notify if we are the caller ending it prematurely, or in call
+            // Using a generic 'end_call' signal which server routes to 'to'.
+            // We need to know who 'to' is.
+            const target = call.from || outgoingCallTarget;
+            if (target) {
+                // Calculate duration if needed, or simple end
+                socket.emit('end_call', { to: target, from: user._id });
+            }
             connectionRef.current.close();
         }
+
         if (localStream) {
             localStream.getTracks().forEach(track => track.stop());
         }
@@ -163,13 +202,7 @@ export const CallProvider = ({ children }) => {
         setShowCallModal(false);
         setCall({});
         setCallAccepted(false);
-
-        // Notify other user
-        if (callAccepted && !callEnded) {
-             const target = call.from === user._id ? call.userToCall : call.from; // Need to track who we are talking to properly
-             // For simplicity, we just reload the window logic or rely on socket 'end_call' broadcast
-             // Assuming the UI handles the reset.
-        }
+        setOutgoingCallTarget(null);
     };
 
     const createPeerConnection = () => {

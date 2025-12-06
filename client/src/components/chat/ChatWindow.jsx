@@ -1,11 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react';
 import {
     FaPhone, FaVideo, FaCircleInfo, FaImages, FaFaceSmile, FaPlus, FaThumbsUp, FaPaperPlane, FaArrowLeft,
-    FaPlay, FaPause, FaFile, FaReply, FaTrash, FaLocationDot, FaSquarePollVertical, FaMicrophone, FaEllipsisVertical, FaStop, FaXmark
+    FaPlay, FaPause, FaFile, FaReply, FaTrash, FaLocationDot, FaSquarePollVertical, FaMicrophone, FaEllipsisVertical, FaStop, FaXmark, FaPhoneSlash
 } from 'react-icons/fa6';
 import { FaStickyNote } from 'react-icons/fa'; // Sticker Icon
 import EmojiPicker from 'emoji-picker-react';
-import { useSwipeable } from 'react-swipeable';
 import { useCall } from '../../context/CallContext';
 import API from '../../utils/api';
 import { toast } from 'react-toastify';
@@ -108,12 +107,16 @@ const ChatWindow = ({ conversation, currentUser, socket, onBack, onMessageSent, 
         if (!socket) return;
         const handleReceive = (data) => {
             if (data.conversationId === conversation._id) {
-                if (data.isEdited || data.type === 'poll' || data.isDeletedForEveryone) {
-                    setMessages(prev => prev.map(m => m._id === data._id ? data : m));
-                } else {
-                     setMessages(prev => [...prev, data]);
-                     scrollToBottom();
-                }
+                // Optimistic check: if we already have this message (via local state), don't add duplicate
+                // But backend sends full object. We can check by unique temporary ID if we used one,
+                // or just check if last message is same content/timestamp.
+                // Since we rely on socket for real-time, optimistic UI usually adds it first.
+                // Here we filter by _id if exists.
+                setMessages(prev => {
+                    if (prev.some(m => m._id === data._id)) return prev;
+                    return [...prev, data];
+                });
+                scrollToBottom();
                 if (onMessageSent) onMessageSent(data);
             }
         };
@@ -221,8 +224,29 @@ const ChatWindow = ({ conversation, currentUser, socket, onBack, onMessageSent, 
         if (!content.trim() && attachments.length === 0 && !fileUrl && !pollData && !locationData && overrideType === 'text') return;
 
         setIsSending(true);
+
+        // Optimistic UI Update
+        const tempId = Date.now().toString();
+        const optimisticMsg = {
+            _id: tempId,
+            conversationId: conversation._id,
+            sender: currentUser,
+            content,
+            type: overrideType,
+            attachments,
+            pollData,
+            locationData,
+            createdAt: new Date().toISOString(),
+            isPending: true
+        };
+
+        setMessages(prev => [...prev, optimisticMsg]);
+        setNewMessage('');
+        setReplyTo(null);
+        setSelectedFiles([]);
+        scrollToBottom();
+
         try {
-            // Using API.post as fixed in api.js
             const sentMsg = await API.post('/messages', {
                 conversationId: conversation._id,
                 content,
@@ -233,20 +257,19 @@ const ChatWindow = ({ conversation, currentUser, socket, onBack, onMessageSent, 
                 locationData
             });
 
-            setMessages(prev => [...prev, sentMsg]);
-            setNewMessage('');
-            setReplyTo(null);
-            setSelectedFiles([]);
+            // Replace optimistic message
+            setMessages(prev => prev.map(m => m._id === tempId ? sentMsg : m));
             if (onMessageSent) onMessageSent(sentMsg);
 
             socket.emit('send_message', {
                 ...sentMsg,
                 receiverId: otherUser._id
             });
-            scrollToBottom();
         } catch (err) {
             console.error("Failed to send", err);
             toast.error("Failed to send message");
+            // Remove optimistic message on fail
+            setMessages(prev => prev.filter(m => m._id !== tempId));
         } finally {
             setIsSending(false);
         }
@@ -369,7 +392,10 @@ const ChatWindow = ({ conversation, currentUser, socket, onBack, onMessageSent, 
             await API.put(`/users/${otherUser._id}/block`);
             toast.success("User blocked");
             onBack();
-        } catch(e) { toast.error("Failed to block"); }
+        } catch(e) {
+            console.error("Block failed", e);
+            toast.error("Failed to block. Try again.");
+        }
     };
 
     const handleDeleteConversation = () => {
@@ -385,6 +411,19 @@ const ChatWindow = ({ conversation, currentUser, socket, onBack, onMessageSent, 
 
         if (msg.type === 'system') {
             return <div className="text-center small text-secondary my-2">{msg.content}</div>;
+        }
+
+        if (msg.type === 'call_log') { // Template for call logs
+             return (
+                 <div className="d-flex align-items-center gap-2 p-2 bg-white border rounded-3 text-secondary">
+                     <div className="bg-light rounded-circle p-2"><FaPhoneSlash /></div>
+                     <div>
+                         <div className="fw-bold">{msg.content}</div>
+                         <small className="text-muted">Tap to call back</small>
+                     </div>
+                     <button className="btn btn-primary btn-sm rounded-circle ms-2" onClick={() => callUser(otherUser._id, false)}><FaPhone size={12} /></button>
+                 </div>
+             );
         }
 
         if (msg.type === 'location' && msg.locationData) {
@@ -434,7 +473,7 @@ const ChatWindow = ({ conversation, currentUser, socket, onBack, onMessageSent, 
 
         return (
             <div
-                className={`px-3 py-2 ${msg.type === 'text' ? (isMe ? 'text-white' : 'text-dark') : ''}`}
+                className={`px-3 py-2 ${msg.type === 'text' ? (isMe ? 'text-white' : 'text-dark') : ''} ${msg.isPending ? 'opacity-75' : ''}`}
                 style={{
                     backgroundColor: msg.type === 'text' ? (isMe ? conversationSettings.theme : '#f0f2f5') : 'transparent',
                     borderRadius: '18px',
@@ -571,11 +610,14 @@ const ChatWindow = ({ conversation, currentUser, socket, onBack, onMessageSent, 
                 <div className="flex-grow-1 overflow-auto p-3 d-flex flex-column gap-1 w-100">
                     {messages.map((msg, idx) => {
                         const isMe = msg.sender._id === currentUser._id || msg.sender === currentUser._id;
-                        const isSystem = msg.type === 'system';
+                        const isSystem = msg.type === 'system' || msg.type === 'call_log';
                         const isLast = idx === messages.length - 1 || messages[idx+1]?.sender._id !== msg.sender._id;
                         const isMenuOpen = menuOpenId === msg._id;
 
                         if (isSystem) {
+                             if (msg.type === 'call_log') {
+                                 return <div key={msg._id} className="w-100 d-flex justify-content-center my-2">{renderContent(msg, false)}</div>
+                             }
                              return <div key={msg._id} className="text-center small text-secondary my-2 w-100">{msg.content}</div>;
                         }
 

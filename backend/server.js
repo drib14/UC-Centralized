@@ -122,10 +122,9 @@ io.on("connection", async (socket) => {
 
         // Generate System Message for Call Ended
         if (data.from && data.to) {
-            // Find Conversation
              try {
-                 const Conversation = require('./models/Conversation'); // Lazy require
-                 const Message = require('./models/Message'); // Lazy require
+                 const Conversation = require('./models/Conversation');
+                 const Message = require('./models/Message');
 
                  const conv = await Conversation.findOne({
                      participants: { $all: [data.from, data.to], $size: 2 }
@@ -138,18 +137,49 @@ io.on("connection", async (socket) => {
                         sender: data.from,
                         content: durationText,
                         type: 'system',
-                        readBy: [data.from] // Read by sender
+                        readBy: [data.from]
                     });
                     await sysMsg.save();
                     await conv.updateOne({ lastMessage: sysMsg._id, updatedAt: Date.now() });
 
                     const populatedMsg = await sysMsg.populate('sender', 'firstName lastName profileImage');
-
                     io.to(data.to).emit("receive_message", populatedMsg);
                     io.to(data.from).emit("receive_message", populatedMsg);
                  }
              } catch(e) {
                  console.error("Failed to save call end message", e);
+             }
+        }
+    });
+
+    socket.on("call_missed", async (data) => {
+        // data: { from, to }
+        if (data.from && data.to) {
+             try {
+                 const Conversation = require('./models/Conversation');
+                 const Message = require('./models/Message');
+
+                 const conv = await Conversation.findOne({
+                     participants: { $all: [data.from, data.to], $size: 2 }
+                 });
+
+                 if (conv) {
+                     const sysMsg = new Message({
+                        conversationId: conv._id,
+                        sender: data.from,
+                        content: "Missed voice call",
+                        type: 'call_log', // Use 'call_log' type for specific styling
+                        readBy: [data.from]
+                    });
+                    await sysMsg.save();
+                    await conv.updateOne({ lastMessage: sysMsg._id, updatedAt: Date.now() });
+
+                    const populatedMsg = await sysMsg.populate('sender', 'firstName lastName profileImage');
+                    io.to(data.to).emit("receive_message", populatedMsg);
+                    io.to(data.from).emit("receive_message", populatedMsg);
+                 }
+             } catch(e) {
+                 console.error("Failed to save missed call message", e);
              }
         }
     });
