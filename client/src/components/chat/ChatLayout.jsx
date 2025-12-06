@@ -19,6 +19,18 @@ const ChatLayout = () => {
     useEffect(() => {
         loadConversations();
         setUnreadMessageCount(0);
+
+        const handleSelectionChange = () => {
+            loadConversations();
+            const storedId = localStorage.getItem('selectedConversationId');
+            if (storedId) {
+                // We might need to fetch the specific conversation if it's not in the list yet
+                // But for now, let's rely on loadConversations
+            }
+        };
+
+        window.addEventListener('chat_selection_change', handleSelectionChange);
+        return () => window.removeEventListener('chat_selection_change', handleSelectionChange);
     }, []);
 
     useEffect(() => {
@@ -49,7 +61,6 @@ const ChatLayout = () => {
     };
 
     const handleNewChat = async (targetUser) => {
-        // ... (Same logic as before, omitted for brevity but should assume implemented or imported helper)
         try {
             const existing = conversations.find(c => c.participants.some(p => p._id === targetUser._id && p._id !== user._id));
             if (existing) {
@@ -62,31 +73,46 @@ const ChatLayout = () => {
         } catch (e) { console.error(e); }
     };
 
-    // Socket listeners for conversation list updates (omitted for brevity, can reuse existing logic)
+    const handleDeleteConversation = async (convId) => {
+        try {
+             // Optimistic update
+             setConversations(prev => prev.filter(c => c._id !== convId));
+             if (selectedConversation?._id === convId) {
+                 setSelectedConversation(null);
+                 setMobileView('list');
+             }
+             await API.deleteConversation(convId);
+        } catch (err) {
+            console.error("Failed to delete", err);
+            loadConversations(); // Revert on error
+        }
+    };
 
     return (
-        <div className="d-flex h-100 w-100 overflow-hidden bg-white">
+        <div className="d-flex h-100 w-100 overflow-hidden bg-white chat-layout-container">
             <CallOverlay />
 
             {/* Sidebar Column */}
-            <div className={`d-flex flex-column border-end ${mobileView === 'chat' ? 'd-none d-md-flex' : 'd-flex'}`} style={{width: window.innerWidth > 768 ? '360px' : '100%', minWidth: '300px'}}>
+            <div className={`d-flex flex-column border-end chat-sidebar-wrapper ${mobileView === 'chat' ? 'd-none d-md-flex' : 'd-flex'}`}>
                 <ChatSidebar
                     conversations={conversations}
                     selectedId={selectedConversation?._id}
                     onSelect={handleSelectConversation}
-                    onNewChat={handleNewChat}
+                    onNewChat={() => {/* Trigger active user list or search focus? For now handled in Sidebar */}}
+                    onDeleteConversation={handleDeleteConversation}
                     currentUser={user}
                 />
             </div>
 
             {/* Chat Window Column */}
-            <div className={`flex-grow-1 d-flex flex-column ${mobileView === 'list' ? 'd-none d-md-flex' : 'd-flex'}`}>
+            <div className={`flex-grow-1 d-flex flex-column chat-window-wrapper ${mobileView === 'list' ? 'd-none d-md-flex' : 'd-flex'}`}>
                 {selectedConversation ? (
                     <ChatWindow
                         conversation={selectedConversation}
                         currentUser={user}
                         socket={socket}
                         onBack={() => setMobileView('list')}
+                        onDeleteConversation={() => handleDeleteConversation(selectedConversation._id)}
                     />
                 ) : (
                     <div className="h-100 d-flex flex-column align-items-center justify-content-center text-muted">
@@ -94,6 +120,17 @@ const ChatLayout = () => {
                     </div>
                 )}
             </div>
+            <style>{`
+                .chat-sidebar-wrapper {
+                    width: 360px;
+                    min-width: 300px;
+                }
+                @media (max-width: 768px) {
+                    .chat-sidebar-wrapper {
+                        width: 100%;
+                    }
+                }
+            `}</style>
         </div>
     );
 };

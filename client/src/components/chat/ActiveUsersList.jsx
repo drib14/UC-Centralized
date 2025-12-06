@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import API from '../../utils/api';
 import { useSocket } from '../../context/SocketContext';
 import { useNavigate } from 'react-router-dom';
+import UserAvatar from './UserAvatar';
 
 const ActiveUsersList = ({ currentUser }) => {
     const [users, setUsers] = useState([]);
@@ -11,7 +12,6 @@ const ActiveUsersList = ({ currentUser }) => {
     useEffect(() => {
         const fetchUsers = async () => {
             try {
-                // Fetch top 50 recent users
                 const data = await API.searchUsers('');
                 // Filter out current user
                 setUsers(data.filter(u => u._id !== currentUser._id));
@@ -24,75 +24,15 @@ const ActiveUsersList = ({ currentUser }) => {
 
     const handleUserClick = async (user) => {
         try {
-            // For now, assume createConversation returns the conversation object (existing or new)
             const conv = await API.createConversation(user._id);
-
-            // Persist selection
             localStorage.setItem('selectedConversationId', conv._id);
-
-            // Navigate/Update
-            // If already on messages page, we might just need to update state
-            // But navigation is safe
             navigate(currentUser.role === 'admin' ? '/admin/messages' : '/student/messages', {
                 state: { selectedConversationId: conv._id }
             });
-
-            // Dispatch event to notify ChatSidebar to reload or select
             window.dispatchEvent(new Event('chat_selection_change'));
         } catch (err) {
             console.error("Failed to open conversation", err);
         }
-    };
-
-    const formatLastSeen = (date) => {
-        if (!date) return '';
-        const seconds = Math.floor((new Date() - new Date(date)) / 1000);
-        if (seconds < 60) return 'Just now';
-        const minutes = Math.floor(seconds / 60);
-        if (minutes < 60) return `${minutes}m`;
-        const hours = Math.floor(minutes / 60);
-        if (hours < 24) return `${hours}h`;
-        return `${Math.floor(hours / 24)}d`;
-    };
-
-    const renderAvatar = (user) => {
-        const isOnline = onlineUsers.has(user._id) || user.isOnline;
-        return (
-            <div className="position-relative d-inline-block">
-                {user.profileImage ? (
-                    <img
-                        src={user.profileImage}
-                        alt={user.firstName}
-                        className="rounded-circle border"
-                        width={50}
-                        height={50}
-                        style={{objectFit: 'cover'}}
-                    />
-                ) : (
-                    <div
-                        className="rounded-circle bg-secondary text-white d-flex align-items-center justify-content-center border"
-                        style={{width: 50, height: 50, fontSize: '1.2rem'}}
-                    >
-                        {user.firstName[0]}
-                    </div>
-                )}
-                {isOnline ? (
-                    <span
-                        className="position-absolute bottom-0 end-0 bg-success border border-white rounded-circle"
-                        style={{width: 14, height: 14, transform: 'translate(-2px, -2px)', border: '2px solid white'}}
-                    ></span>
-                ) : (
-                    user.lastSeen && (
-                        <div
-                            className="position-absolute bottom-0 start-50 translate-middle-x bg-white px-1 rounded-pill border shadow-sm text-center"
-                            style={{fontSize: '0.6rem', whiteSpace: 'nowrap', lineHeight: 1, bottom: '-5px'}}
-                        >
-                            {formatLastSeen(user.lastSeen)}
-                        </div>
-                    )
-                )}
-            </div>
-        );
     };
 
     if (users.length === 0) return null;
@@ -108,7 +48,12 @@ const ActiveUsersList = ({ currentUser }) => {
                         style={{width: 60, cursor: 'pointer'}}
                         onClick={() => handleUserClick(user)}
                     >
-                        {renderAvatar(user)}
+                        <UserAvatar
+                            user={user}
+                            size={50}
+                            showOnlineStatus={true}
+                            isOnline={onlineUsers.has(user._id) || user.isOnline}
+                        />
                         <small className="text-truncate mt-1 text-center w-100" style={{fontSize: '0.7rem'}}>
                             {user.firstName}
                         </small>

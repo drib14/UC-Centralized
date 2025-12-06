@@ -1,19 +1,23 @@
 import React, { useState, useEffect, useRef } from 'react';
 import {
     FaPhone, FaVideo, FaCircleInfo, FaImages, FaFaceSmile, FaPlus, FaThumbsUp, FaPaperPlane, FaArrowLeft,
-    FaPlay, FaPause, FaFile
+    FaPlay, FaPause, FaFile, FaReply, FaTrash, FaShare, FaEllipsisVertical, FaUser, FaBellSlash, FaBan
 } from 'react-icons/fa6';
 import EmojiPicker from 'emoji-picker-react';
 import { useCall } from '../../context/CallContext';
 import API from '../../utils/api';
 import { toast } from 'react-toastify';
+import UserAvatar from './UserAvatar';
 
-const ChatWindow = ({ conversation, currentUser, socket, onBack, onMessageSent }) => {
+const ChatWindow = ({ conversation, currentUser, socket, onBack, onMessageSent, onDeleteConversation }) => {
     const [newMessage, setNewMessage] = useState('');
     const [messages, setMessages] = useState([]);
     const [showEmojiPicker, setShowEmojiPicker] = useState(false);
     const [lightboxMedia, setLightboxMedia] = useState(null);
     const [isUploading, setIsUploading] = useState(false);
+    const [menuOpenId, setMenuOpenId] = useState(null);
+    const [replyTo, setReplyTo] = useState(null);
+    const [showInfoSidebar, setShowInfoSidebar] = useState(false);
 
     const { callUser } = useCall();
     const otherUser = conversation.participants.find(p => p._id !== currentUser._id) || conversation.participants[0];
@@ -24,7 +28,6 @@ const ChatWindow = ({ conversation, currentUser, socket, onBack, onMessageSent }
 
     useEffect(() => {
         loadMessages();
-        // Mark read
         API.markMessagesRead(conversation._id).catch(console.error);
         if (socket) {
             socket.emit('mark_messages_read', {
@@ -72,6 +75,7 @@ const ChatWindow = ({ conversation, currentUser, socket, onBack, onMessageSent }
             const sentMsg = await API.sendMessage(conversation._id, content, overrideType, fileUrl, attachments);
             setMessages(prev => [...prev, sentMsg]);
             setNewMessage('');
+            setReplyTo(null);
             if (onMessageSent) onMessageSent(sentMsg);
 
             socket.emit('send_message', {
@@ -112,6 +116,16 @@ const ChatWindow = ({ conversation, currentUser, socket, onBack, onMessageSent }
         }
     };
 
+    const deleteMessage = async (msgId) => {
+        if (!window.confirm("Unsend this message?")) return;
+        try {
+            setMessages(prev => prev.filter(m => m._id !== msgId));
+            await API.deleteMessage(msgId);
+        } catch (err) {
+            toast.error("Failed to unsend");
+        }
+    };
+
     const onEmojiClick = (emojiObject) => {
         setNewMessage(prev => prev + emojiObject.emoji);
         setShowEmojiPicker(false);
@@ -126,7 +140,7 @@ const ChatWindow = ({ conversation, currentUser, socket, onBack, onMessageSent }
         } else {
             if (playingAudio && audioRefs.current[playingAudio]) {
                 audioRefs.current[playingAudio].pause();
-                audioRefs.current[playingAudio].currentTime = 0; // Reset previous
+                audioRefs.current[playingAudio].currentTime = 0;
             }
             audio.play();
             setPlayingAudio(url);
@@ -142,7 +156,7 @@ const ChatWindow = ({ conversation, currentUser, socket, onBack, onMessageSent }
     };
 
     const renderAttachment = (att, index) => {
-        const url = att.url || att; // Backward compat
+        const url = att.url || att;
         const type = att.type || 'file';
 
         if (type === 'image') {
@@ -173,7 +187,7 @@ const ChatWindow = ({ conversation, currentUser, socket, onBack, onMessageSent }
                         {isPlaying ? <FaPause size={12}/> : <FaPlay size={12}/>}
                     </button>
                     <div className="flex-grow-1 mx-1" style={{height: 4, background: '#eee'}}>
-                        <div className="h-100 bg-primary" style={{width: isPlaying ? '100%' : '0%', transition: 'width 10s linear'}}></div>
+                        <div className="h-100 bg-primary" style={{width: isPlaying ? '100%' : '0%', transition: 'width 0.2s linear'}}></div>
                     </div>
                     <small className="text-muted" style={{fontSize: '0.7rem'}}>{formatDuration(att.duration || 0)}</small>
                     <audio ref={el => audioRefs.current[url] = el} src={url} />
@@ -191,106 +205,185 @@ const ChatWindow = ({ conversation, currentUser, socket, onBack, onMessageSent }
         );
     };
 
+    const handleMessageContextMenu = (e, msgId) => {
+        e.preventDefault();
+        setMenuOpenId(menuOpenId === msgId ? null : msgId);
+    };
+
     return (
-        <div className="d-flex flex-column h-100 bg-white">
-            {/* Header */}
-            <div className="p-2 border-bottom d-flex align-items-center justify-content-between shadow-sm" style={{height: '60px'}}>
-                <div className="d-flex align-items-center">
-                    <button className="btn btn-link text-primary d-md-none me-2" onClick={onBack}><FaArrowLeft size={20}/></button>
-                    <div className="position-relative me-2">
-                        <img src={otherUser.profileImage || 'https://via.placeholder.com/40'} className="rounded-circle" width={40} height={40} style={{objectFit:'cover'}} />
-                        {otherUser.isOnline && <span className="position-absolute bottom-0 end-0 bg-success rounded-circle border border-white" style={{width:10, height:10}}></span>}
+        <div className="d-flex h-100 overflow-hidden">
+            <div className="d-flex flex-column h-100 flex-grow-1 bg-white position-relative" onClick={() => setMenuOpenId(null)}>
+                {/* Header */}
+                <div className="p-2 border-bottom d-flex align-items-center justify-content-between shadow-sm" style={{height: '60px'}}>
+                    <div className="d-flex align-items-center">
+                        <button className="btn btn-link text-primary d-md-none me-2" onClick={onBack}><FaArrowLeft size={20}/></button>
+                        <div className="me-2">
+                            <UserAvatar user={otherUser} size={40} showOnlineStatus={true} isOnline={otherUser.isOnline} />
+                        </div>
+                        <div>
+                            <h6 className="mb-0 fw-bold">{otherUser.firstName} {otherUser.lastName}</h6>
+                            <small className="text-muted" style={{fontSize: '0.75rem'}}>
+                                {otherUser.isOnline ? 'Active now' : (otherUser.lastSeen ? `Active ${Math.floor((new Date() - new Date(otherUser.lastSeen))/60000)}m ago` : 'Offline')}
+                            </small>
+                        </div>
                     </div>
-                    <div>
-                        <h6 className="mb-0 fw-bold">{otherUser.firstName} {otherUser.lastName}</h6>
-                        <small className="text-muted" style={{fontSize: '0.75rem'}}>Active now</small>
+                    <div className="d-flex gap-3 text-primary me-2">
+                        <FaPhone size={20} className="cursor-pointer hover-scale" onClick={() => callUser(otherUser._id, false)} />
+                        <FaVideo size={20} className="cursor-pointer hover-scale" onClick={() => callUser(otherUser._id, true)} />
+                        <FaCircleInfo size={20} className="cursor-pointer hover-scale" onClick={() => setShowInfoSidebar(!showInfoSidebar)} />
                     </div>
                 </div>
-                <div className="d-flex gap-3 text-primary me-2">
-                    <FaPhone size={20} className="cursor-pointer hover-scale" onClick={() => callUser(otherUser._id, false)} />
-                    <FaVideo size={20} className="cursor-pointer hover-scale" onClick={() => callUser(otherUser._id, true)} />
-                    <FaCircleInfo size={20} className="cursor-pointer hover-scale" />
-                </div>
-            </div>
 
-            {/* Messages Area */}
-            <div className="flex-grow-1 overflow-auto p-3 d-flex flex-column gap-1">
-                {messages.map((msg, idx) => {
-                    const isMe = msg.sender._id === currentUser._id || msg.sender === currentUser._id;
-                    const isLast = idx === messages.length - 1 || messages[idx+1]?.sender._id !== msg.sender._id;
+                {/* Messages Area */}
+                <div className="flex-grow-1 overflow-auto p-3 d-flex flex-column gap-1">
+                    {messages.map((msg, idx) => {
+                        const isMe = msg.sender._id === currentUser._id || msg.sender === currentUser._id;
+                        const isLast = idx === messages.length - 1 || messages[idx+1]?.sender._id !== msg.sender._id;
+                        const isMenuOpen = menuOpenId === msg._id;
 
-                    return (
-                        <div key={msg._id} className={`d-flex align-items-end gap-2 ${isMe ? 'flex-row-reverse' : ''} mb-1`}>
-                            {!isMe && (
-                                <div style={{width: 28}}>
-                                    {isLast && <img src={otherUser.profileImage} className="rounded-circle" width={28} height={28} style={{objectFit:'cover'}} />}
-                                </div>
-                            )}
-                            <div className={`d-flex flex-column ${isMe ? 'align-items-end' : 'align-items-start'}`} style={{maxWidth: '70%'}}>
-                                {msg.attachments && msg.attachments.length > 0 && (
-                                    <div className="d-flex flex-column gap-1 mb-1">
-                                        {msg.attachments.map((att, i) => renderAttachment(att, i))}
+                        return (
+                            <div
+                                key={msg._id}
+                                className={`d-flex align-items-end gap-2 ${isMe ? 'flex-row-reverse' : ''} mb-1 position-relative`}
+                                onContextMenu={(e) => handleMessageContextMenu(e, msg._id)}
+                            >
+                                {!isMe && (
+                                    <div style={{width: 28}}>
+                                        {isLast && <UserAvatar user={otherUser} size={28} />}
                                     </div>
                                 )}
-                                {msg.content && (
+
+                                <div className={`d-flex flex-column ${isMe ? 'align-items-end' : 'align-items-start'}`} style={{maxWidth: '70%'}}>
+                                    {msg.attachments && msg.attachments.length > 0 && (
+                                        <div className="d-flex flex-column gap-1 mb-1">
+                                            {msg.attachments.map((att, i) => renderAttachment(att, i))}
+                                        </div>
+                                    )}
+                                    {msg.content && (
+                                        <div
+                                            className={`px-3 py-2 ${isMe ? 'bg-primary text-white' : 'bg-light text-dark'}`}
+                                            style={{
+                                                borderRadius: '18px',
+                                                borderBottomRightRadius: isMe ? '4px' : '18px',
+                                                borderBottomLeftRadius: !isMe ? '4px' : '18px',
+                                                wordWrap: 'break-word',
+                                                cursor: 'pointer'
+                                            }}
+                                            onClick={(e) => {
+                                                // Handle mobile tap to toggle menu if desired, or double tap to like
+                                            }}
+                                        >
+                                            {msg.content}
+                                        </div>
+                                    )}
+                                </div>
+
+                                {/* Message Actions Menu (Popover) */}
+                                {isMenuOpen && (
                                     <div
-                                        className={`px-3 py-2 ${isMe ? 'bg-primary text-white' : 'bg-light text-dark'}`}
+                                        className={`position-absolute bg-white shadow rounded-3 p-1 z-3 d-flex gap-2`}
                                         style={{
-                                            borderRadius: '18px',
-                                            borderBottomRightRadius: isMe ? '4px' : '18px',
-                                            borderBottomLeftRadius: !isMe ? '4px' : '18px',
-                                            wordWrap: 'break-word'
+                                            bottom: '100%',
+                                            [isMe ? 'right' : 'left']: '0',
+                                            marginBottom: '5px'
                                         }}
+                                        onClick={(e) => e.stopPropagation()}
                                     >
-                                        {msg.content}
+                                        <button className="btn btn-sm btn-light rounded-circle" onClick={() => setReplyTo(msg)} title="Reply">
+                                            <FaReply size={12} />
+                                        </button>
+                                        {isMe && (
+                                            <button className="btn btn-sm btn-light rounded-circle text-danger" onClick={() => deleteMessage(msg._id)} title="Unsend">
+                                                <FaTrash size={12} />
+                                            </button>
+                                        )}
                                     </div>
                                 )}
                             </div>
-                        </div>
-                    );
-                })}
-                <div ref={messagesEndRef} />
-            </div>
-
-            {/* Footer */}
-            <div className="p-2 d-flex align-items-center gap-2 border-top position-relative">
-                {showEmojiPicker && (
-                    <div className="position-absolute bottom-100 start-0 mb-2 ms-3 shadow-lg z-3">
-                        <EmojiPicker onEmojiClick={onEmojiClick} />
-                    </div>
-                )}
-
-                <input type="file" ref={fileInputRef} className="d-none" multiple onChange={handleFileSelect} />
-                <FaPlus className="text-primary cursor-pointer hover-scale" size={20} />
-                <FaImages className="text-primary cursor-pointer hover-scale" size={20} onClick={() => fileInputRef.current.click()} />
-
-                <div className="flex-grow-1 bg-light rounded-pill px-3 py-2 d-flex align-items-center">
-                    <input
-                        type="text"
-                        className="bg-transparent border-0 w-100 no-focus-outline"
-                        placeholder="Aa"
-                        value={newMessage}
-                        onChange={e => setNewMessage(e.target.value)}
-                        onKeyDown={e => e.key === 'Enter' && handleSend()}
-                    />
-                    <FaFaceSmile className="text-primary cursor-pointer hover-scale" size={20} onClick={() => setShowEmojiPicker(!showEmojiPicker)} />
+                        );
+                    })}
+                    <div ref={messagesEndRef} />
                 </div>
 
-                {newMessage || isUploading ? (
-                    <FaPaperPlane className={`text-primary cursor-pointer hover-scale ${isUploading ? 'opacity-50' : ''}`} size={20} onClick={() => handleSend()} />
-                ) : (
-                    <FaThumbsUp className="text-primary cursor-pointer hover-scale" size={20} onClick={() => handleSend('👍', 'text')} />
+                {/* Footer */}
+                <div className="p-2 border-top position-relative">
+                    {replyTo && (
+                        <div className="px-3 py-2 bg-light border-bottom d-flex justify-content-between align-items-center">
+                            <small className="text-muted">Replying to {replyTo.sender._id === currentUser._id ? 'yourself' : otherUser.firstName}</small>
+                            <button className="btn-close btn-sm" onClick={() => setReplyTo(null)}></button>
+                        </div>
+                    )}
+
+                    <div className="d-flex align-items-center gap-2 pt-2">
+                        {showEmojiPicker && (
+                            <div className="position-absolute bottom-100 start-0 mb-2 ms-3 shadow-lg z-3">
+                                <EmojiPicker onEmojiClick={onEmojiClick} />
+                            </div>
+                        )}
+
+                        <input type="file" ref={fileInputRef} className="d-none" multiple onChange={handleFileSelect} />
+
+                        {/* Placeholder for 'More' menu */}
+                        <FaPlus className="text-primary cursor-pointer hover-scale" size={20} onClick={() => fileInputRef.current.click()} />
+                        <FaImages className="text-primary cursor-pointer hover-scale" size={20} onClick={() => fileInputRef.current.click()} />
+
+                        <div className="flex-grow-1 bg-light rounded-pill px-3 py-2 d-flex align-items-center">
+                            <input
+                                type="text"
+                                className="bg-transparent border-0 w-100 no-focus-outline"
+                                placeholder="Aa"
+                                value={newMessage}
+                                onChange={e => setNewMessage(e.target.value)}
+                                onKeyDown={e => e.key === 'Enter' && handleSend()}
+                            />
+                            <FaFaceSmile className="text-primary cursor-pointer hover-scale" size={20} onClick={() => setShowEmojiPicker(!showEmojiPicker)} />
+                        </div>
+
+                        {newMessage || isUploading ? (
+                            <FaPaperPlane className={`text-primary cursor-pointer hover-scale ${isUploading ? 'opacity-50' : ''}`} size={20} onClick={() => handleSend()} />
+                        ) : (
+                            <FaThumbsUp className="text-primary cursor-pointer hover-scale" size={20} onClick={() => handleSend('👍', 'text')} />
+                        )}
+                    </div>
+                </div>
+
+                {/* Lightbox */}
+                {lightboxMedia && (
+                    <div className="position-fixed top-0 start-0 w-100 h-100 bg-black bg-opacity-90 z-3 d-flex align-items-center justify-content-center p-4" onClick={() => setLightboxMedia(null)} style={{zIndex: 9999}}>
+                        {lightboxMedia.type === 'video' ? (
+                            <video src={lightboxMedia.url} controls autoPlay className="mw-100 mh-100" />
+                        ) : (
+                            <img src={lightboxMedia.url} className="mw-100 mh-100 object-fit-contain" />
+                        )}
+                    </div>
                 )}
             </div>
 
-            {/* Lightbox */}
-            {lightboxMedia && (
-                <div className="position-fixed top-0 start-0 w-100 h-100 bg-black bg-opacity-90 z-3 d-flex align-items-center justify-content-center p-4" onClick={() => setLightboxMedia(null)} style={{zIndex: 9999}}>
-                    {lightboxMedia.type === 'video' ? (
-                        <video src={lightboxMedia.url} controls autoPlay className="mw-100 mh-100" />
-                    ) : (
-                        <img src={lightboxMedia.url} className="mw-100 mh-100 object-fit-contain" />
-                    )}
+            {/* Chat Info Sidebar */}
+            {showInfoSidebar && (
+                <div className="bg-white border-start h-100 d-flex flex-column" style={{width: '300px', minWidth: '300px'}}>
+                     <div className="p-3 border-bottom d-flex align-items-center justify-content-between">
+                         <h5 className="mb-0 fw-bold">Chat Info</h5>
+                         <button className="btn-close" onClick={() => setShowInfoSidebar(false)}></button>
+                     </div>
+                     <div className="p-4 d-flex flex-column align-items-center">
+                         <UserAvatar user={otherUser} size={80} showOnlineStatus={true} isOnline={otherUser.isOnline} />
+                         <h5 className="mt-3 fw-bold">{otherUser.firstName} {otherUser.lastName}</h5>
+                         <p className="text-muted small">Student</p>
+                     </div>
+                     <div className="flex-grow-1 overflow-auto">
+                         <div className="list-group list-group-flush">
+                             <button className="list-group-item list-group-item-action d-flex align-items-center gap-3 py-3" onClick={() => toast.info('Muted')}>
+                                 <FaBellSlash /> Mute Notifications
+                             </button>
+                             <button className="list-group-item list-group-item-action d-flex align-items-center gap-3 py-3 text-danger" onClick={() => onDeleteConversation(conversation._id)}>
+                                 <FaTrash /> Delete Conversation
+                             </button>
+                             <button className="list-group-item list-group-item-action d-flex align-items-center gap-3 py-3 text-danger">
+                                 <FaBan /> Block User
+                             </button>
+                         </div>
+                     </div>
                 </div>
             )}
         </div>
