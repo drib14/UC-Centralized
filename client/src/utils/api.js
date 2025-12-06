@@ -241,6 +241,23 @@ class API {
     static getMyDetails() {
         return this.request('/users/me/details');
     }
+
+    // Generic Methods helpers for convenience (since ChatWindow uses API.post/put/get)
+    static get(endpoint) {
+        return this.request(endpoint, 'GET');
+    }
+
+    static post(endpoint, body) {
+        return this.request(endpoint, 'POST', body);
+    }
+
+    static put(endpoint, body) {
+        return this.request(endpoint, 'PUT', body);
+    }
+
+    static delete(endpoint) {
+        return this.request(endpoint, 'DELETE');
+    }
 }
 
 export default API;

@@ -115,7 +115,7 @@ const ChatSidebar = ({ conversations, selectedId, onSelect, onNewChat, onDeleteC
                             <div>
                                 <h6 className="px-2 text-muted small fw-bold mt-2">People</h6>
                                 {filteredConversations.map(conv => {
-                                    const other = conv.participants.find(p => p._id !== currentUser._id) || c.participants[0];
+                                    const other = conv.participants.find(p => p._id !== currentUser._id) || conv.participants[0];
                                     return (
                                         <div key={conv._id} className="d-flex align-items-center p-2 rounded-3 cursor-pointer hover-bg-light" onClick={() => onSelect(conv)}>
                                             <UserAvatar user={other} size={40} />
