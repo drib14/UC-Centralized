@@ -44,6 +44,17 @@ const ActiveUsersList = ({ currentUser }) => {
         }
     };
 
+    const formatLastSeen = (date) => {
+        if (!date) return '';
+        const seconds = Math.floor((new Date() - new Date(date)) / 1000);
+        if (seconds < 60) return 'Just now';
+        const minutes = Math.floor(seconds / 60);
+        if (minutes < 60) return `${minutes}m`;
+        const hours = Math.floor(minutes / 60);
+        if (hours < 24) return `${hours}h`;
+        return `${Math.floor(hours / 24)}d`;
+    };
+
     const renderAvatar = (user) => {
         const isOnline = onlineUsers.has(user._id) || user.isOnline;
         return (
@@ -65,11 +76,20 @@ const ActiveUsersList = ({ currentUser }) => {
                         {user.firstName[0]}
                     </div>
                 )}
-                {isOnline && (
+                {isOnline ? (
                     <span
                         className="position-absolute bottom-0 end-0 bg-success border border-white rounded-circle"
-                        style={{width: 12, height: 12, transform: 'translate(-2px, -2px)'}}
+                        style={{width: 14, height: 14, transform: 'translate(-2px, -2px)', border: '2px solid white'}}
                     ></span>
+                ) : (
+                    user.lastSeen && (
+                        <div
+                            className="position-absolute bottom-0 start-50 translate-middle-x bg-white px-1 rounded-pill border shadow-sm text-center"
+                            style={{fontSize: '0.6rem', whiteSpace: 'nowrap', lineHeight: 1, bottom: '-5px'}}
+                        >
+                            {formatLastSeen(user.lastSeen)}
+                        </div>
+                    )
                 )}
             </div>
         );

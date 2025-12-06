@@ -3,6 +3,7 @@ import io from 'socket.io-client';
 import { toast } from 'react-toastify';
 import { useAuth } from './AuthContext';
 import API from '../utils/api';
+import { playMessageSound, playNotificationSound } from '../utils/soundPlayer';
 
 const SocketContext = createContext();
 
@@ -59,6 +60,7 @@ export const SocketProvider = ({ children }) => {
 
             // Global Notification Listener
             newSocket.on('new_notification', (data) => {
+                playNotificationSound();
                 setUnreadCount(prev => prev + 1);
                 setNotifications(prev => [data, ...prev]);
                 toast.info(data.content, {
@@ -72,8 +74,12 @@ export const SocketProvider = ({ children }) => {
             // Global Message Listener (for toasts and badges)
             newSocket.on('receive_message', (data) => {
                 if (!window.location.pathname.includes('/messages')) {
+                    playMessageSound();
                     toast.info(`New message from ${data.sender.firstName}: ${data.content.substring(0, 20)}...`);
                     setUnreadMessageCount(prev => prev + 1);
+                } else {
+                    // Even if in messages, play sound (Messenger style pop)
+                    playMessageSound();
                 }
             });
 

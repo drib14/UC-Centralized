@@ -30,6 +30,35 @@ const ChatLayout = () => {
         }
     }, [conversations]); // Run when conversations load
 
+    // Listen for custom event from ActiveUsersList to switch view on mobile
+    useEffect(() => {
+        const handleSelectionChange = () => {
+            const storedId = localStorage.getItem('selectedConversationId');
+            if (storedId) {
+                // We need to find it in the list.
+                // If it's a new conversation created by ActiveUsersList that isn't in 'conversations' yet,
+                // we might need to reload. But ActiveUsersList usually calls createConversation which returns the object.
+                // Best bet: reload conversations or trust that the user click triggered a fetch/reload.
+
+                // Check if we have it
+                const found = conversations.find(c => c._id === storedId);
+                if (found) {
+                    setSelectedConversation(found);
+                    if (window.innerWidth <= 768) setMobileShowChat(true);
+                } else {
+                    // Not found? Maybe new. Reload.
+                    loadConversations().then(() => {
+                        // We can't easily set selectedConversation here without another effect or logic,
+                        // but the effect above [conversations] will handle it if storedId is set!
+                    });
+                }
+            }
+        };
+
+        window.addEventListener('chat_selection_change', handleSelectionChange);
+        return () => window.removeEventListener('chat_selection_change', handleSelectionChange);
+    }, [conversations]);
+
     useEffect(() => {
         if (!socket) return;
 
