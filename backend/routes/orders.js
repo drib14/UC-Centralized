@@ -2,6 +2,7 @@ const router = require('express').Router();
 const Order = require('../models/Order');
 const Merch = require('../models/Merch');
 const { verifyToken, verifyAdmin } = require('../middleware/auth');
+const { notifyAdmins, notifyUser } = require('../utils/notificationService');
 
 // CREATE
 router.post('/', verifyToken, async (req, res) => {
@@ -15,9 +16,24 @@ router.post('/', verifyToken, async (req, res) => {
             }
         }
 
-        // Decrement Stock
+        // Decrement Stock and Check Threshold
         for (const item of req.body.items) {
-            await Merch.findByIdAndUpdate(item.merch, { $inc: { stock: -item.quantity } });
+            const updatedProduct = await Merch.findByIdAndUpdate(
+                item.merch,
+                { $inc: { stock: -item.quantity } },
+                { new: true }
+            );
+
+            // Low Stock Alert (Threshold: 5)
+            if (updatedProduct.stock <= 5) {
+                await notifyAdmins(
+                    'alert',
+                    `Low Stock Alert: ${updatedProduct.name} has only ${updatedProduct.stock} items left.`,
+                    updatedProduct._id,
+                    `${process.env.CLIENT_URL || 'http://localhost:5173'}/admin/merch`,
+                    req
+                );
+            }
         }
 
         const orderData = {
@@ -64,7 +80,21 @@ router.put('/:id', verifyAdmin, async (req, res) => {
             req.params.id,
             { $set: req.body },
             { new: true }
-        );
+        ).populate('user'); // Populate to get user for notification
+
+        // Notify User if order belongs to a registered student
+        if (updatedOrder.user && updatedOrder.user._id) {
+            await notifyUser(
+                updatedOrder.user._id,
+                'alert',
+                `Your Order #${updatedOrder._id.toString().slice(-6)} status is now: ${updatedOrder.status}`,
+                updatedOrder._id,
+                `${process.env.CLIENT_URL || 'http://localhost:5173'}/student/cart`,
+                true,
+                req
+            );
+        }
+
         res.status(200).json(updatedOrder);
     } catch (err) {
         res.status(500).json(err);

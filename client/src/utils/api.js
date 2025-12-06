@@ -221,6 +221,14 @@ class API {
         return this.request('/notifications/read-all', 'PUT');
     }
 
+    static deleteNotification(id) {
+        return this.request(`/notifications/${id}`, 'DELETE');
+    }
+
+    static deleteAllNotifications() {
+        return this.request('/notifications', 'DELETE');
+    }
+
     // User Actions
     static blockUser(id) {
         return this.request(`/users/${id}/block`, 'PUT');

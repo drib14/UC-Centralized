@@ -38,4 +38,24 @@ router.put('/read-all', verifyToken, async (req, res) => {
     }
 });
 
+// Delete one notification
+router.delete('/:id', verifyToken, async (req, res) => {
+    try {
+        await Notification.findOneAndDelete({ _id: req.params.id, recipient: req.user.id });
+        res.status(200).json("Notification deleted");
+    } catch (err) {
+        res.status(500).json(err);
+    }
+});
+
+// Delete all notifications
+router.delete('/', verifyToken, async (req, res) => {
+    try {
+        await Notification.deleteMany({ recipient: req.user.id });
+        res.status(200).json("All notifications deleted");
+    } catch (err) {
+        res.status(500).json(err);
+    }
+});
+
 module.exports = router;

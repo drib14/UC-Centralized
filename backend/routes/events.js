@@ -1,9 +1,7 @@
 const router = require('express').Router();
 const Event = require('../models/Event');
 const Notification = require('../models/Notification');
-const User = require('../models/User');
-const sendEmail = require('../utils/sendEmail');
-const { getNotificationEmail } = require('../utils/emailTemplates');
+const { notifyAllStudents } = require('../utils/notificationService');
 const { verifyToken, verifyAdmin } = require('../middleware/auth');
 const parser = require('../config/cloudinary');
 
@@ -17,41 +15,13 @@ router.post('/', verifyAdmin, parser.single('image'), async (req, res) => {
         const savedEvent = await newEvent.save();
 
         // Notify Students
-        const users = await User.find({ role: 'student' });
-
-        // 1. Create Notifications
-        const notifications = users.map(user => ({
-            recipient: user._id,
-            type: 'event',
-            content: `New Event: ${savedEvent.title}`,
-            relatedId: savedEvent._id
-        }));
-        await Notification.insertMany(notifications);
-
-        // 2. Socket Broadcast
-        const io = req.app.get('io');
-        io.emit('new_notification', {
-            type: 'event',
-            content: `New Event: ${savedEvent.title}`,
-            relatedId: savedEvent._id
-        });
-
-        // 3. Email
-        users.forEach(user => {
-            if (user.email && user.notificationPreferences?.email !== false) {
-                 const emailContent = getNotificationEmail(
-                    user.firstName,
-                    'Event',
-                    `<strong>${savedEvent.title}</strong><br/>Date: ${new Date(savedEvent.date).toLocaleDateString()}<br/>${savedEvent.description.substring(0, 100)}...`,
-                    `${process.env.CLIENT_URL || 'http://localhost:5173'}/student/events`
-                 );
-                 sendEmail({
-                     email: user.email,
-                     subject: `New Event: ${savedEvent.title}`,
-                     html: emailContent
-                 }).catch(err => console.error("Email failed", err));
-            }
-        });
+        await notifyAllStudents(
+            'event',
+            `New Event: ${savedEvent.title}`,
+            savedEvent._id,
+            `${process.env.CLIENT_URL || 'http://localhost:5173'}/student/events`,
+            req
+        );
 
         res.status(200).json(savedEvent);
     } catch (err) {
