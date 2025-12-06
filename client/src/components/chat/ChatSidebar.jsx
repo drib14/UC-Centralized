@@ -41,10 +41,10 @@ const ChatSidebar = ({ conversations, selectedId, onSelect, onNewChat, onDeleteC
             <div className="p-3 d-flex justify-content-between align-items-center">
                 <h3 className="fw-bold mb-0">Chats</h3>
                 <div
-                    className="bg-light rounded-circle p-2 cursor-pointer hover-scale"
+                    className="btn-messenger"
                     onClick={onNewChat}
                 >
-                    <FaPenToSquare size={20} />
+                    <FaPenToSquare className="text-dark" size={20} />
                 </div>
             </div>
 
@@ -111,15 +111,15 @@ const ChatSidebar = ({ conversations, selectedId, onSelect, onNewChat, onDeleteC
 
                             {/* 3-dots Menu */}
                             <div
-                                className="position-absolute end-0 top-50 translate-middle-y me-2 p-2 rounded-circle hover-bg-gray d-flex align-items-center justify-content-center"
+                                className="position-absolute end-0 top-50 translate-middle-y me-2 btn-messenger action-btn-wrapper"
                                 style={{
-                                    opacity: showMenuId === conv._id ? 1 : 0,
                                     zIndex: 10,
                                     width: 32,
-                                    height: 32
+                                    height: 32,
+                                    backgroundColor: showMenuId === conv._id ? '#f0f2f5' : 'transparent',
+                                    opacity: showMenuId === conv._id ? 1 : undefined
                                 }}
                                 onClick={(e) => handleMenuClick(e, conv._id)}
-                                onMouseEnter={(e) => e.currentTarget.style.opacity = 1}
                             >
                                 <FaEllipsis className="text-muted" />
                             </div>

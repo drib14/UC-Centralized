@@ -80,3 +80,42 @@ code {
         opacity: 1 !important;
     }
 }
+
+/* Messenger Style Buttons */
+.btn-messenger {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background-color 0.2s;
+    cursor: pointer;
+    color: #0084ff; /* Messenger Blue default, can be overridden */
+}
+
+.btn-messenger:hover {
+    background-color: #f0f2f5;
+}
+
+.btn-messenger.text-muted {
+    color: #65676b !important;
+}
+
+/* Message Hover Actions */
+.message-actions {
+    opacity: 0;
+    transition: opacity 0.2s;
+}
+
+.message-row:hover .message-actions {
+    opacity: 1;
+}
+
+.hover-bg-gray:hover {
+    background-color: #f0f2f5 !important;
+}
+
+.cursor-pointer {
+    cursor: pointer;
+}

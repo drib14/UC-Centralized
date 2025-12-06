@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import {
     FaPhone, FaVideo, FaCircleInfo, FaImages, FaFaceSmile, FaPlus, FaThumbsUp, FaPaperPlane, FaArrowLeft,
-    FaPlay, FaPause, FaFile, FaReply, FaTrash, FaLocationDot, FaSquarePollVertical
+    FaPlay, FaPause, FaFile, FaReply, FaTrash, FaLocationDot, FaSquarePollVertical, FaMicrophone, FaEllipsisVertical, FaStop, FaXmark
 } from 'react-icons/fa6';
 import EmojiPicker from 'emoji-picker-react';
 import { useCall } from '../../context/CallContext';
@@ -30,6 +30,13 @@ const ChatWindow = ({ conversation, currentUser, socket, onBack, onMessageSent, 
         nicknames: conversation.nicknames || {}
     });
     const [isMuted, setIsMuted] = useState(conversation.mutedBy?.includes(currentUser._id));
+
+    // Voice Recording
+    const [isRecording, setIsRecording] = useState(false);
+    const [recordingDuration, setRecordingDuration] = useState(0);
+    const mediaRecorderRef = useRef(null);
+    const audioChunksRef = useRef([]);
+    const recordingTimerRef = useRef(null);
 
     const { callUser } = useCall();
     const otherUser = conversation.participants.find(p => p._id !== currentUser._id) || conversation.participants[0];
@@ -111,6 +118,75 @@ const ChatWindow = ({ conversation, currentUser, socket, onBack, onMessageSent, 
             messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
         }, 100);
     };
+
+    // --- Voice Recording Logic ---
+    const startRecording = async () => {
+        if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                mediaRecorderRef.current = new MediaRecorder(stream);
+                audioChunksRef.current = [];
+
+                mediaRecorderRef.current.ondataavailable = (event) => {
+                    audioChunksRef.current.push(event.data);
+                };
+
+                mediaRecorderRef.current.onstop = () => {
+                   // Logic handled in stop/send
+                };
+
+                mediaRecorderRef.current.start();
+                setIsRecording(true);
+                setRecordingDuration(0);
+                recordingTimerRef.current = setInterval(() => {
+                    setRecordingDuration(prev => prev + 1);
+                }, 1000);
+            } catch (err) {
+                console.error("Mic Error:", err);
+                toast.error("Microphone access denied");
+            }
+        } else {
+            toast.error("Audio recording not supported");
+        }
+    };
+
+    const stopRecording = () => {
+        if (mediaRecorderRef.current && isRecording) {
+            mediaRecorderRef.current.stop();
+            mediaRecorderRef.current.stream.getTracks().forEach(track => track.stop());
+            clearInterval(recordingTimerRef.current);
+            setIsRecording(false);
+        }
+    };
+
+    const cancelRecording = () => {
+        stopRecording();
+        audioChunksRef.current = [];
+    };
+
+    const sendRecording = () => {
+        if (mediaRecorderRef.current) {
+            // Need to attach a one-time listener or use promise, but since stop is async,
+            // we attach 'onstop' logic before stopping
+            mediaRecorderRef.current.onstop = async () => {
+                 const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
+                 const file = new File([audioBlob], "voice_message.webm", { type: 'audio/webm' });
+
+                 // Reuse upload logic
+                 try {
+                     const { url } = await API.uploadFile(file);
+                     await handleSend('', 'audio', null, [{ url, type: 'audio', duration: recordingDuration }]);
+                 } catch (err) {
+                     toast.error("Failed to send audio");
+                 }
+                 clearInterval(recordingTimerRef.current);
+                 setIsRecording(false);
+            };
+            mediaRecorderRef.current.stop();
+            mediaRecorderRef.current.stream.getTracks().forEach(track => track.stop());
+        }
+    };
+
 
     const handleSend = async (overrideContent = null, overrideType = 'text', fileUrl = null, attachments = [], pollData = null, locationData = null) => {
         const content = overrideContent !== null ? overrideContent : newMessage;
@@ -430,7 +506,7 @@ const ChatWindow = ({ conversation, currentUser, socket, onBack, onMessageSent, 
                 {/* Header */}
                 <div className="p-2 border-bottom d-flex align-items-center justify-content-between shadow-sm flex-shrink-0" style={{height: '60px'}}>
                     <div className="d-flex align-items-center">
-                        <button className="btn btn-link text-primary d-md-none me-2 cursor-pointer" onClick={onBack}><FaArrowLeft size={20}/></button>
+                        <button className="btn btn-messenger text-primary d-md-none me-2 cursor-pointer" onClick={onBack}><FaArrowLeft size={20}/></button>
                         <div className="me-2 cursor-pointer" onClick={() => setShowInfoModal(true)}>
                             <UserAvatar user={otherUser} size={40} showOnlineStatus={true} isOnline={otherUser.isOnline} />
                         </div>
@@ -441,10 +517,10 @@ const ChatWindow = ({ conversation, currentUser, socket, onBack, onMessageSent, 
                             </small>
                         </div>
                     </div>
-                    <div className="d-flex gap-3 text-primary me-2">
-                        <FaPhone size={20} className="cursor-pointer hover-scale" onClick={() => callUser(otherUser._id, false)} />
-                        <FaVideo size={20} className="cursor-pointer hover-scale" onClick={() => callUser(otherUser._id, true)} />
-                        <FaCircleInfo size={20} className="cursor-pointer hover-scale" onClick={() => setShowInfoModal(true)} />
+                    <div className="d-flex gap-2 text-primary me-2">
+                        <div className="btn-messenger" onClick={() => callUser(otherUser._id, false)}><FaPhone size={20} /></div>
+                        <div className="btn-messenger" onClick={() => callUser(otherUser._id, true)}><FaVideo size={20} /></div>
+                        <div className="btn-messenger" onClick={() => setShowInfoModal(true)}><FaCircleInfo size={20} /></div>
                     </div>
                 </div>
 
@@ -463,7 +539,7 @@ const ChatWindow = ({ conversation, currentUser, socket, onBack, onMessageSent, 
                         return (
                             <div
                                 key={msg._id}
-                                className={`d-flex align-items-end gap-2 ${isMe ? 'flex-row-reverse' : ''} mb-1 position-relative`}
+                                className={`d-flex align-items-center gap-2 ${isMe ? 'flex-row-reverse' : ''} mb-1 position-relative message-row`}
                                 onContextMenu={(e) => { e.preventDefault(); setMenuOpenId(msg._id); }}
                             >
                                 {!isMe && (
@@ -472,7 +548,14 @@ const ChatWindow = ({ conversation, currentUser, socket, onBack, onMessageSent, 
                                     </div>
                                 )}
 
-                                <div className={`d-flex flex-column ${isMe ? 'align-items-end' : 'align-items-start'}`} style={{maxWidth: '70%'}}>
+                                {/* Hover Actions (Desktop) - Left of My Message, Right of Their Message */}
+                                <div className={`message-actions d-none d-md-flex gap-1 ${isMe ? 'order-1 me-2' : 'order-2 ms-2'}`}>
+                                    <div className="btn-messenger text-muted" style={{width: 24, height: 24}} onClick={() => handleReaction(msg, '👍')} title="Like"><FaThumbsUp size={12} /></div>
+                                    <div className="btn-messenger text-muted" style={{width: 24, height: 24}} onClick={() => setReplyTo(msg)} title="Reply"><FaReply size={12} /></div>
+                                    <div className="btn-messenger text-muted" style={{width: 24, height: 24}} onClick={() => setMenuOpenId(msg._id)}><FaEllipsisVertical size={12} /></div>
+                                </div>
+
+                                <div className={`d-flex flex-column ${isMe ? 'align-items-end order-2' : 'align-items-start order-1'}`} style={{maxWidth: '70%'}}>
                                     {msg.attachments && msg.attachments.length > 0 && (
                                         <div className="d-flex flex-column gap-1 mb-1">
                                             {msg.attachments.map((att, i) => renderAttachment(att, i))}
@@ -494,7 +577,7 @@ const ChatWindow = ({ conversation, currentUser, socket, onBack, onMessageSent, 
                                     )}
                                 </div>
 
-                                {/* Message Actions Menu (Popover) */}
+                                {/* Message Actions Menu (Popover) - Mobile Long Press or Desktop Click */}
                                 {isMenuOpen && (
                                     <div
                                         className={`position-absolute bg-white shadow rounded-3 p-1 z-3 d-flex gap-2`}
@@ -561,26 +644,54 @@ const ChatWindow = ({ conversation, currentUser, socket, onBack, onMessageSent, 
                         <input type="file" ref={fileInputRef} className="d-none" multiple onChange={handleFileSelect} />
 
                         {/* Plus Button */}
-                        <FaPlus className={`text-primary cursor-pointer hover-scale ${showPlusMenu ? 'rotate-45' : ''}`} style={{transition: 'transform 0.2s'}} size={20} onClick={() => setShowPlusMenu(!showPlusMenu)} />
-                        <FaImages className="text-primary cursor-pointer hover-scale" size={20} onClick={() => fileInputRef.current.click()} />
-
-                        <div className="flex-grow-1 bg-light rounded-pill px-3 py-2 d-flex align-items-center">
-                            <input
-                                type="text"
-                                className="bg-transparent border-0 w-100 no-focus-outline"
-                                placeholder="Aa"
-                                value={newMessage}
-                                onChange={e => setNewMessage(e.target.value)}
-                                onKeyDown={e => e.key === 'Enter' && (selectedFiles.length > 0 ? handleUploadAndSend() : handleSend())}
-                            />
-                            <FaFaceSmile className="text-primary cursor-pointer hover-scale" size={20} onClick={() => setShowEmojiPicker(!showEmojiPicker)} />
+                        <div className={`btn-messenger ${showPlusMenu ? 'rotate-45' : ''}`} style={{transition: 'transform 0.2s'}} onClick={() => setShowPlusMenu(!showPlusMenu)}>
+                             <FaPlus className="text-primary" size={20} />
+                        </div>
+                        <div className="btn-messenger" onClick={() => fileInputRef.current.click()}>
+                             <FaImages className="text-primary" size={20} />
                         </div>
 
-                        {newMessage || selectedFiles.length > 0 || isUploading ? (
-                            <FaPaperPlane className={`text-primary cursor-pointer hover-scale ${isUploading ? 'opacity-50' : ''}`} size={20} onClick={() => selectedFiles.length > 0 ? handleUploadAndSend() : handleSend()} />
+                        <div className="flex-grow-1 bg-light rounded-pill px-3 py-2 d-flex align-items-center">
+                            {isRecording ? (
+                                <div className="d-flex align-items-center w-100 text-danger animate-pulse">
+                                     <div className="bg-danger rounded-circle me-2" style={{width:10, height:10}}></div>
+                                     <span className="fw-bold flex-grow-1">{formatDuration(recordingDuration)}</span>
+                                     <div className="btn-messenger text-danger" onClick={cancelRecording}><FaXmark /></div>
+                                </div>
+                            ) : (
+                                <>
+                                    <input
+                                        type="text"
+                                        className="bg-transparent border-0 w-100 no-focus-outline"
+                                        placeholder="Aa"
+                                        value={newMessage}
+                                        onChange={e => setNewMessage(e.target.value)}
+                                        onKeyDown={e => e.key === 'Enter' && (selectedFiles.length > 0 ? handleUploadAndSend() : handleSend())}
+                                    />
+                                    <div className="btn-messenger text-primary" style={{width:30, height:30}} onClick={() => setShowEmojiPicker(!showEmojiPicker)}>
+                                         <FaFaceSmile size={20} />
+                                    </div>
+                                </>
+                            )}
+                        </div>
+
+                        {isRecording ? (
+                             <div className="btn-messenger text-primary" onClick={sendRecording}><FaPaperPlane size={20} /></div>
                         ) : (
-                            <div className="text-primary cursor-pointer hover-scale fs-4" onClick={() => handleSend(conversationSettings.quickReaction, 'text')}>
-                                {conversationSettings.quickReaction}
+                            newMessage || selectedFiles.length > 0 || isUploading ? (
+                                <div className={`btn-messenger text-primary ${isUploading ? 'opacity-50' : ''}`} onClick={() => selectedFiles.length > 0 ? handleUploadAndSend() : handleSend()}>
+                                     <FaPaperPlane size={20} />
+                                </div>
+                            ) : (
+                                <div className="btn-messenger text-primary" onClick={startRecording}>
+                                     <FaMicrophone size={20} />
+                                </div>
+                            )
+                        )}
+
+                        {!newMessage && !selectedFiles.length && !isRecording && (
+                             <div className="btn-messenger text-primary fs-4" onClick={() => handleSend(conversationSettings.quickReaction, 'text')}>
+                                 {conversationSettings.quickReaction}
                             </div>
                         )}
                     </div>
