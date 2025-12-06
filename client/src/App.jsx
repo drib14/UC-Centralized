@@ -6,6 +6,7 @@ import 'react-toastify/dist/ReactToastify.css';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { CartProvider } from './context/CartContext';
 import { SocketProvider } from './context/SocketContext';
+import { CallProvider } from './context/CallContext';
 
 import Layout from './components/Layout';
 import SplashScreen from './components/SplashScreen';
@@ -69,9 +70,10 @@ function App() {
     return (
         <AuthProvider>
             <SocketProvider>
-                <CartProvider>
-                    <Router>
-                        <ToastContainer position="top-right" autoClose={5000} />
+                <CallProvider>
+                    <CartProvider>
+                        <Router>
+                            <ToastContainer position="top-right" autoClose={5000} />
                     <Routes>
                         {/* Public Routes */}
                         <Route path="/" element={<Landing />} />
@@ -113,9 +115,10 @@ function App() {
 
                          {/* Catch all */}
                         <Route path="*" element={<Navigate to="/" replace />} />
-                    </Routes>
-                </Router>
-                </CartProvider>
+                        </Routes>
+                    </Router>
+                    </CartProvider>
+                </CallProvider>
             </SocketProvider>
         </AuthProvider>
     );
