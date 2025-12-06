@@ -18,7 +18,6 @@ import VerifyCode from './pages/VerifyCode';
 import ResetPassword from './pages/ResetPassword';
 import Documentation from './pages/Documentation';
 import OAuthConsent from './pages/OAuthConsent';
-import CallOverlay from './components/chat/CallOverlay'; // Import CallOverlay
 
 import StudentDashboard from './pages/student/StudentDashboard';
 import StudentEvents from './pages/student/StudentEvents';
@@ -75,8 +74,6 @@ function App() {
                     <CartProvider>
                         <Router future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
                             <ToastContainer position="top-right" autoClose={5000} />
-                            {/* Global Call Overlay */}
-                            <CallOverlay />
 
                             <Routes>
                                 {/* Public Routes */}
