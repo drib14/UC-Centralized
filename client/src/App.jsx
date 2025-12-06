@@ -72,7 +72,7 @@ function App() {
             <SocketProvider>
                 <CallProvider>
                     <CartProvider>
-                        <Router>
+                        <Router future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
                             <ToastContainer position="top-right" autoClose={5000} />
                     <Routes>
                         {/* Public Routes */}

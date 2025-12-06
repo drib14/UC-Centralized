@@ -16,7 +16,7 @@ const messageSchema = new mongoose.Schema({
     },
     type: {
         type: String,
-        enum: ['text', 'image', 'audio', 'call', 'video_call', 'location', 'poll'],
+        enum: ['text', 'image', 'audio', 'call', 'video_call', 'location', 'poll', 'system'],
         default: 'text'
     },
     pollData: {

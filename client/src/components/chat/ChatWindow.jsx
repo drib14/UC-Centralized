@@ -1,8 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import {
     FaPhone, FaVideo, FaCircleInfo, FaImages, FaFaceSmile, FaPlus, FaThumbsUp, FaPaperPlane, FaArrowLeft,
-    FaPlay, FaPause, FaFile, FaReply, FaTrash, FaShare, FaEllipsisVertical, FaUser, FaBellSlash, FaBan,
-    FaLocationDot, FaSquarePollVertical, FaPalette, FaPen
+    FaPlay, FaPause, FaFile, FaReply, FaTrash, FaLocationDot, FaSquarePollVertical
 } from 'react-icons/fa6';
 import EmojiPicker from 'emoji-picker-react';
 import { useCall } from '../../context/CallContext';
@@ -11,6 +10,7 @@ import { toast } from 'react-toastify';
 import UserAvatar from './UserAvatar';
 import PollModal from './PollModal';
 import MediaPreview from './MediaPreview';
+import ChatInfoModal from './ChatInfoModal';
 
 const ChatWindow = ({ conversation, currentUser, socket, onBack, onMessageSent, onDeleteConversation }) => {
     const [newMessage, setNewMessage] = useState('');
@@ -20,7 +20,7 @@ const ChatWindow = ({ conversation, currentUser, socket, onBack, onMessageSent, 
     const [isUploading, setIsUploading] = useState(false);
     const [menuOpenId, setMenuOpenId] = useState(null);
     const [replyTo, setReplyTo] = useState(null);
-    const [showInfoSidebar, setShowInfoSidebar] = useState(false);
+    const [showInfoModal, setShowInfoModal] = useState(false);
     const [showPlusMenu, setShowPlusMenu] = useState(false);
     const [showPollModal, setShowPollModal] = useState(false);
     const [selectedFiles, setSelectedFiles] = useState([]);
@@ -29,6 +29,7 @@ const ChatWindow = ({ conversation, currentUser, socket, onBack, onMessageSent, 
         quickReaction: conversation.quickReaction || '👍',
         nicknames: conversation.nicknames || {}
     });
+    const [isMuted, setIsMuted] = useState(conversation.mutedBy?.includes(currentUser._id));
 
     const { callUser } = useCall();
     const otherUser = conversation.participants.find(p => p._id !== currentUser._id) || conversation.participants[0];
@@ -36,13 +37,17 @@ const ChatWindow = ({ conversation, currentUser, socket, onBack, onMessageSent, 
     const messagesEndRef = useRef(null);
     const audioRefs = useRef({});
     const [playingAudio, setPlayingAudio] = useState(null);
-    const [showSettingsEmojiPicker, setShowSettingsEmojiPicker] = useState(false);
-    const [editingNickname, setEditingNickname] = useState(null);
-    const [tempNickname, setTempNickname] = useState('');
 
     useEffect(() => {
         loadMessages();
         API.markMessagesRead(conversation._id).catch(console.error);
+        setIsMuted(conversation.mutedBy?.includes(currentUser._id));
+        setConversationSettings({
+            theme: conversation.theme || '#003399',
+            quickReaction: conversation.quickReaction || '👍',
+            nicknames: conversation.nicknames || {}
+        });
+
         if (socket) {
             socket.emit('mark_messages_read', {
                 conversationId: conversation._id,
@@ -68,7 +73,6 @@ const ChatWindow = ({ conversation, currentUser, socket, onBack, onMessageSent, 
         if (!socket) return;
         const handleReceive = (data) => {
             if (data.conversationId === conversation._id) {
-                // If it's a vote update (message_updated), replace the message in the list
                 if (data.isEdited || data.type === 'poll' || data.isDeletedForEveryone) {
                     setMessages(prev => prev.map(m => m._id === data._id ? data : m));
                 } else {
@@ -177,8 +181,6 @@ const ChatWindow = ({ conversation, currentUser, socket, onBack, onMessageSent, 
 
         navigator.geolocation.getCurrentPosition(async (position) => {
             const { latitude, longitude } = position.coords;
-            // Optionally fetch address using OpenCage or similar if needed here,
-            // but for now we send raw coords and let UI handle map link
             await handleSend('Shared a location', 'location', null, [], null, {
                 latitude, longitude
             });
@@ -194,8 +196,7 @@ const ChatWindow = ({ conversation, currentUser, socket, onBack, onMessageSent, 
 
     const handleVote = async (msgId, optionIndex) => {
         try {
-             const updatedMsg = await API.put(`/messages/${msgId}/vote`, { optionIndex });
-             // Socket update handles the state change
+             await API.put(`/messages/${msgId}/vote`, { optionIndex });
         } catch (err) {
             toast.error("Failed to vote");
         }
@@ -244,17 +245,43 @@ const ChatWindow = ({ conversation, currentUser, socket, onBack, onMessageSent, 
         }
     };
 
+    const handleMute = async () => {
+        try {
+            await API.put(`/messages/conversations/${conversation._id}/mute`);
+            setIsMuted(!isMuted);
+            toast.success(isMuted ? "Notifications unmuted" : "Notifications muted");
+        } catch(e) { toast.error("Failed to mute"); }
+    };
+
+    const handleBlock = async () => {
+        if(!window.confirm(`Block ${otherUser.firstName}?`)) return;
+        try {
+            await API.put(`/users/${otherUser._id}/block`);
+            toast.success("User blocked");
+            onBack();
+        } catch(e) { toast.error("Failed to block"); }
+    };
+
+    const handleDeleteConversation = () => {
+        if(!window.confirm("Delete this conversation?")) return;
+        onDeleteConversation(conversation._id);
+    };
+
     // --- Message Rendering Helpers ---
     const renderContent = (msg, isMe) => {
         if (msg.isDeletedForEveryone) {
             return <em className="text-muted">Message unsent</em>;
         }
 
+        if (msg.type === 'system') {
+            return <div className="text-center small text-secondary my-2">{msg.content}</div>;
+        }
+
         if (msg.type === 'location' && msg.locationData) {
             const { latitude, longitude } = msg.locationData;
             const mapUrl = `https://www.google.com/maps?q=${latitude},${longitude}`;
             return (
-                <div className="bg-white p-2 rounded-3" style={{width: 200}}>
+                <div className="bg-white p-2 rounded-3 cursor-pointer" style={{width: 200}}>
                     <a href={mapUrl} target="_blank" rel="noopener noreferrer" className="d-block text-decoration-none text-dark">
                         <div className="bg-light d-flex align-items-center justify-content-center rounded mb-2" style={{height: 100}}>
                             <FaLocationDot size={32} className="text-danger" />
@@ -271,7 +298,7 @@ const ChatWindow = ({ conversation, currentUser, socket, onBack, onMessageSent, 
              const totalVotes = options.reduce((acc, opt) => acc + opt.votes.length, 0);
 
              return (
-                 <div className="bg-white p-3 rounded-3 shadow-sm" style={{minWidth: 250}}>
+                 <div className="bg-white p-3 rounded-3 shadow-sm cursor-pointer" style={{minWidth: 250}}>
                      <div className="fw-bold mb-2">{question}</div>
                      <small className="text-muted mb-3 d-block">{allowMultipleAnswers ? 'Multiple Choice' : 'Select one'}</small>
                      <div className="d-flex flex-column gap-2">
@@ -393,22 +420,21 @@ const ChatWindow = ({ conversation, currentUser, socket, onBack, onMessageSent, 
         return `${mins}:${secs < 10 ? '0' : ''}${secs}`;
     };
 
-    // --- Nicknames Helpers ---
     const getNickname = (user) => {
         return (conversationSettings.nicknames && conversationSettings.nicknames[user._id]) || user.firstName;
     }
 
     return (
-        <div className="d-flex h-100 overflow-hidden">
-            <div className="d-flex flex-column h-100 flex-grow-1 bg-white position-relative" onClick={() => { setMenuOpenId(null); setShowPlusMenu(false); }}>
+        <div className="d-flex h-100 w-100 overflow-hidden">
+            <div className="d-flex flex-column h-100 w-100 flex-grow-1 bg-white position-relative" onClick={() => { setMenuOpenId(null); setShowPlusMenu(false); }}>
                 {/* Header */}
-                <div className="p-2 border-bottom d-flex align-items-center justify-content-between shadow-sm" style={{height: '60px'}}>
+                <div className="p-2 border-bottom d-flex align-items-center justify-content-between shadow-sm flex-shrink-0" style={{height: '60px'}}>
                     <div className="d-flex align-items-center">
-                        <button className="btn btn-link text-primary d-md-none me-2" onClick={onBack}><FaArrowLeft size={20}/></button>
-                        <div className="me-2">
+                        <button className="btn btn-link text-primary d-md-none me-2 cursor-pointer" onClick={onBack}><FaArrowLeft size={20}/></button>
+                        <div className="me-2 cursor-pointer" onClick={() => setShowInfoModal(true)}>
                             <UserAvatar user={otherUser} size={40} showOnlineStatus={true} isOnline={otherUser.isOnline} />
                         </div>
-                        <div>
+                        <div className="cursor-pointer" onClick={() => setShowInfoModal(true)}>
                             <h6 className="mb-0 fw-bold">{getNickname(otherUser)} {otherUser.lastName}</h6>
                             <small className="text-muted" style={{fontSize: '0.75rem'}}>
                                 {otherUser.isOnline ? 'Active now' : (otherUser.lastSeen ? `Active ${Math.floor((new Date() - new Date(otherUser.lastSeen))/60000)}m ago` : 'Offline')}
@@ -418,17 +444,21 @@ const ChatWindow = ({ conversation, currentUser, socket, onBack, onMessageSent, 
                     <div className="d-flex gap-3 text-primary me-2">
                         <FaPhone size={20} className="cursor-pointer hover-scale" onClick={() => callUser(otherUser._id, false)} />
                         <FaVideo size={20} className="cursor-pointer hover-scale" onClick={() => callUser(otherUser._id, true)} />
-                        <FaCircleInfo size={20} className="cursor-pointer hover-scale" onClick={() => setShowInfoSidebar(!showInfoSidebar)} />
+                        <FaCircleInfo size={20} className="cursor-pointer hover-scale" onClick={() => setShowInfoModal(true)} />
                     </div>
                 </div>
 
                 {/* Messages Area */}
-                <div className="flex-grow-1 overflow-auto p-3 d-flex flex-column gap-1">
+                <div className="flex-grow-1 overflow-auto p-3 d-flex flex-column gap-1 w-100">
                     {messages.map((msg, idx) => {
                         const isMe = msg.sender._id === currentUser._id || msg.sender === currentUser._id;
+                        const isSystem = msg.type === 'system';
                         const isLast = idx === messages.length - 1 || messages[idx+1]?.sender._id !== msg.sender._id;
                         const isMenuOpen = menuOpenId === msg._id;
-                        const senderUser = isMe ? currentUser : otherUser;
+
+                        if (isSystem) {
+                             return <div key={msg._id} className="text-center small text-secondary my-2 w-100">{msg.content}</div>;
+                        }
 
                         return (
                             <div
@@ -458,7 +488,7 @@ const ChatWindow = ({ conversation, currentUser, socket, onBack, onMessageSent, 
 
                                     {/* Reactions */}
                                     {msg.reactions && msg.reactions.length > 0 && (
-                                        <div className="position-absolute bg-white rounded-pill shadow-sm px-1 border" style={{bottom: -10, [isMe ? 'right' : 'left']: 0, fontSize: '0.8rem', zIndex: 1}}>
+                                        <div className="position-absolute bg-white rounded-pill shadow-sm px-1 border cursor-pointer" style={{bottom: -10, [isMe ? 'right' : 'left']: 0, fontSize: '0.8rem', zIndex: 1}}>
                                             {msg.reactions.map((r, i) => <span key={i}>{r.emoji}</span>)}
                                         </div>
                                     )}
@@ -475,11 +505,11 @@ const ChatWindow = ({ conversation, currentUser, socket, onBack, onMessageSent, 
                                         }}
                                         onClick={(e) => e.stopPropagation()}
                                     >
-                                        <button className="btn btn-sm btn-light rounded-circle" onClick={() => setReplyTo(msg)} title="Reply">
+                                        <button className="btn btn-sm btn-light rounded-circle cursor-pointer" onClick={() => setReplyTo(msg)} title="Reply">
                                             <FaReply size={12} />
                                         </button>
                                         {isMe && (
-                                            <button className="btn btn-sm btn-light rounded-circle text-danger" onClick={() => deleteMessage(msg._id)} title="Unsend">
+                                            <button className="btn btn-sm btn-light rounded-circle text-danger cursor-pointer" onClick={() => deleteMessage(msg._id)} title="Unsend">
                                                 <FaTrash size={12} />
                                             </button>
                                         )}
@@ -499,7 +529,7 @@ const ChatWindow = ({ conversation, currentUser, socket, onBack, onMessageSent, 
                 />
 
                 {/* Footer */}
-                <div className="p-2 border-top position-relative">
+                <div className="p-2 border-top position-relative flex-shrink-0 bg-white">
                     {replyTo && (
                         <div className="px-3 py-2 bg-light border-bottom d-flex justify-content-between align-items-center">
                             <small className="text-muted">Replying to {replyTo.sender._id === currentUser._id ? 'yourself' : otherUser.firstName}</small>
@@ -519,11 +549,11 @@ const ChatWindow = ({ conversation, currentUser, socket, onBack, onMessageSent, 
                              <div className="position-absolute bottom-100 start-0 mb-2 ms-2 bg-white shadow-lg rounded-3 p-2 z-3 d-flex flex-column gap-2" style={{minWidth: 150}}>
                                  <div className="d-flex align-items-center gap-2 p-2 hover-bg-light rounded cursor-pointer" onClick={() => setShowPollModal(true)}>
                                      <div className="bg-warning text-white rounded-circle p-1 d-flex align-items-center justify-content-center" style={{width:30, height:30}}><FaSquarePollVertical /></div>
-                                     <span className="small fw-bold">Polls</span>
+                                     <span className="small fw-bold cursor-pointer">Polls</span>
                                  </div>
                                  <div className="d-flex align-items-center gap-2 p-2 hover-bg-light rounded cursor-pointer" onClick={handleLocation}>
                                      <div className="bg-danger text-white rounded-circle p-1 d-flex align-items-center justify-content-center" style={{width:30, height:30}}><FaLocationDot /></div>
-                                     <span className="small fw-bold">Location</span>
+                                     <span className="small fw-bold cursor-pointer">Location</span>
                                  </div>
                              </div>
                         )}
@@ -568,97 +598,21 @@ const ChatWindow = ({ conversation, currentUser, socket, onBack, onMessageSent, 
                 )}
 
                 <PollModal show={showPollModal} onClose={() => setShowPollModal(false)} onSubmit={handlePollSubmit} />
+
+                <ChatInfoModal
+                    show={showInfoModal}
+                    onClose={() => setShowInfoModal(false)}
+                    user={otherUser}
+                    conversation={{...conversation, ...conversationSettings}}
+                    currentUser={currentUser}
+                    onUpdateSettings={updateSettings}
+                    onDelete={handleDeleteConversation}
+                    onBlock={handleBlock}
+                    onMute={handleMute}
+                    nickname={getNickname(otherUser)}
+                    isMuted={isMuted}
+                />
             </div>
-
-            {/* Chat Info Sidebar */}
-            {showInfoSidebar && (
-                <div className="bg-white border-start h-100 d-flex flex-column" style={{width: '300px', minWidth: '300px'}}>
-                     <div className="p-3 border-bottom d-flex align-items-center justify-content-between">
-                         <h5 className="mb-0 fw-bold">Chat Info</h5>
-                         <button className="btn-close" onClick={() => setShowInfoSidebar(false)}></button>
-                     </div>
-                     <div className="p-4 d-flex flex-column align-items-center text-center">
-                         <UserAvatar user={otherUser} size={80} showOnlineStatus={true} isOnline={otherUser.isOnline} />
-                         <h5 className="mt-3 fw-bold">{getNickname(otherUser)} {otherUser.lastName}</h5>
-                         <p className="text-muted small">Student</p>
-                     </div>
-
-                     {/* Customize Chat */}
-                     <div className="px-3 py-2">
-                         <h6 className="text-muted small fw-bold mb-2">CUSTOMIZE CHAT</h6>
-                         <div className="list-group list-group-flush">
-                             <button className="list-group-item list-group-item-action d-flex align-items-center gap-3 py-2 border-0" onClick={() => {
-                                 const color = prompt("Enter hex color (e.g., #FF0000) or name:", conversationSettings.theme);
-                                 if (color) updateSettings({ theme: color });
-                             }}>
-                                 <FaPalette className="text-primary" /> Change Theme
-                             </button>
-                             <button className="list-group-item list-group-item-action d-flex align-items-center gap-3 py-2 border-0 position-relative" onClick={() => setShowSettingsEmojiPicker(!showSettingsEmojiPicker)}>
-                                 <span className="text-primary fs-5">{conversationSettings.quickReaction}</span> Change Emoji
-                                 {showSettingsEmojiPicker && (
-                                     <div className="position-absolute top-100 start-0 z-3">
-                                         <EmojiPicker onEmojiClick={(emoji) => {
-                                             updateSettings({ quickReaction: emoji.emoji });
-                                             setShowSettingsEmojiPicker(false);
-                                         }} />
-                                     </div>
-                                 )}
-                             </button>
-                             <button className="list-group-item list-group-item-action d-flex align-items-center gap-3 py-2 border-0" onClick={() => setEditingNickname(otherUser._id)}>
-                                 <FaPen className="text-primary" /> Edit Nicknames
-                             </button>
-                         </div>
-                     </div>
-
-                     {/* Nickname Editor Modal (Inline) */}
-                     {editingNickname && (
-                         <div className="p-3 bg-light m-3 rounded">
-                             <label className="small fw-bold mb-1">Nickname for {otherUser.firstName}</label>
-                             <input
-                                 type="text"
-                                 className="form-control form-control-sm mb-2"
-                                 placeholder={otherUser.firstName}
-                                 defaultValue={getNickname(otherUser)}
-                                 onChange={e => setTempNickname(e.target.value)}
-                             />
-                             <div className="d-flex gap-2 justify-content-end">
-                                 <button className="btn btn-sm btn-light" onClick={() => setEditingNickname(null)}>Cancel</button>
-                                 <button className="btn btn-sm btn-primary" onClick={() => {
-                                     updateSettings({ nicknames: { ...conversationSettings.nicknames, [otherUser._id]: tempNickname } });
-                                     setEditingNickname(null);
-                                 }}>Save</button>
-                             </div>
-                         </div>
-                     )}
-
-                     <div className="flex-grow-1 overflow-auto mt-2">
-                         <h6 className="text-muted small fw-bold px-3 mb-2">PRIVACY & SUPPORT</h6>
-                         <div className="list-group list-group-flush">
-                             <button className="list-group-item list-group-item-action d-flex align-items-center gap-3 py-3 border-0" onClick={async () => {
-                                 try {
-                                     await API.put(`/messages/conversations/${conversation._id}/mute`);
-                                     toast.success("Notifications muted");
-                                 } catch(e) { toast.error("Failed to mute"); }
-                             }}>
-                                 <FaBellSlash /> Mute Notifications
-                             </button>
-                             <button className="list-group-item list-group-item-action d-flex align-items-center gap-3 py-3 border-0 text-danger" onClick={() => onDeleteConversation(conversation._id)}>
-                                 <FaTrash /> Delete Conversation
-                             </button>
-                             <button className="list-group-item list-group-item-action d-flex align-items-center gap-3 py-3 border-0 text-danger" onClick={async () => {
-                                 if(!window.confirm(`Block ${otherUser.firstName}?`)) return;
-                                 try {
-                                     await API.put(`/users/${otherUser._id}/block`);
-                                     toast.success("User blocked");
-                                     onBack(); // Exit chat
-                                 } catch(e) { toast.error("Failed to block"); }
-                             }}>
-                                 <FaBan /> Block User
-                             </button>
-                         </div>
-                     </div>
-                </div>
-            )}
         </div>
     );
 };

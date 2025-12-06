@@ -127,12 +127,11 @@ const ChatSidebar = ({ conversations, selectedId, onSelect, onNewChat, onDeleteC
                             {/* Dropdown Menu */}
                             {showMenuId === conv._id && (
                                 <div
-                                    className="position-absolute bg-white shadow-lg rounded-3 py-2 z-3"
+                                    className="position-fixed bg-white shadow-lg rounded-3 py-2 z-3"
                                     style={{
-                                        top: '60%',
-                                        right: '20px',
-                                        minWidth: '180px',
-                                        border: '1px solid #eee'
+                                        zIndex: 9999,
+                                        marginTop: '10px',
+                                        transform: 'translateX(-80%)' // Shift left to stay on screen
                                     }}
                                     onClick={(e) => e.stopPropagation()}
                                 >

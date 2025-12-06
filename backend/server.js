@@ -116,8 +116,42 @@ io.on("connection", async (socket) => {
         io.to(data.to).emit("ice_candidate", data.candidate);
     });
 
-    socket.on("end_call", (data) => {
+    socket.on("end_call", async (data) => {
+        // data: { to, from, duration }
         io.to(data.to).emit("call_ended");
+
+        // Generate System Message for Call Ended
+        if (data.from && data.to) {
+            // Find Conversation
+             try {
+                 const Conversation = require('./models/Conversation'); // Lazy require
+                 const Message = require('./models/Message'); // Lazy require
+
+                 const conv = await Conversation.findOne({
+                     participants: { $all: [data.from, data.to], $size: 2 }
+                 });
+
+                 if (conv) {
+                     const durationText = data.duration ? `Call ended • ${data.duration}` : 'Call ended';
+                     const sysMsg = new Message({
+                        conversationId: conv._id,
+                        sender: data.from,
+                        content: durationText,
+                        type: 'system',
+                        readBy: [data.from] // Read by sender
+                    });
+                    await sysMsg.save();
+                    await conv.updateOne({ lastMessage: sysMsg._id, updatedAt: Date.now() });
+
+                    const populatedMsg = await sysMsg.populate('sender', 'firstName lastName profileImage');
+
+                    io.to(data.to).emit("receive_message", populatedMsg);
+                    io.to(data.from).emit("receive_message", populatedMsg);
+                 }
+             } catch(e) {
+                 console.error("Failed to save call end message", e);
+             }
+        }
     });
 
 });

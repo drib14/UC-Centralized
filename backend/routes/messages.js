@@ -283,6 +283,18 @@ router.put('/conversations/:id/settings', verifyToken, async (req, res) => {
         const conversation = await Conversation.findById(req.params.id);
         if (!conversation) return res.status(404).json("Conversation not found");
 
+        let systemMsgContent = '';
+        if (theme && theme !== conversation.theme) systemMsgContent = 'changed the chat theme';
+        if (quickReaction && quickReaction !== conversation.quickReaction) systemMsgContent = 'changed the quick reaction';
+        if (nicknames) {
+             const changedKey = Object.keys(nicknames).find(k => nicknames[k] !== (conversation.nicknames ? conversation.nicknames.get(k) : null));
+             if (changedKey) {
+                 const targetUser = conversation.participants.find(p => p.toString() === changedKey);
+                 // We can't easily get the name here without populating, so generic message
+                 systemMsgContent = 'set a nickname';
+             }
+        }
+
         if (theme) conversation.theme = theme;
         if (quickReaction) conversation.quickReaction = quickReaction;
         if (nicknames) conversation.nicknames = nicknames;
@@ -298,8 +310,23 @@ router.put('/conversations/:id/settings', verifyToken, async (req, res) => {
             nicknames: conversation.nicknames
         });
 
+        // If we created a system message, we should save and emit it too.
+        if (systemMsgContent) {
+             const sysMsg = new Message({
+                conversationId: conversation._id,
+                sender: req.user.id,
+                content: systemMsgContent,
+                type: 'system',
+                readBy: [req.user.id]
+            });
+            await sysMsg.save();
+             // Emit message
+            if (receiver) io.to(receiver.toString()).emit("receive_message", await sysMsg.populate('sender', 'firstName lastName profileImage'));
+        }
+
         res.status(200).json(conversation);
     } catch (err) {
+        console.error(err);
         res.status(500).json(err);
     }
 });
