@@ -16,8 +16,21 @@ const messageSchema = new mongoose.Schema({
     },
     type: {
         type: String,
-        enum: ['text', 'image', 'audio', 'call', 'video_call'],
+        enum: ['text', 'image', 'audio', 'call', 'video_call', 'location', 'poll'],
         default: 'text'
+    },
+    pollData: {
+        question: String,
+        options: [{
+            text: String,
+            votes: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }]
+        }],
+        allowMultipleAnswers: { type: Boolean, default: false }
+    },
+    locationData: {
+        latitude: Number,
+        longitude: Number,
+        address: String
     },
     fileUrl: {
         type: String

@@ -1,13 +1,16 @@
 import React, { useState, useEffect, useRef } from 'react';
 import {
     FaPhone, FaVideo, FaCircleInfo, FaImages, FaFaceSmile, FaPlus, FaThumbsUp, FaPaperPlane, FaArrowLeft,
-    FaPlay, FaPause, FaFile, FaReply, FaTrash, FaShare, FaEllipsisVertical, FaUser, FaBellSlash, FaBan
+    FaPlay, FaPause, FaFile, FaReply, FaTrash, FaShare, FaEllipsisVertical, FaUser, FaBellSlash, FaBan,
+    FaLocationDot, FaSquarePollVertical, FaPalette, FaPen
 } from 'react-icons/fa6';
 import EmojiPicker from 'emoji-picker-react';
 import { useCall } from '../../context/CallContext';
 import API from '../../utils/api';
 import { toast } from 'react-toastify';
 import UserAvatar from './UserAvatar';
+import PollModal from './PollModal';
+import MediaPreview from './MediaPreview';
 
 const ChatWindow = ({ conversation, currentUser, socket, onBack, onMessageSent, onDeleteConversation }) => {
     const [newMessage, setNewMessage] = useState('');
@@ -18,6 +21,14 @@ const ChatWindow = ({ conversation, currentUser, socket, onBack, onMessageSent, 
     const [menuOpenId, setMenuOpenId] = useState(null);
     const [replyTo, setReplyTo] = useState(null);
     const [showInfoSidebar, setShowInfoSidebar] = useState(false);
+    const [showPlusMenu, setShowPlusMenu] = useState(false);
+    const [showPollModal, setShowPollModal] = useState(false);
+    const [selectedFiles, setSelectedFiles] = useState([]);
+    const [conversationSettings, setConversationSettings] = useState({
+        theme: conversation.theme || '#003399',
+        quickReaction: conversation.quickReaction || '👍',
+        nicknames: conversation.nicknames || {}
+    });
 
     const { callUser } = useCall();
     const otherUser = conversation.participants.find(p => p._id !== currentUser._id) || conversation.participants[0];
@@ -25,6 +36,9 @@ const ChatWindow = ({ conversation, currentUser, socket, onBack, onMessageSent, 
     const messagesEndRef = useRef(null);
     const audioRefs = useRef({});
     const [playingAudio, setPlayingAudio] = useState(null);
+    const [showSettingsEmojiPicker, setShowSettingsEmojiPicker] = useState(false);
+    const [editingNickname, setEditingNickname] = useState(null);
+    const [tempNickname, setTempNickname] = useState('');
 
     useEffect(() => {
         loadMessages();
@@ -35,6 +49,18 @@ const ChatWindow = ({ conversation, currentUser, socket, onBack, onMessageSent, 
                 readerId: currentUser._id,
                 senderId: otherUser._id
             });
+            socket.on('conversation_settings_updated', (data) => {
+                if (data.conversationId === conversation._id) {
+                    setConversationSettings({
+                        theme: data.theme,
+                        quickReaction: data.quickReaction,
+                        nicknames: data.nicknames || {}
+                    });
+                }
+            });
+        }
+        return () => {
+            if(socket) socket.off('conversation_settings_updated');
         }
     }, [conversation._id]);
 
@@ -42,13 +68,28 @@ const ChatWindow = ({ conversation, currentUser, socket, onBack, onMessageSent, 
         if (!socket) return;
         const handleReceive = (data) => {
             if (data.conversationId === conversation._id) {
-                setMessages(prev => [...prev, data]);
-                scrollToBottom();
+                // If it's a vote update (message_updated), replace the message in the list
+                if (data.isEdited || data.type === 'poll' || data.isDeletedForEveryone) {
+                    setMessages(prev => prev.map(m => m._id === data._id ? data : m));
+                } else {
+                     setMessages(prev => [...prev, data]);
+                     scrollToBottom();
+                }
                 if (onMessageSent) onMessageSent(data);
             }
         };
+        const handleUpdate = (data) => {
+             if (data.conversationId === conversation._id) {
+                 setMessages(prev => prev.map(m => m._id === data._id ? data : m));
+             }
+        };
+
         socket.on('receive_message', handleReceive);
-        return () => socket.off('receive_message', handleReceive);
+        socket.on('message_updated', handleUpdate);
+        return () => {
+            socket.off('receive_message', handleReceive);
+            socket.off('message_updated', handleUpdate);
+        }
     }, [socket, conversation._id]);
 
     const loadMessages = async () => {
@@ -67,15 +108,25 @@ const ChatWindow = ({ conversation, currentUser, socket, onBack, onMessageSent, 
         }, 100);
     };
 
-    const handleSend = async (overrideContent = null, overrideType = 'text', fileUrl = null, attachments = []) => {
+    const handleSend = async (overrideContent = null, overrideType = 'text', fileUrl = null, attachments = [], pollData = null, locationData = null) => {
         const content = overrideContent !== null ? overrideContent : newMessage;
-        if (!content.trim() && attachments.length === 0 && !fileUrl && overrideType === 'text') return;
+        if (!content.trim() && attachments.length === 0 && !fileUrl && !pollData && !locationData && overrideType === 'text') return;
 
         try {
-            const sentMsg = await API.sendMessage(conversation._id, content, overrideType, fileUrl, attachments);
+            const sentMsg = await API.post('/messages', {
+                conversationId: conversation._id,
+                content,
+                type: overrideType,
+                fileUrl,
+                attachments,
+                pollData,
+                locationData
+            });
+
             setMessages(prev => [...prev, sentMsg]);
             setNewMessage('');
             setReplyTo(null);
+            setSelectedFiles([]);
             if (onMessageSent) onMessageSent(sentMsg);
 
             socket.emit('send_message', {
@@ -89,14 +140,20 @@ const ChatWindow = ({ conversation, currentUser, socket, onBack, onMessageSent, 
         }
     };
 
-    const handleFileSelect = async (e) => {
+    const handleFileSelect = (e) => {
         const files = Array.from(e.target.files);
         if (files.length === 0) return;
+        setSelectedFiles(prev => [...prev, ...files]);
+        e.target.value = null; // Reset
+    };
+
+    const handleUploadAndSend = async () => {
+        if (selectedFiles.length === 0 && !newMessage.trim()) return;
         setIsUploading(true);
 
         try {
             const attachments = [];
-            for (const file of files) {
+            for (const file of selectedFiles) {
                 const { url } = await API.uploadFile(file);
                 let type = 'file';
                 if (file.type.startsWith('image')) type = 'image';
@@ -107,12 +164,40 @@ const ChatWindow = ({ conversation, currentUser, socket, onBack, onMessageSent, 
                     url, type, name: file.name, size: file.size
                 });
             }
-            await handleSend('', 'file', null, attachments);
+            await handleSend(newMessage, attachments.length > 0 ? (attachments[0].type === 'image' ? 'image' : 'file') : 'text', null, attachments);
         } catch (err) {
             toast.error("Upload failed");
         } finally {
             setIsUploading(false);
-            e.target.value = null; // Reset
+        }
+    }
+
+    const handleLocation = () => {
+        if (!navigator.geolocation) return toast.error("Geolocation is not supported by your browser");
+
+        navigator.geolocation.getCurrentPosition(async (position) => {
+            const { latitude, longitude } = position.coords;
+            // Optionally fetch address using OpenCage or similar if needed here,
+            // but for now we send raw coords and let UI handle map link
+            await handleSend('Shared a location', 'location', null, [], null, {
+                latitude, longitude
+            });
+        }, () => {
+            toast.error("Unable to retrieve your location");
+        });
+        setShowPlusMenu(false);
+    };
+
+    const handlePollSubmit = async (pollData) => {
+        await handleSend('Created a poll', 'poll', null, [], pollData);
+    };
+
+    const handleVote = async (msgId, optionIndex) => {
+        try {
+             const updatedMsg = await API.put(`/messages/${msgId}/vote`, { optionIndex });
+             // Socket update handles the state change
+        } catch (err) {
+            toast.error("Failed to vote");
         }
     };
 
@@ -148,11 +233,83 @@ const ChatWindow = ({ conversation, currentUser, socket, onBack, onMessageSent, 
         }
     };
 
-    const formatDuration = (seconds) => {
-        if (!seconds || isNaN(seconds)) return "0:00";
-        const mins = Math.floor(seconds / 60);
-        const secs = Math.floor(seconds % 60);
-        return `${mins}:${secs < 10 ? '0' : ''}${secs}`;
+    const updateSettings = async (updates) => {
+        try {
+            const newSettings = { ...conversationSettings, ...updates };
+            setConversationSettings(newSettings);
+            await API.put(`/messages/conversations/${conversation._id}/settings`, updates);
+            toast.success("Settings updated");
+        } catch (err) {
+            toast.error("Failed to update settings");
+        }
+    };
+
+    // --- Message Rendering Helpers ---
+    const renderContent = (msg, isMe) => {
+        if (msg.isDeletedForEveryone) {
+            return <em className="text-muted">Message unsent</em>;
+        }
+
+        if (msg.type === 'location' && msg.locationData) {
+            const { latitude, longitude } = msg.locationData;
+            const mapUrl = `https://www.google.com/maps?q=${latitude},${longitude}`;
+            return (
+                <div className="bg-white p-2 rounded-3" style={{width: 200}}>
+                    <a href={mapUrl} target="_blank" rel="noopener noreferrer" className="d-block text-decoration-none text-dark">
+                        <div className="bg-light d-flex align-items-center justify-content-center rounded mb-2" style={{height: 100}}>
+                            <FaLocationDot size={32} className="text-danger" />
+                        </div>
+                        <div className="fw-bold small">Location</div>
+                        <small className="text-muted d-block text-truncate">View on Maps</small>
+                    </a>
+                </div>
+            );
+        }
+
+        if (msg.type === 'poll' && msg.pollData) {
+             const { question, options, allowMultipleAnswers } = msg.pollData;
+             const totalVotes = options.reduce((acc, opt) => acc + opt.votes.length, 0);
+
+             return (
+                 <div className="bg-white p-3 rounded-3 shadow-sm" style={{minWidth: 250}}>
+                     <div className="fw-bold mb-2">{question}</div>
+                     <small className="text-muted mb-3 d-block">{allowMultipleAnswers ? 'Multiple Choice' : 'Select one'}</small>
+                     <div className="d-flex flex-column gap-2">
+                         {options.map((opt, idx) => {
+                             const isVoted = opt.votes.includes(currentUser._id);
+                             const percent = totalVotes > 0 ? (opt.votes.length / totalVotes) * 100 : 0;
+                             return (
+                                 <div key={idx} className="cursor-pointer" onClick={() => handleVote(msg._id, idx)}>
+                                     <div className="d-flex justify-content-between small mb-1">
+                                         <span>{opt.text}</span>
+                                         <span>{opt.votes.length}</span>
+                                     </div>
+                                     <div className="progress" style={{height: 8}}>
+                                         <div className={`progress-bar ${isVoted ? 'bg-primary' : 'bg-secondary'}`} style={{width: `${percent}%`}}></div>
+                                     </div>
+                                 </div>
+                             );
+                         })}
+                     </div>
+                 </div>
+             );
+        }
+
+        return (
+            <div
+                className={`px-3 py-2 ${msg.type === 'text' ? (isMe ? 'text-white' : 'text-dark') : ''}`}
+                style={{
+                    backgroundColor: msg.type === 'text' ? (isMe ? conversationSettings.theme : '#f0f2f5') : 'transparent',
+                    borderRadius: '18px',
+                    borderBottomRightRadius: isMe ? '4px' : '18px',
+                    borderBottomLeftRadius: !isMe ? '4px' : '18px',
+                    wordWrap: 'break-word',
+                    cursor: 'pointer'
+                }}
+            >
+                {msg.content}
+            </div>
+        );
     };
 
     const renderAttachment = (att, index) => {
@@ -205,14 +362,45 @@ const ChatWindow = ({ conversation, currentUser, socket, onBack, onMessageSent, 
         );
     };
 
-    const handleMessageContextMenu = (e, msgId) => {
-        e.preventDefault();
-        setMenuOpenId(menuOpenId === msgId ? null : msgId);
+    // --- Double Tap & Long Press ---
+    const tapTimeout = useRef(null);
+    const lastTap = useRef(0);
+
+    const handleTouchStart = (msg) => {
+        const now = Date.now();
+        if (now - lastTap.current < 300) {
+            // Double Tap
+            handleReaction(msg, '❤️');
+            lastTap.current = 0;
+        } else {
+            lastTap.current = now;
+        }
     };
+
+    const handleReaction = async (msg, emoji) => {
+        try {
+             const updated = await API.put(`/messages/${msg._id}/react`, { emoji });
+             setMessages(prev => prev.map(m => m._id === updated._id ? updated : m));
+        } catch (err) {
+            console.error(err);
+        }
+    };
+
+    const formatDuration = (seconds) => {
+        if (!seconds || isNaN(seconds)) return "0:00";
+        const mins = Math.floor(seconds / 60);
+        const secs = Math.floor(seconds % 60);
+        return `${mins}:${secs < 10 ? '0' : ''}${secs}`;
+    };
+
+    // --- Nicknames Helpers ---
+    const getNickname = (user) => {
+        return (conversationSettings.nicknames && conversationSettings.nicknames[user._id]) || user.firstName;
+    }
 
     return (
         <div className="d-flex h-100 overflow-hidden">
-            <div className="d-flex flex-column h-100 flex-grow-1 bg-white position-relative" onClick={() => setMenuOpenId(null)}>
+            <div className="d-flex flex-column h-100 flex-grow-1 bg-white position-relative" onClick={() => { setMenuOpenId(null); setShowPlusMenu(false); }}>
                 {/* Header */}
                 <div className="p-2 border-bottom d-flex align-items-center justify-content-between shadow-sm" style={{height: '60px'}}>
                     <div className="d-flex align-items-center">
@@ -221,7 +409,7 @@ const ChatWindow = ({ conversation, currentUser, socket, onBack, onMessageSent, 
                             <UserAvatar user={otherUser} size={40} showOnlineStatus={true} isOnline={otherUser.isOnline} />
                         </div>
                         <div>
-                            <h6 className="mb-0 fw-bold">{otherUser.firstName} {otherUser.lastName}</h6>
+                            <h6 className="mb-0 fw-bold">{getNickname(otherUser)} {otherUser.lastName}</h6>
                             <small className="text-muted" style={{fontSize: '0.75rem'}}>
                                 {otherUser.isOnline ? 'Active now' : (otherUser.lastSeen ? `Active ${Math.floor((new Date() - new Date(otherUser.lastSeen))/60000)}m ago` : 'Offline')}
                             </small>
@@ -240,12 +428,13 @@ const ChatWindow = ({ conversation, currentUser, socket, onBack, onMessageSent, 
                         const isMe = msg.sender._id === currentUser._id || msg.sender === currentUser._id;
                         const isLast = idx === messages.length - 1 || messages[idx+1]?.sender._id !== msg.sender._id;
                         const isMenuOpen = menuOpenId === msg._id;
+                        const senderUser = isMe ? currentUser : otherUser;
 
                         return (
                             <div
                                 key={msg._id}
                                 className={`d-flex align-items-end gap-2 ${isMe ? 'flex-row-reverse' : ''} mb-1 position-relative`}
-                                onContextMenu={(e) => handleMessageContextMenu(e, msg._id)}
+                                onContextMenu={(e) => { e.preventDefault(); setMenuOpenId(msg._id); }}
                             >
                                 {!isMe && (
                                     <div style={{width: 28}}>
@@ -259,21 +448,18 @@ const ChatWindow = ({ conversation, currentUser, socket, onBack, onMessageSent, 
                                             {msg.attachments.map((att, i) => renderAttachment(att, i))}
                                         </div>
                                     )}
-                                    {msg.content && (
+                                    {msg.content || msg.type === 'poll' || msg.type === 'location' ? (
                                         <div
-                                            className={`px-3 py-2 ${isMe ? 'bg-primary text-white' : 'bg-light text-dark'}`}
-                                            style={{
-                                                borderRadius: '18px',
-                                                borderBottomRightRadius: isMe ? '4px' : '18px',
-                                                borderBottomLeftRadius: !isMe ? '4px' : '18px',
-                                                wordWrap: 'break-word',
-                                                cursor: 'pointer'
-                                            }}
-                                            onClick={(e) => {
-                                                // Handle mobile tap to toggle menu if desired, or double tap to like
-                                            }}
+                                            onClick={() => handleTouchStart(msg)}
                                         >
-                                            {msg.content}
+                                            {renderContent(msg, isMe)}
+                                        </div>
+                                    ) : null}
+
+                                    {/* Reactions */}
+                                    {msg.reactions && msg.reactions.length > 0 && (
+                                        <div className="position-absolute bg-white rounded-pill shadow-sm px-1 border" style={{bottom: -10, [isMe ? 'right' : 'left']: 0, fontSize: '0.8rem', zIndex: 1}}>
+                                            {msg.reactions.map((r, i) => <span key={i}>{r.emoji}</span>)}
                                         </div>
                                     )}
                                 </div>
@@ -305,6 +491,13 @@ const ChatWindow = ({ conversation, currentUser, socket, onBack, onMessageSent, 
                     <div ref={messagesEndRef} />
                 </div>
 
+                {/* Media Preview before send */}
+                <MediaPreview
+                    files={selectedFiles}
+                    onRemove={(idx) => setSelectedFiles(prev => prev.filter((_, i) => i !== idx))}
+                    onAddMore={() => fileInputRef.current.click()}
+                />
+
                 {/* Footer */}
                 <div className="p-2 border-top position-relative">
                     {replyTo && (
@@ -321,10 +514,24 @@ const ChatWindow = ({ conversation, currentUser, socket, onBack, onMessageSent, 
                             </div>
                         )}
 
+                        {/* Plus Menu Popup */}
+                        {showPlusMenu && (
+                             <div className="position-absolute bottom-100 start-0 mb-2 ms-2 bg-white shadow-lg rounded-3 p-2 z-3 d-flex flex-column gap-2" style={{minWidth: 150}}>
+                                 <div className="d-flex align-items-center gap-2 p-2 hover-bg-light rounded cursor-pointer" onClick={() => setShowPollModal(true)}>
+                                     <div className="bg-warning text-white rounded-circle p-1 d-flex align-items-center justify-content-center" style={{width:30, height:30}}><FaSquarePollVertical /></div>
+                                     <span className="small fw-bold">Polls</span>
+                                 </div>
+                                 <div className="d-flex align-items-center gap-2 p-2 hover-bg-light rounded cursor-pointer" onClick={handleLocation}>
+                                     <div className="bg-danger text-white rounded-circle p-1 d-flex align-items-center justify-content-center" style={{width:30, height:30}}><FaLocationDot /></div>
+                                     <span className="small fw-bold">Location</span>
+                                 </div>
+                             </div>
+                        )}
+
                         <input type="file" ref={fileInputRef} className="d-none" multiple onChange={handleFileSelect} />
 
-                        {/* Placeholder for 'More' menu */}
-                        <FaPlus className="text-primary cursor-pointer hover-scale" size={20} onClick={() => fileInputRef.current.click()} />
+                        {/* Plus Button */}
+                        <FaPlus className={`text-primary cursor-pointer hover-scale ${showPlusMenu ? 'rotate-45' : ''}`} style={{transition: 'transform 0.2s'}} size={20} onClick={() => setShowPlusMenu(!showPlusMenu)} />
                         <FaImages className="text-primary cursor-pointer hover-scale" size={20} onClick={() => fileInputRef.current.click()} />
 
                         <div className="flex-grow-1 bg-light rounded-pill px-3 py-2 d-flex align-items-center">
@@ -334,15 +541,17 @@ const ChatWindow = ({ conversation, currentUser, socket, onBack, onMessageSent, 
                                 placeholder="Aa"
                                 value={newMessage}
                                 onChange={e => setNewMessage(e.target.value)}
-                                onKeyDown={e => e.key === 'Enter' && handleSend()}
+                                onKeyDown={e => e.key === 'Enter' && (selectedFiles.length > 0 ? handleUploadAndSend() : handleSend())}
                             />
                             <FaFaceSmile className="text-primary cursor-pointer hover-scale" size={20} onClick={() => setShowEmojiPicker(!showEmojiPicker)} />
                         </div>
 
-                        {newMessage || isUploading ? (
-                            <FaPaperPlane className={`text-primary cursor-pointer hover-scale ${isUploading ? 'opacity-50' : ''}`} size={20} onClick={() => handleSend()} />
+                        {newMessage || selectedFiles.length > 0 || isUploading ? (
+                            <FaPaperPlane className={`text-primary cursor-pointer hover-scale ${isUploading ? 'opacity-50' : ''}`} size={20} onClick={() => selectedFiles.length > 0 ? handleUploadAndSend() : handleSend()} />
                         ) : (
-                            <FaThumbsUp className="text-primary cursor-pointer hover-scale" size={20} onClick={() => handleSend('👍', 'text')} />
+                            <div className="text-primary cursor-pointer hover-scale fs-4" onClick={() => handleSend(conversationSettings.quickReaction, 'text')}>
+                                {conversationSettings.quickReaction}
+                            </div>
                         )}
                     </div>
                 </div>
@@ -357,6 +566,8 @@ const ChatWindow = ({ conversation, currentUser, socket, onBack, onMessageSent, 
                         )}
                     </div>
                 )}
+
+                <PollModal show={showPollModal} onClose={() => setShowPollModal(false)} onSubmit={handlePollSubmit} />
             </div>
 
             {/* Chat Info Sidebar */}
@@ -366,20 +577,82 @@ const ChatWindow = ({ conversation, currentUser, socket, onBack, onMessageSent, 
                          <h5 className="mb-0 fw-bold">Chat Info</h5>
                          <button className="btn-close" onClick={() => setShowInfoSidebar(false)}></button>
                      </div>
-                     <div className="p-4 d-flex flex-column align-items-center">
+                     <div className="p-4 d-flex flex-column align-items-center text-center">
                          <UserAvatar user={otherUser} size={80} showOnlineStatus={true} isOnline={otherUser.isOnline} />
-                         <h5 className="mt-3 fw-bold">{otherUser.firstName} {otherUser.lastName}</h5>
+                         <h5 className="mt-3 fw-bold">{getNickname(otherUser)} {otherUser.lastName}</h5>
                          <p className="text-muted small">Student</p>
                      </div>
-                     <div className="flex-grow-1 overflow-auto">
+
+                     {/* Customize Chat */}
+                     <div className="px-3 py-2">
+                         <h6 className="text-muted small fw-bold mb-2">CUSTOMIZE CHAT</h6>
                          <div className="list-group list-group-flush">
-                             <button className="list-group-item list-group-item-action d-flex align-items-center gap-3 py-3" onClick={() => toast.info('Muted')}>
+                             <button className="list-group-item list-group-item-action d-flex align-items-center gap-3 py-2 border-0" onClick={() => {
+                                 const color = prompt("Enter hex color (e.g., #FF0000) or name:", conversationSettings.theme);
+                                 if (color) updateSettings({ theme: color });
+                             }}>
+                                 <FaPalette className="text-primary" /> Change Theme
+                             </button>
+                             <button className="list-group-item list-group-item-action d-flex align-items-center gap-3 py-2 border-0 position-relative" onClick={() => setShowSettingsEmojiPicker(!showSettingsEmojiPicker)}>
+                                 <span className="text-primary fs-5">{conversationSettings.quickReaction}</span> Change Emoji
+                                 {showSettingsEmojiPicker && (
+                                     <div className="position-absolute top-100 start-0 z-3">
+                                         <EmojiPicker onEmojiClick={(emoji) => {
+                                             updateSettings({ quickReaction: emoji.emoji });
+                                             setShowSettingsEmojiPicker(false);
+                                         }} />
+                                     </div>
+                                 )}
+                             </button>
+                             <button className="list-group-item list-group-item-action d-flex align-items-center gap-3 py-2 border-0" onClick={() => setEditingNickname(otherUser._id)}>
+                                 <FaPen className="text-primary" /> Edit Nicknames
+                             </button>
+                         </div>
+                     </div>
+
+                     {/* Nickname Editor Modal (Inline) */}
+                     {editingNickname && (
+                         <div className="p-3 bg-light m-3 rounded">
+                             <label className="small fw-bold mb-1">Nickname for {otherUser.firstName}</label>
+                             <input
+                                 type="text"
+                                 className="form-control form-control-sm mb-2"
+                                 placeholder={otherUser.firstName}
+                                 defaultValue={getNickname(otherUser)}
+                                 onChange={e => setTempNickname(e.target.value)}
+                             />
+                             <div className="d-flex gap-2 justify-content-end">
+                                 <button className="btn btn-sm btn-light" onClick={() => setEditingNickname(null)}>Cancel</button>
+                                 <button className="btn btn-sm btn-primary" onClick={() => {
+                                     updateSettings({ nicknames: { ...conversationSettings.nicknames, [otherUser._id]: tempNickname } });
+                                     setEditingNickname(null);
+                                 }}>Save</button>
+                             </div>
+                         </div>
+                     )}
+
+                     <div className="flex-grow-1 overflow-auto mt-2">
+                         <h6 className="text-muted small fw-bold px-3 mb-2">PRIVACY & SUPPORT</h6>
+                         <div className="list-group list-group-flush">
+                             <button className="list-group-item list-group-item-action d-flex align-items-center gap-3 py-3 border-0" onClick={async () => {
+                                 try {
+                                     await API.put(`/messages/conversations/${conversation._id}/mute`);
+                                     toast.success("Notifications muted");
+                                 } catch(e) { toast.error("Failed to mute"); }
+                             }}>
                                  <FaBellSlash /> Mute Notifications
                              </button>
-                             <button className="list-group-item list-group-item-action d-flex align-items-center gap-3 py-3 text-danger" onClick={() => onDeleteConversation(conversation._id)}>
+                             <button className="list-group-item list-group-item-action d-flex align-items-center gap-3 py-3 border-0 text-danger" onClick={() => onDeleteConversation(conversation._id)}>
                                  <FaTrash /> Delete Conversation
                              </button>
-                             <button className="list-group-item list-group-item-action d-flex align-items-center gap-3 py-3 text-danger">
+                             <button className="list-group-item list-group-item-action d-flex align-items-center gap-3 py-3 border-0 text-danger" onClick={async () => {
+                                 if(!window.confirm(`Block ${otherUser.firstName}?`)) return;
+                                 try {
+                                     await API.put(`/users/${otherUser._id}/block`);
+                                     toast.success("User blocked");
+                                     onBack(); // Exit chat
+                                 } catch(e) { toast.error("Failed to block"); }
+                             }}>
                                  <FaBan /> Block User
                              </button>
                          </div>

@@ -3,7 +3,7 @@ import React from 'react';
 const UserAvatar = ({ user, size = 40, className = '', showOnlineStatus = false, isOnline = false }) => {
     if (!user) return null;
 
-    const initials = `${user.firstName?.charAt(0) || ''}${user.lastName?.charAt(0) || ''}`.toUpperCase();
+    const initials = `${user.firstName?.charAt(0) || ''}`.toUpperCase();
 
     // Generate a consistent background color based on name
     const colors = ['#003399', '#FFCC00', '#dc3545', '#198754', '#0d6efd', '#6610f2', '#fd7e14', '#20c997'];

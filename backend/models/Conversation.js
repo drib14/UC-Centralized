@@ -17,7 +17,20 @@ const conversationSchema = new mongoose.Schema({
     hiddenFor: [{
         type: mongoose.Schema.Types.ObjectId,
         ref: 'User'
-    }]
+    }],
+    theme: {
+        type: String,
+        default: '#003399' // Default UC Blue
+    },
+    quickReaction: {
+        type: String,
+        default: '👍'
+    },
+    nicknames: {
+        type: Map,
+        of: String,
+        default: {}
+    }
 }, { timestamps: true });
 
 // Ensure unique conversation between specific participants

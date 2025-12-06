@@ -276,10 +276,83 @@ router.delete('/:id', verifyToken, async (req, res) => {
     }
 });
 
+// Update Conversation Settings (Theme, Quick Reaction, Nicknames)
+router.put('/conversations/:id/settings', verifyToken, async (req, res) => {
+    try {
+        const { theme, quickReaction, nicknames } = req.body;
+        const conversation = await Conversation.findById(req.params.id);
+        if (!conversation) return res.status(404).json("Conversation not found");
+
+        if (theme) conversation.theme = theme;
+        if (quickReaction) conversation.quickReaction = quickReaction;
+        if (nicknames) conversation.nicknames = nicknames;
+
+        await conversation.save();
+
+        const io = req.app.get('io');
+        const receiver = conversation.participants.find(p => p.toString() !== req.user.id);
+        if (receiver) io.to(receiver.toString()).emit("conversation_settings_updated", {
+            conversationId: conversation._id,
+            theme: conversation.theme,
+            quickReaction: conversation.quickReaction,
+            nicknames: conversation.nicknames
+        });
+
+        res.status(200).json(conversation);
+    } catch (err) {
+        res.status(500).json(err);
+    }
+});
+
+// Vote on Poll
+router.put('/:id/vote', verifyToken, async (req, res) => {
+    try {
+        const { optionIndex } = req.body;
+        const message = await Message.findById(req.params.id);
+        if (!message || message.type !== 'poll') return res.status(404).json("Poll not found");
+
+        const userId = req.user.id;
+        const poll = message.pollData;
+
+        // If not multiple choice, remove vote from other options
+        if (!poll.allowMultipleAnswers) {
+            poll.options.forEach((opt, idx) => {
+                if (idx !== optionIndex) {
+                    const voteIdx = opt.votes.indexOf(userId);
+                    if (voteIdx > -1) opt.votes.splice(voteIdx, 1);
+                }
+            });
+        }
+
+        const option = poll.options[optionIndex];
+        const voteIdx = option.votes.indexOf(userId);
+
+        if (voteIdx > -1) {
+            // Remove vote
+            option.votes.splice(voteIdx, 1);
+        } else {
+            // Add vote
+            option.votes.push(userId);
+        }
+
+        const updatedMessage = await message.save();
+        await updatedMessage.populate('sender', 'firstName lastName profileImage');
+
+        const io = req.app.get('io');
+        const conversation = await Conversation.findById(message.conversationId);
+        const receiver = conversation.participants.find(p => p.toString() !== req.user.id);
+        if (receiver) io.to(receiver.toString()).emit("message_updated", updatedMessage);
+
+        res.status(200).json(updatedMessage);
+    } catch (err) {
+        res.status(500).json(err);
+    }
+});
+
 // Send a message
 router.post('/', verifyToken, async (req, res) => {
     try {
-        let { conversationId, content, type, fileUrl, attachments } = req.body;
+        let { conversationId, content, type, fileUrl, attachments, pollData, locationData } = req.body;
 
         // Backend Parse Guard: Handle double-encoded JSON strings from client
         if (typeof attachments === 'string') {
@@ -314,6 +387,8 @@ router.post('/', verifyToken, async (req, res) => {
             type: type || 'text',
             fileUrl: fileUrl || '',
             attachments: attachments || [],
+            pollData: pollData || undefined,
+            locationData: locationData || undefined,
             readBy: [req.user.id]
         });
 

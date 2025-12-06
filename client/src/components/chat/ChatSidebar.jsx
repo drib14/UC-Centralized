@@ -54,7 +54,7 @@ const ChatSidebar = ({ conversations, selectedId, onSelect, onNewChat, onDeleteC
                     <FaSearch className="text-muted me-2" />
                     <input
                         type="text"
-                        placeholder="Search message"
+                        placeholder="Search Message"
                         className="bg-transparent border-0 w-100 no-focus-outline"
                         value={search}
                         onChange={e => setSearch(e.target.value)}
