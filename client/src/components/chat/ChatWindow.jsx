@@ -49,6 +49,7 @@ const ChatWindow = ({ conversation, currentUser, socket, onBack, onMessageSent, 
     const audioRefs = useRef({}); // Map audio URLs to audio elements
     const timerRef = useRef(null); // For recording timer
     const [recordingStartTime, setRecordingStartTime] = useState(0); // To measure actual duration
+    const [isInputFocused, setIsInputFocused] = useState(false); // Mobile focus state
 
     const otherUser = conversation.participants.find(p => p._id !== currentUser._id) || conversation.participants[0] || {};
     const isOnline = onlineUsers.has(otherUser._id);
@@ -560,7 +561,7 @@ const ChatWindow = ({ conversation, currentUser, socket, onBack, onMessageSent, 
 
                         <div className="d-flex flex-column align-items-end ms-auto">
                             <span className="small text-muted fw-bold" style={{fontSize: '0.7rem'}}>
-                                {duration ? formatDuration(duration) : (size ? (size/1024).toFixed(0)+' KB' : 'Audio')}
+                                {duration ? formatDuration(duration) : (size ? (size >= 1048576 ? (size/1048576).toFixed(2)+' MB' : (size/1024).toFixed(0)+' KB') : 'Audio')}
                             </span>
                         </div>
                         <audio ref={el => audioRefs.current[url] = el} src={url} hidden />
@@ -582,7 +583,7 @@ const ChatWindow = ({ conversation, currentUser, socket, onBack, onMessageSent, 
                              </div>
                              <div className="d-flex flex-column flex-grow-1 overflow-hidden">
                                  <strong className="text-truncate d-block" style={{maxWidth: '180px', fontSize: '0.9rem'}} title={name}>{name}</strong>
-                                 <small className="text-white-50" style={{fontSize: '0.75rem'}}>{size ? (size / 1024).toFixed(2) + ' KB' : 'Download'}</small>
+                                 <small className="text-white-50" style={{fontSize: '0.75rem'}}>{size ? (size >= 1048576 ? (size/1048576).toFixed(2)+' MB' : (size/1024).toFixed(2)+' KB') : 'Download'}</small>
                              </div>
                         </div>
                      </a>
@@ -1069,19 +1070,24 @@ const ChatWindow = ({ conversation, currentUser, socket, onBack, onMessageSent, 
                             <FaFaceSmile size={20} className="text-warning" />
                         </button>
 
-                        <input type="file" className="d-none" multiple ref={fileInputRef} onChange={handleFileSelect} />
-                        <button type="button" className="btn btn-light text-secondary rounded-circle" onClick={() => fileInputRef.current.click()} disabled={uploading}>
-                            <FaPlus size={20} />
-                        </button>
+                        {/* Hide extra actions on mobile focus */}
+                        {(!isInputFocused || window.innerWidth > 768) && (
+                            <>
+                                <input type="file" className="d-none" multiple ref={fileInputRef} onChange={handleFileSelect} />
+                                <button type="button" className="btn btn-light text-secondary rounded-circle" onClick={() => fileInputRef.current.click()} disabled={uploading}>
+                                    <FaPlus size={20} />
+                                </button>
 
-                        <button
-                            type="button"
-                            className={`btn rounded-circle ${isRecording ? 'btn-danger' : 'btn-light text-secondary'}`}
-                            onClick={isRecording ? stopRecording : startRecording}
-                            disabled={uploading}
-                        >
-                            {isRecording ? <FaStop size={16} /> : <FaMicrophone size={20} />}
-                        </button>
+                                <button
+                                    type="button"
+                                    className={`btn rounded-circle ${isRecording ? 'btn-danger' : 'btn-light text-secondary'}`}
+                                    onClick={isRecording ? stopRecording : startRecording}
+                                    disabled={uploading}
+                                >
+                                    {isRecording ? <FaStop size={16} /> : <FaMicrophone size={20} />}
+                                </button>
+                            </>
+                        )}
 
                         <input
                             type="text"
@@ -1089,6 +1095,8 @@ const ChatWindow = ({ conversation, currentUser, socket, onBack, onMessageSent, 
                             placeholder={uploading ? "Uploading..." : "Aa"}
                             value={newMessage}
                             onChange={handleInputChange}
+                            onFocus={() => setIsInputFocused(true)}
+                            onBlur={() => setTimeout(() => setIsInputFocused(false), 200)} // Delay to allow button clicks
                             disabled={uploading}
                         />
 

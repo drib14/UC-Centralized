@@ -396,3 +396,17 @@ footer {
         border-right: none !important;
     }
 }
+
+
+@media (max-width: 768px) {
+    /* Reduce padding in chat components on mobile */
+    .chat-layout-container .p-3 {
+        padding: 0.5rem !important; /* p-2 equivalent */
+    }
+
+    /* Ensure dropdowns fit on small screens */
+    .dropdown-menu {
+        max-width: 90vw;
+        min-width: auto !important;
+    }
+}
