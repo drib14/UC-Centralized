@@ -394,16 +394,48 @@ const ChatWindow = ({ conversation, currentUser, socket, onBack, onMessageSent, 
     const onReactionEmojiClick = (emojiObject) => {
         if (reactingMsgId) {
             handleReaction(reactingMsgId, emojiObject.emoji);
+            setReactingMsgId(null); // Close picker immediately
         }
     };
 
     const handleQuickReaction = async (msg) => {
-        // Toggle Heart Emoji
-        const myReaction = msg.reactions?.find(r => (r.user._id === currentUser._id || r.user === currentUser._id));
+        // Optimistic UI Update handled by state in 'handleReaction' if we moved it there,
+        // but here we just call the API. To make it "faster", we should optimistically update messages state.
 
-        // If already reacted with Heart, remove it? The current API toggleReaction handles toggle.
-        // We will just send '❤️'. If it's there, it removes. If another emoji is there, it replaces.
-        await handleReaction(msg._id, '❤️');
+        const emoji = '❤️';
+        const myId = currentUser._id;
+
+        // Optimistic Update
+        setMessages(prev => prev.map(m => {
+            if (m._id === msg._id) {
+                const reactions = m.reactions || [];
+                const existingIndex = reactions.findIndex(r => (r.user._id === myId || r.user === myId));
+
+                let newReactions = [...reactions];
+                if (existingIndex > -1) {
+                    if (reactions[existingIndex].emoji === emoji) {
+                        // Toggle off
+                        newReactions.splice(existingIndex, 1);
+                    } else {
+                        // Replace
+                        newReactions[existingIndex] = { ...newReactions[existingIndex], emoji };
+                    }
+                } else {
+                    // Add
+                    newReactions.push({ user: currentUser, emoji });
+                }
+                return { ...m, reactions: newReactions };
+            }
+            return m;
+        }));
+
+        try {
+            // API Call (Background)
+            await API.toggleReaction(msg._id, emoji);
+        } catch(err) {
+            console.error("Reaction failed", err);
+            // Revert on failure (omitted for brevity, or trigger refetch)
+        }
     };
 
     // Unified Touch Handler (Double Tap & Long Press)
