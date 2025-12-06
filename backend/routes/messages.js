@@ -4,6 +4,7 @@ const Conversation = require('../models/Conversation');
 const User = require('../models/User');
 const { verifyToken } = require('../middleware/auth');
 const parser = require('../config/cloudinary');
+const { notifyUser } = require('../utils/notificationService');
 
 // Upload File
 router.post('/upload', verifyToken, (req, res, next) => {
@@ -327,6 +328,22 @@ router.post('/', verifyToken, async (req, res) => {
         // Populate sender info for the socket event or frontend update
         const populatedMessage = await Message.findById(savedMessage._id)
              .populate('sender', 'firstName lastName profileImage');
+
+        // Notify Receiver via Notification System
+        if (receiverId) {
+            // Note: This adds a database entry for every message.
+            // If high volume, this might be noisy. But requested "include also the message as part of notification system".
+            await notifyUser(
+                receiverId,
+                'message',
+                `You received a message from ${req.user.firstName || 'User'}`, // Fallback, though user object is verified
+                conversationId,
+                `${process.env.CLIENT_URL || 'http://localhost:5173'}/student/messages`,
+                false, // Don't send email for every chat message (spam risk), rely on socket/push
+                req,
+                req.user.id // senderId
+            );
+        }
 
         res.status(200).json(populatedMessage);
     } catch (err) {

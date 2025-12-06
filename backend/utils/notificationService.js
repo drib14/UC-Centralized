@@ -3,7 +3,7 @@ const User = require('../models/User');
 const sendEmail = require('./sendEmail');
 const { getNotificationEmail } = require('./emailTemplates');
 
-const notifyUser = async (userId, type, content, relatedId, link = null, shouldSendEmail = true, req = null) => {
+const notifyUser = async (userId, type, content, relatedId, link = null, shouldSendEmail = true, req = null, senderId = null) => {
     try {
         const user = await User.findById(userId);
         if (!user) return;
@@ -13,27 +13,25 @@ const notifyUser = async (userId, type, content, relatedId, link = null, shouldS
             recipient: userId,
             type,
             content,
-            relatedId
+            relatedId,
+            sender: senderId
         });
         await notification.save();
 
         // 2. Socket Emit
         if (req) {
             const io = req.app.get('io');
-            // Check if user is online? We emit to specific room or just filter on client?
-            // Assuming socket is setup with user IDs as rooms or global broadcast
-            // Based on earlier context, we might emit to a user-specific room if available, or broadcast.
-            // Let's check how 'receive_message' works. Usually io.to(userId).emit...
-            // If room logic isn't robust, we might emit global 'new_notification' and client filters.
-            // But let's try to be specific if possible.
-            // Fallback: Emit 'new_notification' with recipientId data.
+            // Populate sender for frontend
+            const populatedNotif = await Notification.findById(notification._id).populate('sender', 'firstName lastName profileImage');
+
             io.emit('new_notification', {
-                _id: notification._id,
+                _id: populatedNotif._id,
                 recipientId: userId,
                 type,
                 content,
                 relatedId,
-                createdAt: notification.createdAt
+                sender: populatedNotif.sender,
+                createdAt: populatedNotif.createdAt
             });
         }
 

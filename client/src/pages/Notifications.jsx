@@ -107,8 +107,22 @@ const Notifications = () => {
         if (notification.type === 'alert' && notification.content.includes('Low Stock')) navigate('/admin/merch');
     };
 
-    const getIcon = (type) => {
-        switch(type) {
+    const renderAvatar = (sender) => {
+        if (!sender) return null;
+        return sender.profileImage ? (
+            <img src={sender.profileImage} alt="avatar" className="rounded-circle" width="50" height="50" style={{objectFit:'cover'}} />
+        ) : (
+            <div className="rounded-circle bg-secondary text-white d-flex align-items-center justify-content-center" style={{width: 50, height: 50}}>
+                {sender.firstName ? sender.firstName[0] : 'U'}
+            </div>
+        );
+    };
+
+    const getIcon = (notification) => {
+        if (notification.type === 'message' && notification.sender) {
+            return renderAvatar(notification.sender);
+        }
+        switch(notification.type) {
             case 'announcement': return <FaBullhorn className="text-warning" />;
             case 'event': return <FaCalendarDays className="text-primary" />;
             case 'message': return <FaEnvelope className="text-success" />;
@@ -116,11 +130,14 @@ const Notifications = () => {
         }
     };
 
-    const getHeader = (type) => {
-        switch(type) {
+    const getHeader = (notification) => {
+        switch(notification.type) {
             case 'announcement': return "New Announcement";
             case 'event': return "New Event";
-            case 'message': return "New Message";
+            case 'message':
+                return notification.sender
+                    ? `You have received a message from ${notification.sender.firstName} ${notification.sender.lastName}`
+                    : "New Message";
             case 'alert': return "System Alert";
             default: return "Notification";
         }
@@ -170,15 +187,15 @@ const Notifications = () => {
                                 onClick={() => handleClick(notification)}
                             >
                                 {/* Icon */}
-                                <div className="fs-3 mt-1 text-secondary p-2 bg-white rounded-circle shadow-sm d-flex align-items-center justify-content-center" style={{width: 50, height: 50}}>
-                                    {getIcon(notification.type)}
+                                <div className="fs-3 mt-1 text-secondary p-2 bg-white rounded-circle shadow-sm d-flex align-items-center justify-content-center overflow-hidden" style={{width: 50, height: 50}}>
+                                    {getIcon(notification)}
                                 </div>
 
                                 {/* Content */}
                                 <div className="flex-grow-1">
                                     <div className="d-flex justify-content-between align-items-center mb-1">
                                         <h6 className={`mb-0 ${!notification.read ? 'fw-bold text-dark' : 'text-secondary'}`}>
-                                            {getHeader(notification.type)}
+                                            {getHeader(notification)}
                                         </h6>
                                         <small className="text-muted text-nowrap ms-2" style={{fontSize: '0.8rem'}}>
                                             {timeAgo(notification.createdAt)}
