@@ -29,6 +29,30 @@ router.get('/conversations', verifyToken, async (req, res) => {
     } catch (err) { res.status(500).json(err); }
 });
 
+// Get unread count - MUST BE BEFORE /:conversationId
+router.get('/unread-count', verifyToken, async (req, res) => {
+    try {
+        const conversations = await Conversation.find({
+            participants: { $in: [req.user.id] },
+            hiddenFor: { $ne: req.user.id }
+        }).populate('lastMessage');
+
+        let count = 0;
+        conversations.forEach(conv => {
+            if (conv.lastMessage &&
+                conv.lastMessage.sender.toString() !== req.user.id &&
+                !conv.lastMessage.readBy.includes(req.user.id)) {
+                count++;
+            }
+        });
+
+        res.status(200).json({ count });
+    } catch (err) {
+        console.error("Unread Count Error:", err);
+        res.status(500).json(err);
+    }
+});
+
 // Create/Get Conversation
 router.post('/conversations', verifyToken, async (req, res) => {
     try {

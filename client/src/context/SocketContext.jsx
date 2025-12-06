@@ -13,7 +13,11 @@ export const useSocket = () => {
 
 export const SocketProvider = ({ children }) => {
     const [socket, setSocket] = useState(null);
-    const [onlineUsers, setOnlineUsers] = useState(new Set());
+    // Initialize as Array for compatibility with .includes(), or handle Set conversion
+    // The previous error was `onlineUsers.includes is not a function`.
+    // If we use Set, we must use .has(). If consumers use .includes(), we must use Array.
+    // Let's use Array to fix the crash immediately.
+    const [onlineUsers, setOnlineUsers] = useState([]);
     const [notifications, setNotifications] = useState([]);
     const [unreadCount, setUnreadCount] = useState(0); // Notification count
     const [unreadMessageCount, setUnreadMessageCount] = useState(0); // Message count
@@ -24,7 +28,6 @@ export const SocketProvider = ({ children }) => {
             // Fetch initial counts
             const fetchCounts = async () => {
                 try {
-                    // API.getNotifications() // If implemented
                     const msgData = await API.getUnreadMessageCount();
                     setUnreadMessageCount(msgData.count || 0);
                 } catch (e) {
@@ -33,10 +36,13 @@ export const SocketProvider = ({ children }) => {
             };
             fetchCounts();
 
-            // Force connection URL if needed, but relative '/' usually works with proxy
-            const newSocket = io(window.location.origin.replace('5173', '5000'), {
-                transports: ['websocket'], // Force websocket
-                reconnection: true
+            // Setup Socket
+            // Use environment variable or relative path proxy
+            const socketUrl = process.env.NODE_ENV === 'production' ? '/' : 'http://localhost:5000';
+            const newSocket = io(socketUrl, {
+                transports: ['websocket', 'polling'], // Allow fallback
+                reconnection: true,
+                withCredentials: true
             });
 
             newSocket.on('connect', () => {
@@ -51,43 +57,35 @@ export const SocketProvider = ({ children }) => {
             // Listen for user status changes
             newSocket.on('user_status_change', (data) => {
                 setOnlineUsers(prev => {
-                    const next = new Set(prev);
-                    if (data.isOnline) next.add(data.userId);
-                    else next.delete(data.userId);
-                    return next;
+                    const currentSet = new Set(prev);
+                    if (data.isOnline) currentSet.add(data.userId);
+                    else currentSet.delete(data.userId);
+                    return Array.from(currentSet); // Return array to satisfy consumers using .includes()
                 });
             });
 
-            // Global Notification Listener
             newSocket.on('new_notification', (data) => {
                 playNotificationSound();
                 setUnreadCount(prev => prev + 1);
                 setNotifications(prev => [data, ...prev]);
-                toast.info(data.content, {
-                    icon: "🔔",
-                    onClick: () => {
-                        // Handle click if needed
-                    }
-                });
+                toast.info(data.content, { icon: "🔔" });
             });
 
-            // Global Message Listener (for toasts and badges)
             newSocket.on('receive_message', (data) => {
-                if (!window.location.pathname.includes('/messages')) {
+                // If the user is sender, don't increment unread count
+                if (data.sender._id === user._id) return;
+
+                const isChatOpen = window.location.pathname.includes('/messages');
+                if (!isChatOpen) {
                     playMessageSound();
-                    toast.info(`New message from ${data.sender.firstName}: ${data.content.substring(0, 20)}...`);
+                    toast.info(`New message from ${data.sender.firstName}`);
                     setUnreadMessageCount(prev => prev + 1);
                 } else {
-                    // Even if in messages, play sound (Messenger style pop)
                     playMessageSound();
                 }
             });
 
-            // Listen for read updates to decrement count?
-            // This is tricky without fetching. We'll rely on the Message page to reset it.
-
             setSocket(newSocket);
-
             return () => newSocket.close();
         } else {
             if (socket) {
@@ -104,4 +102,4 @@ export const SocketProvider = ({ children }) => {
     );
 };
 
-export default SocketProvider; // Default export for HMR compatibility
+export default SocketProvider;

@@ -18,6 +18,7 @@ import VerifyCode from './pages/VerifyCode';
 import ResetPassword from './pages/ResetPassword';
 import Documentation from './pages/Documentation';
 import OAuthConsent from './pages/OAuthConsent';
+import CallOverlay from './components/chat/CallOverlay'; // Import CallOverlay
 
 import StudentDashboard from './pages/student/StudentDashboard';
 import StudentEvents from './pages/student/StudentEvents';
@@ -74,49 +75,52 @@ function App() {
                     <CartProvider>
                         <Router future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
                             <ToastContainer position="top-right" autoClose={5000} />
-                    <Routes>
-                        {/* Public Routes */}
-                        <Route path="/" element={<Landing />} />
-                        <Route path="/login" element={<Login />} />
-                        <Route path="/register" element={<Register />} />
-                        <Route path="/forgot-password" element={<ForgotPassword />} />
-                        <Route path="/verify-code" element={<VerifyCode />} />
-                        <Route path="/reset-password" element={<ResetPassword />} />
-                        <Route path="/documentation" element={<Documentation />} />
-                        <Route path="/oauth/authorize" element={<OAuthConsent />} />
+                            {/* Global Call Overlay */}
+                            <CallOverlay />
 
-                        {/* Student Routes */}
-                        <Route path="/student" element={<ProtectedRoute allowedRoles={['student']}><Layout /></ProtectedRoute>}>
-                            <Route index element={<Navigate to="dashboard" replace />} />
-                            <Route path="dashboard" element={<StudentDashboard />} />
-                            <Route path="events" element={<StudentEvents />} />
-                            <Route path="merch" element={<StudentMerch />} />
-                            <Route path="cart" element={<StudentCart />} />
-                            <Route path="messages" element={<StudentMessages />} />
-                            <Route path="notifications" element={<Notifications />} />
-                            <Route path="profile" element={<StudentProfile />} />
-                            <Route path="developer" element={<DeveloperDashboard />} />
-                        </Route>
+                            <Routes>
+                                {/* Public Routes */}
+                                <Route path="/" element={<Landing />} />
+                                <Route path="/login" element={<Login />} />
+                                <Route path="/register" element={<Register />} />
+                                <Route path="/forgot-password" element={<ForgotPassword />} />
+                                <Route path="/verify-code" element={<VerifyCode />} />
+                                <Route path="/reset-password" element={<ResetPassword />} />
+                                <Route path="/documentation" element={<Documentation />} />
+                                <Route path="/oauth/authorize" element={<OAuthConsent />} />
 
-                        {/* Admin Routes */}
-                        <Route path="/admin" element={<ProtectedRoute allowedRoles={['admin']}><Layout /></ProtectedRoute>}>
-                            <Route index element={<Navigate to="dashboard" replace />} />
-                            <Route path="dashboard" element={<AdminDashboard />} />
-                            <Route path="users" element={<AdminUsers />} />
-                            <Route path="events" element={<AdminEvents />} />
-                            <Route path="merch" element={<AdminMerch />} />
-                            <Route path="announcements" element={<AdminAnnouncements />} />
-                            <Route path="orders" element={<AdminOrders />} />
-                            <Route path="pos" element={<AdminPOS />} />
-                            <Route path="messages" element={<AdminMessages />} />
-                            <Route path="notifications" element={<Notifications />} />
-                            <Route path="profile" element={<StudentProfile />} />
-                        </Route>
+                                {/* Student Routes */}
+                                <Route path="/student" element={<ProtectedRoute allowedRoles={['student']}><Layout /></ProtectedRoute>}>
+                                    <Route index element={<Navigate to="dashboard" replace />} />
+                                    <Route path="dashboard" element={<StudentDashboard />} />
+                                    <Route path="events" element={<StudentEvents />} />
+                                    <Route path="merch" element={<StudentMerch />} />
+                                    <Route path="cart" element={<StudentCart />} />
+                                    <Route path="messages" element={<StudentMessages />} />
+                                    <Route path="notifications" element={<Notifications />} />
+                                    <Route path="profile" element={<StudentProfile />} />
+                                    <Route path="developer" element={<DeveloperDashboard />} />
+                                </Route>
 
-                         {/* Catch all */}
-                        <Route path="*" element={<Navigate to="/" replace />} />
-                        </Routes>
-                    </Router>
+                                {/* Admin Routes */}
+                                <Route path="/admin" element={<ProtectedRoute allowedRoles={['admin']}><Layout /></ProtectedRoute>}>
+                                    <Route index element={<Navigate to="dashboard" replace />} />
+                                    <Route path="dashboard" element={<AdminDashboard />} />
+                                    <Route path="users" element={<AdminUsers />} />
+                                    <Route path="events" element={<AdminEvents />} />
+                                    <Route path="merch" element={<AdminMerch />} />
+                                    <Route path="announcements" element={<AdminAnnouncements />} />
+                                    <Route path="orders" element={<AdminOrders />} />
+                                    <Route path="pos" element={<AdminPOS />} />
+                                    <Route path="messages" element={<AdminMessages />} />
+                                    <Route path="notifications" element={<Notifications />} />
+                                    <Route path="profile" element={<StudentProfile />} />
+                                </Route>
+
+                                {/* Catch all */}
+                                <Route path="*" element={<Navigate to="/" replace />} />
+                            </Routes>
+                        </Router>
                     </CartProvider>
                 </CallProvider>
             </SocketProvider>
