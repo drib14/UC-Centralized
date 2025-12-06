@@ -404,7 +404,7 @@ const ChatWindow = ({ conversation, currentUser, socket, onBack, onMessageSent, 
             recorder.ondataavailable = e => chunks.push(e.data);
             recorder.onstop = async () => {
                 clearInterval(timerRef.current);
-                const duration = Math.floor((Date.now() - recordingStartTime) / 1000);
+                const duration = Math.floor((Date.now() - startTime) / 1000);
                 setRecordingTime(0);
 
                 // Create Blob with specific type
@@ -430,11 +430,12 @@ const ChatWindow = ({ conversation, currentUser, socket, onBack, onMessageSent, 
                 }
             };
 
+            const startTime = Date.now();
             recorder.start();
             setMediaRecorder(recorder);
             setIsRecording(true);
             setRecordingTime(0);
-            setRecordingStartTime(Date.now());
+            setRecordingStartTime(startTime);
 
             timerRef.current = setInterval(() => {
                 setRecordingTime(prev => prev + 1);
@@ -456,8 +457,9 @@ const ChatWindow = ({ conversation, currentUser, socket, onBack, onMessageSent, 
     };
 
     const formatDuration = (seconds) => {
+        if (!seconds || isNaN(seconds) || seconds > 3600) return "0:00"; // Fallback for weird data
         const mins = Math.floor(seconds / 60);
-        const secs = seconds % 60;
+        const secs = Math.floor(seconds % 60);
         return `${mins}:${secs < 10 ? '0' : ''}${secs}`;
     };
 
@@ -490,6 +492,32 @@ const ChatWindow = ({ conversation, currentUser, socket, onBack, onMessageSent, 
         );
     };
 
+    // Unified Touch Handler (Double Tap & Long Press)
+    const handleTouchStart = (msgId) => {
+        touchTimer.current = setTimeout(() => {
+            // Long Press
+            if (window.innerWidth < 768) {
+                setHoveredMsgId(prev => prev === msgId ? null : msgId);
+            }
+        }, 500);
+    };
+
+    const handleTouchEnd = (e, actionCallback) => {
+        clearTimeout(touchTimer.current);
+        const currentTime = new Date().getTime();
+        const tapLength = currentTime - lastTap.current;
+
+        if (tapLength < 300 && tapLength > 0) {
+            // Double Tap -> React
+            e.preventDefault();
+            setReactingMsgId(reactingMsgId ? null : actionCallback.msgId);
+        } else {
+            // Single Tap -> Trigger Action if passed
+            if (actionCallback && actionCallback.fn) actionCallback.fn();
+        }
+        lastTap.current = currentTime;
+    };
+
     const renderMessageContent = (msg, isMe) => {
         if (msg.isDeletedForEveryone) {
             return (
@@ -505,6 +533,24 @@ const ChatWindow = ({ conversation, currentUser, socket, onBack, onMessageSent, 
              const name = att.name || url.split('/').pop() || 'File';
              const size = att.size;
 
+             // Wrapper for touch logic
+             const wrapProps = {
+                 onTouchStart: () => handleTouchStart(msg._id),
+                 onTouchEnd: (e) => {
+                     let actionFn = null;
+                     if (type === 'image' || type === 'video') actionFn = () => setLightboxMedia({ url, type });
+                     // File single tap? Download happens naturally via <a> unless blocked.
+                     // On mobile, maybe we want download.
+                     handleTouchEnd(e, { msgId: msg._id, fn: actionFn });
+                 },
+                 // Desktop fallback
+                 onClick: () => {
+                     if (window.innerWidth >= 768) {
+                        if (type === 'image' || type === 'video') setLightboxMedia({ url, type });
+                     }
+                 }
+             };
+
              if (type === 'image') {
                  return (
                      <img
@@ -513,7 +559,7 @@ const ChatWindow = ({ conversation, currentUser, socket, onBack, onMessageSent, 
                          alt="sent"
                          className="img-fluid rounded shadow-sm"
                          style={{maxHeight: '200px', cursor: 'pointer', maxWidth: '100%'}}
-                         onClick={() => setLightboxMedia({ url, type: 'image' })}
+                         {...wrapProps}
                      />
                  );
              } else if (type === 'video') {
@@ -522,71 +568,69 @@ const ChatWindow = ({ conversation, currentUser, socket, onBack, onMessageSent, 
                         key={index}
                         className="position-relative d-flex align-items-center justify-content-center rounded shadow-sm"
                         style={{width: '200px', height: '150px', cursor: 'pointer', backgroundColor: '#000'}}
-                        onClick={() => setLightboxMedia({ url, type: 'video' })}
+                        {...wrapProps}
                     >
                         <FaPlay className="text-white fs-1 opacity-75 position-absolute" style={{zIndex: 2}} />
                         <video src={url} className="w-100 h-100 object-fit-cover rounded" style={{opacity: 0.8, pointerEvents: 'none'}} />
                     </div>
                  );
              } else if (type === 'audio') {
-                 // Audio kept in bubble or custom styling? User said media bubble.
-                 // We'll wrap audio in a small card to keep controls visible
                 const isPlaying = playingAudio === url;
                 const duration = att.duration || 0;
                 return (
-                    <div key={index} className="d-flex align-items-center gap-3 p-2 rounded-pill shadow-sm bg-white border" style={{minWidth: '240px'}}>
+                    <div
+                        key={index}
+                        className="d-flex align-items-center gap-2 p-2 rounded-pill shadow-sm bg-white border"
+                        style={{minWidth: '180px', maxWidth: '240px'}}
+                        onTouchStart={() => handleTouchStart(msg._id)}
+                        onTouchEnd={(e) => handleTouchEnd(e, { msgId: msg._id, fn: null })}
+                    >
                         <button
                             className="btn btn-primary rounded-circle shadow-sm d-flex align-items-center justify-content-center"
-                            style={{width: '35px', height: '35px', minWidth: '35px'}}
+                            style={{width: '32px', height: '32px', minWidth: '32px'}}
                             onClick={() => toggleAudio(url)}
                         >
-                            {isPlaying ? <FaPause className="text-white" size={12} /> : <FaPlay className="text-white" size={12} />}
+                            {isPlaying ? <FaPause className="text-white" size={10} /> : <FaPlay className="text-white" size={10} />}
                         </button>
 
-                        {/* Fake Waveform Visualizer */}
-                        <div className="d-flex align-items-center gap-1" style={{height: '20px'}}>
-                            {[...Array(15)].map((_, i) => (
+                        <div className="d-flex align-items-center gap-1 flex-grow-1" style={{height: '20px'}}>
+                            {[...Array(10)].map((_, i) => (
                                 <div
                                     key={i}
                                     className={`rounded-pill ${isPlaying ? 'bg-primary animate-pulse' : 'bg-secondary'}`}
                                     style={{
                                         width: '3px',
-                                        height: `${Math.random() * 15 + 5}px`,
-                                        opacity: isPlaying ? 1 : 0.3,
-                                        transition: 'all 0.2s'
+                                        height: `${Math.random() * 12 + 4}px`,
+                                        opacity: isPlaying ? 1 : 0.3
                                     }}
                                 ></div>
                             ))}
                         </div>
 
-                        <div className="d-flex flex-column align-items-end ms-auto">
-                            <span className="small text-muted fw-bold" style={{fontSize: '0.7rem'}}>
-                                {duration ? formatDuration(duration) : (size ? (size >= 1048576 ? (size/1048576).toFixed(2)+' MB' : (size/1024).toFixed(0)+' KB') : 'Audio')}
-                            </span>
-                        </div>
+                        <span className="small text-muted fw-bold ms-1" style={{fontSize: '0.65rem'}}>
+                            {formatDuration(duration)}
+                        </span>
                         <audio ref={el => audioRefs.current[url] = el} src={url} hidden />
                     </div>
                 );
              } else {
                  return (
-                     <a
+                     <div
                         key={index}
-                        href={url}
-                        download
-                        target="_blank"
-                        rel="noreferrer"
-                        className="text-decoration-none"
+                        onTouchStart={() => handleTouchStart(msg._id)}
+                        onTouchEnd={(e) => handleTouchEnd(e, { msgId: msg._id, fn: () => window.open(url, '_blank') })}
+                        onClick={() => window.innerWidth >= 768 && window.open(url, '_blank')}
                      >
-                        <div className="d-flex align-items-center gap-3 p-3 rounded shadow-sm" style={{minWidth: '220px', cursor: 'pointer', backgroundColor: '#333', color: '#fff'}}>
-                             <div className="d-flex align-items-center justify-content-center rounded-circle" style={{width: '40px', height: '40px', backgroundColor: 'rgba(255,255,255,0.1)'}}>
-                                 <FaFile size={20} className="text-white" />
+                        <div className="d-flex align-items-center gap-2 p-2 rounded shadow-sm" style={{minWidth: '160px', maxWidth: '220px', cursor: 'pointer', backgroundColor: '#333', color: '#fff'}}>
+                             <div className="d-flex align-items-center justify-content-center rounded-circle" style={{width: '35px', height: '35px', backgroundColor: 'rgba(255,255,255,0.1)'}}>
+                                 <FaFile size={16} className="text-white" />
                              </div>
                              <div className="d-flex flex-column flex-grow-1 overflow-hidden">
-                                 <strong className="text-truncate d-block" style={{maxWidth: '180px', fontSize: '0.9rem'}} title={name}>{name}</strong>
-                                 <small className="text-white-50" style={{fontSize: '0.75rem'}}>{size ? (size >= 1048576 ? (size/1048576).toFixed(2)+' MB' : (size/1024).toFixed(2)+' KB') : 'Download'}</small>
+                                 <strong className="text-truncate d-block" style={{maxWidth: '140px', fontSize: '0.8rem'}} title={name}>{name}</strong>
+                                 <small className="text-white-50" style={{fontSize: '0.65rem'}}>{size ? (size >= 1048576 ? (size/1048576).toFixed(1)+' MB' : (size/1024).toFixed(0)+' KB') : 'Download'}</small>
                              </div>
                         </div>
-                     </a>
+                     </div>
                  );
              }
         };
@@ -618,7 +662,13 @@ const ChatWindow = ({ conversation, currentUser, socket, onBack, onMessageSent, 
                 );
              } else {
                  elements.push(
-                    <div key="text" className={`p-3 rounded-4 shadow-sm ${isMe ? 'bg-primary text-white' : 'bg-white text-dark'}`} style={{wordWrap: 'break-word'}}>
+                    <div
+                        key="text"
+                        className={`p-3 rounded-4 shadow-sm ${isMe ? 'bg-primary text-white' : 'bg-white text-dark'}`}
+                        style={{wordWrap: 'break-word', userSelect: 'none'}}
+                        onTouchStart={() => handleTouchStart(msg._id)}
+                        onTouchEnd={(e) => handleTouchEnd(e, { msgId: msg._id, fn: null })}
+                    >
                         <div style={{whiteSpace: 'pre-wrap'}}>{msg.content} {msg.isEdited && <span className="small fst-italic ms-1" style={{opacity: 0.7}}>(edited)</span>}</div>
                     </div>
                  );
