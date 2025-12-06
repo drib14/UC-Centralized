@@ -6,6 +6,7 @@ const { verifyToken } = require('../middleware/auth');
 router.get('/', verifyToken, async (req, res) => {
     try {
         const notifications = await Notification.find({ recipient: req.user.id })
+            .populate('sender', 'firstName lastName profileImage')
             .sort({ createdAt: -1 })
             .limit(50);
 

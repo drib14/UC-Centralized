@@ -192,16 +192,16 @@ const Notifications = () => {
                                 </div>
 
                                 {/* Content */}
-                                <div className="flex-grow-1">
+                                <div className="flex-grow-1" style={{minWidth: 0}}>
                                     <div className="d-flex justify-content-between align-items-center mb-1">
-                                        <h6 className={`mb-0 ${!notification.read ? 'fw-bold text-dark' : 'text-secondary'}`}>
+                                        <h6 className={`mb-0 text-truncate ${!notification.read ? 'fw-bold text-dark' : 'text-secondary'}`} style={{maxWidth: '100%'}}>
                                             {getHeader(notification)}
                                         </h6>
-                                        <small className="text-muted text-nowrap ms-2" style={{fontSize: '0.8rem'}}>
+                                        <small className="text-muted text-nowrap ms-2 flex-shrink-0" style={{fontSize: '0.8rem'}}>
                                             {timeAgo(notification.createdAt)}
                                         </small>
                                     </div>
-                                    <p className="mb-0 text-muted small" style={{lineHeight: '1.4'}}>
+                                    <p className="mb-0 text-muted small text-break" style={{lineHeight: '1.4'}}>
                                         {notification.content}
                                     </p>
                                 </div>
