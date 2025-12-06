@@ -13,7 +13,7 @@ const CallOverlay = () => {
         <div className="position-fixed top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center bg-dark" style={{ zIndex: 9999 }}>
             {/* Incoming Call Modal */}
             {!callAccepted && call.isReceivingCall && (
-                <div className="text-center text-white">
+                <div className="text-center text-white" style={{zIndex: 10000}}>
                     <div className="mb-4">
                         <div className="rounded-circle bg-secondary d-flex align-items-center justify-content-center mx-auto mb-3" style={{width: 100, height: 100, fontSize: '2rem'}}>
                             {call.name ? call.name[0] : 'U'}
@@ -22,11 +22,11 @@ const CallOverlay = () => {
                         <p>{call.isVideo ? 'Video Call' : 'Voice Call'}</p>
                     </div>
                     <div className="d-flex gap-4 justify-content-center">
-                        <button className="btn btn-danger btn-lg rounded-circle p-4" onClick={leaveCall}>
-                            <FaPhoneSlash size={24} />
+                        <button className="btn btn-danger btn-lg rounded-circle p-4 d-flex align-items-center justify-content-center" style={{width: 80, height: 80, zIndex: 10001}} onClick={leaveCall}>
+                            <FaPhoneSlash size={32} />
                         </button>
-                        <button className="btn btn-success btn-lg rounded-circle p-4" onClick={answerCall}>
-                            {call.isVideo ? <FaVideo size={24} /> : <FaMicrophone size={24} />}
+                        <button className="btn btn-success btn-lg rounded-circle p-4 d-flex align-items-center justify-content-center" style={{width: 80, height: 80, zIndex: 10001}} onClick={answerCall}>
+                            {call.isVideo ? <FaVideo size={32} /> : <FaMicrophone size={32} />}
                         </button>
                     </div>
                 </div>

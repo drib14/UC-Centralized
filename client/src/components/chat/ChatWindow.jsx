@@ -22,6 +22,7 @@ const ChatWindow = ({ conversation, currentUser, socket, onBack, onMessageSent, 
     const [showStickerPicker, setShowStickerPicker] = useState(false);
     const [lightboxMedia, setLightboxMedia] = useState(null);
     const [isUploading, setIsUploading] = useState(false);
+    const [isSending, setIsSending] = useState(false);
     const [menuOpenId, setMenuOpenId] = useState(null);
     const [replyTo, setReplyTo] = useState(null);
     const [showInfoModal, setShowInfoModal] = useState(false);
@@ -50,15 +51,27 @@ const ChatWindow = ({ conversation, currentUser, socket, onBack, onMessageSent, 
     const [playingAudio, setPlayingAudio] = useState(null);
 
     // Swipe Handlers
-    const swipeHandlers = useSwipeable({
-        onSwipedRight: (eventData) => {
-            // Basic implementation: if swiped on a message, reply to last visible?
-            // React-swipeable is usually component-based.
-            // Since we need to swipe specific messages, we'd wrap each message.
-            // But let's keep it simple: Swipe anywhere on chat doesn't make sense.
-            // We need to apply this per message row. See render below.
+    const touchStartRef = useRef(null);
+    const touchEndRef = useRef(null);
+
+    const onTouchStart = (e) => {
+        touchEndRef.current = null;
+        touchStartRef.current = e.targetTouches[0].clientX;
+    }
+
+    const onTouchMove = (e) => {
+        touchEndRef.current = e.targetTouches[0].clientX;
+    }
+
+    const onTouchEnd = (msg) => {
+        if (!touchStartRef.current || !touchEndRef.current) return;
+        const distance = touchStartRef.current - touchEndRef.current;
+        const isSwipeRight = distance < -50;
+
+        if (isSwipeRight) {
+            setReplyTo(msg);
         }
-    });
+    }
 
     useEffect(() => {
         loadMessages();
@@ -181,18 +194,18 @@ const ChatWindow = ({ conversation, currentUser, socket, onBack, onMessageSent, 
 
     const sendRecording = () => {
         if (mediaRecorderRef.current) {
-            // Need to attach a one-time listener or use promise, but since stop is async,
-            // we attach 'onstop' logic before stopping
             mediaRecorderRef.current.onstop = async () => {
                  const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
                  const file = new File([audioBlob], "voice_message.webm", { type: 'audio/webm' });
 
-                 // Reuse upload logic
+                 setIsSending(true);
                  try {
                      const { url } = await API.uploadFile(file);
                      await handleSend('', 'audio', null, [{ url, type: 'audio', duration: recordingDuration }]);
                  } catch (err) {
                      toast.error("Failed to send audio");
+                 } finally {
+                     setIsSending(false);
                  }
                  clearInterval(recordingTimerRef.current);
                  setIsRecording(false);
@@ -207,7 +220,9 @@ const ChatWindow = ({ conversation, currentUser, socket, onBack, onMessageSent, 
         const content = overrideContent !== null ? overrideContent : newMessage;
         if (!content.trim() && attachments.length === 0 && !fileUrl && !pollData && !locationData && overrideType === 'text') return;
 
+        setIsSending(true);
         try {
+            // Using API.post as fixed in api.js
             const sentMsg = await API.post('/messages', {
                 conversationId: conversation._id,
                 content,
@@ -232,6 +247,8 @@ const ChatWindow = ({ conversation, currentUser, socket, onBack, onMessageSent, 
         } catch (err) {
             console.error("Failed to send", err);
             toast.error("Failed to send message");
+        } finally {
+            setIsSending(false);
         }
     };
 
@@ -245,6 +262,7 @@ const ChatWindow = ({ conversation, currentUser, socket, onBack, onMessageSent, 
     const handleUploadAndSend = async () => {
         if (selectedFiles.length === 0 && !newMessage.trim()) return;
         setIsUploading(true);
+        setIsSending(true);
 
         try {
             const attachments = [];
@@ -264,6 +282,7 @@ const ChatWindow = ({ conversation, currentUser, socket, onBack, onMessageSent, 
             toast.error("Upload failed");
         } finally {
             setIsUploading(false);
+            setIsSending(false);
         }
     }
 
@@ -493,29 +512,6 @@ const ChatWindow = ({ conversation, currentUser, socket, onBack, onMessageSent, 
     const tapTimeout = useRef(null);
     const lastTap = useRef(0);
 
-    // Simple Swipe Logic (Touch Only)
-    const touchStartRef = useRef(null);
-    const touchEndRef = useRef(null);
-
-    const onTouchStart = (e) => {
-        touchEndRef.current = null;
-        touchStartRef.current = e.targetTouches[0].clientX;
-    }
-
-    const onTouchMove = (e) => {
-        touchEndRef.current = e.targetTouches[0].clientX;
-    }
-
-    const onTouchEnd = (msg) => {
-        if (!touchStartRef.current || !touchEndRef.current) return;
-        const distance = touchStartRef.current - touchEndRef.current;
-        const isSwipeRight = distance < -50; // Drag right
-
-        if (isSwipeRight) {
-            setReplyTo(msg);
-        }
-    }
-
     const handleTouchStart = (msg) => {
         const now = Date.now();
         if (now - lastTap.current < 300) {
@@ -599,7 +595,7 @@ const ChatWindow = ({ conversation, currentUser, socket, onBack, onMessageSent, 
                                 )}
 
                                 {/* Hover Actions (Desktop) - Left of My Message, Right of Their Message */}
-                                <div className={`message-actions d-none d-md-flex gap-1 ${isMe ? 'order-1 me-2' : 'order-2 ms-2'}`}>
+                                <div className={`message-actions d-none d-md-flex gap-1 ${isMe ? 'order-1 me-2' : 'order-2 ms-2'}`} style={{zIndex: 1}}>
                                     <div className="btn-messenger text-muted" style={{width: 24, height: 24}} onClick={() => handleReaction(msg, '👍')} title="Like"><FaThumbsUp size={12} /></div>
                                     <div className="btn-messenger text-muted" style={{width: 24, height: 24}} onClick={() => setReplyTo(msg)} title="Reply"><FaReply size={12} /></div>
                                     <div className="btn-messenger text-muted" style={{width: 24, height: 24}} onClick={() => setMenuOpenId(msg._id)}><FaEllipsisVertical size={12} /></div>
@@ -662,7 +658,7 @@ const ChatWindow = ({ conversation, currentUser, socket, onBack, onMessageSent, 
                 />
 
                 {/* Footer */}
-                <div className="p-2 border-top position-relative flex-shrink-0 bg-white">
+                <div className="p-2 border-top position-relative flex-shrink-0 bg-white" style={{zIndex: 10}}>
                     {replyTo && (
                         <div className="px-3 py-2 bg-light border-bottom d-flex justify-content-between align-items-center">
                             <small className="text-muted">Replying to {replyTo.sender._id === currentUser._id ? 'yourself' : otherUser.firstName}</small>
@@ -704,13 +700,13 @@ const ChatWindow = ({ conversation, currentUser, socket, onBack, onMessageSent, 
                         <input type="file" ref={fileInputRef} className="d-none" multiple onChange={handleFileSelect} />
 
                         {/* Plus Button */}
-                        <div className={`btn-messenger ${showPlusMenu ? 'rotate-45' : ''}`} style={{transition: 'transform 0.2s'}} onClick={() => setShowPlusMenu(!showPlusMenu)}>
+                        <div className={`btn-messenger ${showPlusMenu ? 'rotate-45' : ''}`} style={{transition: 'transform 0.2s', zIndex: 11}} onClick={() => setShowPlusMenu(!showPlusMenu)}>
                              <FaPlus className="text-primary" size={20} />
                         </div>
-                        <div className="btn-messenger" onClick={() => fileInputRef.current.click()}>
+                        <div className="btn-messenger" style={{zIndex: 11}} onClick={() => fileInputRef.current.click()}>
                              <FaImages className="text-primary" size={20} />
                         </div>
-                        <div className="btn-messenger" onClick={() => { setShowStickerPicker(!showStickerPicker); setShowEmojiPicker(false); }}>
+                        <div className="btn-messenger" style={{zIndex: 11}} onClick={() => { setShowStickerPicker(!showStickerPicker); setShowEmojiPicker(false); }}>
                              <FaStickyNote className="text-primary" size={20} />
                         </div>
 
@@ -729,7 +725,8 @@ const ChatWindow = ({ conversation, currentUser, socket, onBack, onMessageSent, 
                                         placeholder="Aa"
                                         value={newMessage}
                                         onChange={e => setNewMessage(e.target.value)}
-                                        onKeyDown={e => e.key === 'Enter' && (selectedFiles.length > 0 ? handleUploadAndSend() : handleSend())}
+                                        onKeyDown={e => e.key === 'Enter' && !isSending && (selectedFiles.length > 0 ? handleUploadAndSend() : handleSend())}
+                                        disabled={isSending}
                                     />
                                     <div className="btn-messenger text-primary" style={{width:30, height:30}} onClick={() => { setShowEmojiPicker(!showEmojiPicker); setShowStickerPicker(false); }}>
                                          <FaFaceSmile size={20} />
@@ -739,10 +736,10 @@ const ChatWindow = ({ conversation, currentUser, socket, onBack, onMessageSent, 
                         </div>
 
                         {isRecording ? (
-                             <div className="btn-messenger text-primary" onClick={sendRecording}><FaPaperPlane size={20} /></div>
+                             <div className={`btn-messenger text-primary ${isSending ? 'opacity-50' : ''}`} onClick={!isSending ? sendRecording : null}><FaPaperPlane size={20} /></div>
                         ) : (
                             newMessage || selectedFiles.length > 0 || isUploading ? (
-                                <div className={`btn-messenger text-primary ${isUploading ? 'opacity-50' : ''}`} onClick={() => selectedFiles.length > 0 ? handleUploadAndSend() : handleSend()}>
+                                <div className={`btn-messenger text-primary ${(isUploading || isSending) ? 'opacity-50' : ''}`} onClick={(!isUploading && !isSending) ? () => selectedFiles.length > 0 ? handleUploadAndSend() : handleSend() : null}>
                                      <FaPaperPlane size={20} />
                                 </div>
                             ) : (

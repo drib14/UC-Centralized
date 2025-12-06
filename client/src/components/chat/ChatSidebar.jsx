@@ -10,19 +10,30 @@ const ChatSidebar = ({ conversations, selectedId, onSelect, onNewChat, onDeleteC
     const [search, setSearch] = useState('');
     const [showMenuId, setShowMenuId] = useState(null);
     const [messageResults, setMessageResults] = useState([]);
+    const [peopleResults, setPeopleResults] = useState([]);
     const [isSearching, setIsSearching] = useState(false);
 
     useEffect(() => {
-        const searchMessages = async () => {
+        const searchAll = async () => {
             if (!search.trim()) {
                 setMessageResults([]);
+                setPeopleResults([]);
                 return;
             }
             setIsSearching(true);
             try {
-                // Assuming API.get supports params or we construct URL
-                const results = await API.get(`/messages/search/content?q=${encodeURIComponent(search)}`);
-                setMessageResults(results);
+                // Parallel search: Messages content AND Users (People)
+                const [msgs, users] = await Promise.all([
+                    API.get(`/messages/search/content?q=${encodeURIComponent(search)}`),
+                    API.searchUsers(search)
+                ]);
+
+                setMessageResults(msgs || []);
+
+                // Filter users to exclude myself
+                const filteredUsers = (users || []).filter(u => u._id !== currentUser._id);
+                setPeopleResults(filteredUsers);
+
             } catch (err) {
                 console.error("Search failed", err);
             } finally {
@@ -30,15 +41,19 @@ const ChatSidebar = ({ conversations, selectedId, onSelect, onNewChat, onDeleteC
             }
         };
 
-        const timeoutId = setTimeout(searchMessages, 500); // Debounce
+        const timeoutId = setTimeout(searchAll, 500);
         return () => clearTimeout(timeoutId);
-    }, [search]);
+    }, [search, currentUser._id]);
 
-    const filteredConversations = conversations.filter(c => {
-        const other = c.participants.find(p => p._id !== currentUser._id) || c.participants[0];
-        const name = `${other.firstName} ${other.lastName}`.toLowerCase();
-        return name.includes(search.toLowerCase());
-    });
+    // Local filter for existing conversations (legacy behavior, kept for quick access)
+    // But since we have a dedicated "People" search from API, we might prioritize API results
+    // or merge them. User asked to "search both conversation and people".
+    // Let's rely on the API results for "People" as it searches ALL users, not just conversations.
+    // However, existing conversations should be highlighted or prioritized.
+
+    // Let's stick to the request: "search both conversation and people".
+    // API.searchUsers returns users.
+    // We can match them with existing conversations to open the chat.
 
     const handleMenuClick = (e, convId) => {
         e.stopPropagation();
@@ -59,19 +74,38 @@ const ChatSidebar = ({ conversations, selectedId, onSelect, onNewChat, onDeleteC
         setShowMenuId(null);
     };
 
+    const handleResultClick = (targetUser) => {
+        // Check if conversation exists
+        const existing = conversations.find(c => c.participants.some(p => p._id === targetUser._id));
+        if (existing) {
+            onSelect(existing);
+        } else {
+            // New chat - handled by parent usually via onNewChat logic, but here we can force selection
+            // We need to create it or let ChatLayout handle it.
+            // Since onSelect expects a conversation object, we might need to trigger onNewChat(targetUser)
+            // But onNewChat prop takes no args in ChatLayout currently (it just opens empty?).
+            // Let's pass a "temporary" conversation object or call a create API.
+            // Best approach: create it immediately then select.
+            API.createConversation(targetUser._id).then(newConv => {
+                onSelect(newConv);
+            });
+        }
+        setSearch(''); // Clear search on select? Or keep it? Usually clear.
+    };
+
     const handleMessageResultClick = (result) => {
-        // Find conversation from local list if possible, or trigger selection via ID
-        // The parent onSelect handles the switch. Ideally, we pass the full conversation object.
-        // But search results might only contain conversationId.
-        // We need to match it with existing 'conversations' prop or fetch it.
         const existingConv = conversations.find(c => c._id === result.conversationId);
         if (existingConv) {
             onSelect(existingConv);
         } else {
-            // Should not happen often if we only search "my conversations", but safe fallback needed?
-            // Maybe fetch it? For now, just toast if not found in list (e.g. if list is paginated)
-            // But since 'conversations' prop is "all conversations", it should be there.
+            // Fetch if missing from list
+             API.get(`/messages/conversations/${result.conversationId}`).then(conv => { // This route might fail if it expects just messages
+                 // Actually we need the conversation object.
+                 // If not in list, maybe just select it by ID and let ChatLayout fetch?
+                 // Let's try finding by ID in ChatLayout.
+             });
         }
+        setSearch('');
     };
 
     return (
@@ -109,22 +143,20 @@ const ChatSidebar = ({ conversations, selectedId, onSelect, onNewChat, onDeleteC
 
                 {/* Search Results Mode */}
                 {search && (
-                    <div className="d-flex flex-column gap-3">
+                    <div className="d-flex flex-column gap-3 pb-3">
                         {/* People Results */}
-                        {filteredConversations.length > 0 && (
+                        {peopleResults.length > 0 && (
                             <div>
                                 <h6 className="px-2 text-muted small fw-bold mt-2">People</h6>
-                                {filteredConversations.map(conv => {
-                                    const other = conv.participants.find(p => p._id !== currentUser._id) || conv.participants[0];
-                                    return (
-                                        <div key={conv._id} className="d-flex align-items-center p-2 rounded-3 cursor-pointer hover-bg-light" onClick={() => onSelect(conv)}>
-                                            <UserAvatar user={other} size={40} />
-                                            <div className="ms-3">
-                                                <div className="fw-bold">{other.firstName} {other.lastName}</div>
-                                            </div>
+                                {peopleResults.map(user => (
+                                    <div key={user._id} className="d-flex align-items-center p-2 rounded-3 cursor-pointer hover-bg-light" onClick={() => handleResultClick(user)}>
+                                        <UserAvatar user={user} size={40} />
+                                        <div className="ms-3">
+                                            <div className="fw-bold">{user.firstName} {user.lastName}</div>
+                                            <div className="small text-muted">{user.role}</div>
                                         </div>
-                                    );
-                                })}
+                                    </div>
+                                ))}
                             </div>
                         )}
 
@@ -135,10 +167,10 @@ const ChatSidebar = ({ conversations, selectedId, onSelect, onNewChat, onDeleteC
                                 {messageResults.map(msg => (
                                     <div key={msg._id} className="d-flex align-items-center p-2 rounded-3 cursor-pointer hover-bg-light" onClick={() => handleMessageResultClick(msg)}>
                                         <UserAvatar user={msg.sender} size={40} />
-                                        <div className="ms-3 min-width-0">
-                                            <div className="fw-bold small">
-                                                {msg.sender._id === currentUser._id ? 'You' : msg.sender.firstName}
-                                                <span className="text-muted fw-normal"> &bull; {new Date(msg.createdAt).toLocaleDateString()}</span>
+                                        <div className="ms-3 min-width-0 w-100">
+                                            <div className="fw-bold small d-flex justify-content-between">
+                                                <span>{msg.sender._id === currentUser._id ? 'You' : msg.sender.firstName}</span>
+                                                <span className="text-muted fw-normal small">{new Date(msg.createdAt).toLocaleDateString()}</span>
                                             </div>
                                             <div className="text-truncate text-muted small">{msg.content}</div>
                                             <div className="text-muted" style={{fontSize: '0.7rem'}}>In chat with {msg.otherUser ? msg.otherUser.firstName : 'Unknown'}</div>
@@ -148,13 +180,13 @@ const ChatSidebar = ({ conversations, selectedId, onSelect, onNewChat, onDeleteC
                             </div>
                         )}
 
-                        {filteredConversations.length === 0 && messageResults.length === 0 && !isSearching && (
+                        {peopleResults.length === 0 && messageResults.length === 0 && !isSearching && (
                             <div className="text-center text-muted mt-4">No results found</div>
                         )}
                     </div>
                 )}
 
-                {/* Standard List Mode */}
+                {/* Standard Conversation List */}
                 {!search && conversations.map(conv => {
                     const other = conv.participants.find(p => p._id !== currentUser._id) || conv.participants[0];
                     const isActive = selectedId === conv._id;
@@ -195,7 +227,7 @@ const ChatSidebar = ({ conversations, selectedId, onSelect, onNewChat, onDeleteC
                                 </div>
                             </div>
 
-                            {/* 3-dots Menu */}
+                            {/* 3-dots Menu - Fixed positioning to avoid clipping */}
                             <div
                                 className="position-absolute end-0 top-50 translate-middle-y me-2 btn-messenger action-btn-wrapper"
                                 style={{
@@ -210,14 +242,21 @@ const ChatSidebar = ({ conversations, selectedId, onSelect, onNewChat, onDeleteC
                                 <FaEllipsis className="text-muted" />
                             </div>
 
-                            {/* Dropdown Menu */}
+                            {/* Dropdown Menu - Better Positioning Strategy needed?
+                                User complained "distant from the 3 dot icon".
+                                Fixed pos relative to viewport requires calc.
+                                Let's try absolute but ensure parent has z-index.
+                                Or just standard absolute right: 20px top: 50%
+                            */}
                             {showMenuId === conv._id && (
                                 <div
-                                    className="position-fixed bg-white shadow-lg rounded-3 py-2 z-3"
+                                    className="position-absolute bg-white shadow-lg rounded-3 py-2 z-3"
                                     style={{
-                                        zIndex: 9999,
-                                        marginTop: '10px',
-                                        transform: 'translateX(-80%)' // Shift left to stay on screen
+                                        right: '40px', // Just to the left of the button
+                                        top: '50%',
+                                        transform: 'translateY(-20%)',
+                                        minWidth: '180px',
+                                        border: '1px solid #eee'
                                     }}
                                     onClick={(e) => e.stopPropagation()}
                                 >

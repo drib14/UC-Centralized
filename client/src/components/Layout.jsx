@@ -37,7 +37,7 @@ const Layout = () => {
     return (
         <div id="wrapper">
             <Sidebar />
-            <div id="page-content-wrapper" className={`${collapsed ? 'collapsed' : ''} ${isChatPage ? 'chat-page-wrapper' : ''}`}>
+            <div id="page-content-wrapper" className={`${collapsed ? 'collapsed' : ''} ${isChatPage ? 'chat-page-wrapper' : ''}`} style={isChatPage ? { height: '100dvh', overflow: 'hidden' } : {}}>
                 {/* Navbar removed as per request to fit content */}
                 <div className={isChatPage ? 'h-100 p-0' : 'container-fluid'}>
                     <Outlet />

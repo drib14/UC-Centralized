@@ -283,15 +283,30 @@ router.put('/conversations/:id/settings', verifyToken, async (req, res) => {
         const conversation = await Conversation.findById(req.params.id);
         if (!conversation) return res.status(404).json("Conversation not found");
 
+        // Populate participants to get names for system messages
+        await conversation.populate('participants', 'firstName lastName');
+
         let systemMsgContent = '';
-        if (theme && theme !== conversation.theme) systemMsgContent = 'changed the chat theme';
-        if (quickReaction && quickReaction !== conversation.quickReaction) systemMsgContent = 'changed the quick reaction';
+        const user = conversation.participants.find(p => p._id.toString() === req.user.id);
+        const userName = user ? user.firstName : 'Someone';
+
+        if (theme && theme !== conversation.theme) systemMsgContent = `${userName} changed the chat theme`;
+        if (quickReaction && quickReaction !== conversation.quickReaction) systemMsgContent = `${userName} changed the quick reaction`;
+
         if (nicknames) {
-             const changedKey = Object.keys(nicknames).find(k => nicknames[k] !== (conversation.nicknames ? conversation.nicknames.get(k) : null));
+             const existingNicknames = conversation.nicknames || new Map();
+             const changedKey = Object.keys(nicknames).find(k => nicknames[k] !== (existingNicknames.get ? existingNicknames.get(k) : existingNicknames[k]));
+
              if (changedKey) {
-                 const targetUser = conversation.participants.find(p => p.toString() === changedKey);
-                 // We can't easily get the name here without populating, so generic message
-                 systemMsgContent = 'set a nickname';
+                 const targetUser = conversation.participants.find(p => p._id.toString() === changedKey);
+                 const targetName = targetUser ? targetUser.firstName : 'User';
+                 const newNickname = nicknames[changedKey];
+
+                 if (newNickname) {
+                     systemMsgContent = `${userName} set the nickname for ${targetName} to ${newNickname}`;
+                 } else {
+                     systemMsgContent = `${userName} cleared the nickname for ${targetName}`;
+                 }
              }
         }
 
@@ -389,6 +404,14 @@ router.post('/', verifyToken, async (req, res) => {
                 console.error("Failed to parse attachments string", e);
                 attachments = [];
             }
+        }
+
+        // Backend Parse Guard: pollData/locationData might be strings too if sent via FormData (though API.post uses JSON)
+        if (typeof pollData === 'string') {
+             try { pollData = JSON.parse(pollData); } catch(e) {}
+        }
+        if (typeof locationData === 'string') {
+             try { locationData = JSON.parse(locationData); } catch(e) {}
         }
 
         // Block check
