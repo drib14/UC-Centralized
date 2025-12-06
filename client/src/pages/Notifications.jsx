@@ -116,6 +116,31 @@ const Notifications = () => {
         }
     };
 
+    const getHeader = (type) => {
+        switch(type) {
+            case 'announcement': return "New Announcement";
+            case 'event': return "New Event";
+            case 'message': return "New Message";
+            case 'alert': return "System Alert";
+            default: return "Notification";
+        }
+    };
+
+    const timeAgo = (date) => {
+        const seconds = Math.floor((new Date() - new Date(date)) / 1000);
+        let interval = seconds / 31536000;
+        if (interval > 1) return Math.floor(interval) + "y ago";
+        interval = seconds / 2592000;
+        if (interval > 1) return Math.floor(interval) + "mo ago";
+        interval = seconds / 86400;
+        if (interval > 1) return Math.floor(interval) + "d ago";
+        interval = seconds / 3600;
+        if (interval > 1) return Math.floor(interval) + "h ago";
+        interval = seconds / 60;
+        if (interval > 1) return Math.floor(interval) + "m ago";
+        return Math.floor(seconds) + "s ago";
+    };
+
     return (
         <div className="container-fluid">
             <div className="d-flex justify-content-between align-items-center mb-4 pt-3">
@@ -140,33 +165,44 @@ const Notifications = () => {
                         notifications.map(notification => (
                             <div
                                 key={notification._id}
-                                className={`list-group-item list-group-item-action p-3 d-flex gap-3 align-items-start ${!notification.read ? 'bg-light border-start border-primary border-4' : ''}`}
+                                className={`list-group-item list-group-item-action p-3 d-flex gap-3 align-items-center ${!notification.read ? 'bg-light border-start border-primary border-4' : ''}`}
                                 style={{cursor: 'pointer'}}
                                 onClick={() => handleClick(notification)}
                             >
-                                <div className="fs-4 mt-1">
+                                {/* Icon */}
+                                <div className="fs-3 mt-1 text-secondary p-2 bg-white rounded-circle shadow-sm d-flex align-items-center justify-content-center" style={{width: 50, height: 50}}>
                                     {getIcon(notification.type)}
                                 </div>
+
+                                {/* Content */}
                                 <div className="flex-grow-1">
-                                    <div className="d-flex justify-content-between">
-                                        <h6 className={`mb-1 ${!notification.read ? 'fw-bold' : ''}`}>
-                                            {notification.content}
+                                    <div className="d-flex justify-content-between align-items-center mb-1">
+                                        <h6 className={`mb-0 ${!notification.read ? 'fw-bold text-dark' : 'text-secondary'}`}>
+                                            {getHeader(notification.type)}
                                         </h6>
-                                        <small className="text-muted text-nowrap ms-2">
-                                            {new Date(notification.createdAt).toLocaleDateString()}
+                                        <small className="text-muted text-nowrap ms-2" style={{fontSize: '0.8rem'}}>
+                                            {timeAgo(notification.createdAt)}
                                         </small>
                                     </div>
-                                    <p className="mb-0 text-muted small">Click to view details</p>
+                                    <p className="mb-0 text-muted small" style={{lineHeight: '1.4'}}>
+                                        {notification.content}
+                                    </p>
                                 </div>
-                                {!notification.read && <span className="badge bg-primary rounded-circle p-1 me-3" style={{width:10, height:10}}> </span>}
 
-                                <button
-                                    className="btn btn-sm btn-light text-danger border-0 rounded-circle p-2"
-                                    title="Delete"
-                                    onClick={(e) => handleDelete(e, notification._id)}
-                                >
-                                    <FaTrash />
-                                </button>
+                                {/* Actions */}
+                                <div className="d-flex align-items-center gap-3">
+                                    {!notification.read && (
+                                        <span className="badge bg-primary rounded-pill" style={{fontSize: '0.7rem'}}>New</span>
+                                    )}
+                                    <button
+                                        className="btn btn-sm btn-outline-danger border-0 rounded-circle p-2 d-flex align-items-center justify-content-center hover-scale"
+                                        title="Delete"
+                                        onClick={(e) => handleDelete(e, notification._id)}
+                                        style={{width: 32, height: 32}}
+                                    >
+                                        <FaTrash size={14} />
+                                    </button>
+                                </div>
                             </div>
                         ))
                     )}
