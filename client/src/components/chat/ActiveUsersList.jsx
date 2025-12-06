@@ -24,14 +24,21 @@ const ActiveUsersList = ({ currentUser }) => {
 
     const handleUserClick = async (user) => {
         try {
+            // For now, assume createConversation returns the conversation object (existing or new)
             const conv = await API.createConversation(user._id);
+
+            // Persist selection
+            localStorage.setItem('selectedConversationId', conv._id);
+
+            // Navigate/Update
+            // If already on messages page, we might just need to update state
+            // But navigation is safe
             navigate(currentUser.role === 'admin' ? '/admin/messages' : '/student/messages', {
                 state: { selectedConversationId: conv._id }
             });
-            // Force reload logic if needed, but context should handle it
-            // Ideally dispatch an event or use context to set active conversation
-            localStorage.setItem('selectedConversationId', conv._id);
-            window.dispatchEvent(new Event('storage')); // Trigger update in other components if they listen
+
+            // Dispatch event to notify ChatSidebar to reload or select
+            window.dispatchEvent(new Event('chat_selection_change'));
         } catch (err) {
             console.error("Failed to open conversation", err);
         }
