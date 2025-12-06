@@ -27,17 +27,28 @@ router.post('/upload', verifyToken, (req, res) => {
     });
 });
 
+// Get unread count - MOVED TO TOP to avoid 500 error on /:conversationId collision
+router.get('/unread-count', verifyToken, async (req, res) => {
+    try {
+        const convs = await Conversation.find({ participants: { $in: [req.user.id] } }).populate('lastMessage');
+        let count = 0;
+        convs.forEach(c => {
+            if (c.lastMessage &&
+                c.lastMessage.sender.toString() !== req.user.id &&
+                !c.lastMessage.readBy.includes(req.user.id)) {
+                count++;
+            }
+        });
+        res.status(200).json({ count });
+    } catch(err) { res.status(500).json(err); }
+});
+
 // Get All Conversations (List)
 router.get('/conversations', verifyToken, async (req, res) => {
     try {
         const conversations = await populateConversation(
             Conversation.find({
                 participants: { $in: [req.user.id] },
-                // Don't hide if it's a group, or if not hidden by user
-                // Actually 'hiddenFor' logic: if array doesn't include me.
-                // But we removed 'hiddenFor' from new schema?
-                // Ah, wait. I didn't include 'hiddenFor' in the new schema explicitly,
-                // but I included 'archivedBy'. Let's assume 'archivedBy' acts as hidden from main list.
                 archivedBy: { $ne: req.user.id }
             })
         ).sort({ updatedAt: -1 });
@@ -99,6 +110,39 @@ router.post('/conversations', verifyToken, async (req, res) => {
     }
 });
 
+// Global Search - MOVED TO TOP to avoid 500 error on /:conversationId collision
+router.get('/search/global', verifyToken, async (req, res) => {
+    try {
+        const { q } = req.query;
+        if (!q || !q.trim()) return res.json({ users: [], messages: [] });
+
+        const users = await User.find({
+            _id: { $ne: req.user.id },
+            $or: [
+                { firstName: { $regex: q, $options: 'i' } },
+                { lastName: { $regex: q, $options: 'i' } }
+            ]
+        }).select('firstName lastName profileImage role').limit(5);
+
+        // Find IDs of my convs
+        const myConvs = await Conversation.find({ participants: { $in: [req.user.id] } }).select('_id');
+        const convIds = myConvs.map(c => c._id);
+
+        const messages = await Message.find({
+            conversationId: { $in: convIds },
+            content: { $regex: q, $options: 'i' },
+            type: 'text',
+            deletedFor: { $ne: req.user.id }
+        })
+        .populate('sender', 'firstName lastName')
+        .populate('conversationId')
+        .sort({ createdAt: -1 })
+        .limit(5);
+
+        res.status(200).json({ users, messages });
+    } catch (err) { res.status(500).json(err); }
+});
+
 // Update Conversation (Group Info, Members, Settings)
 router.put('/conversations/:id', verifyToken, async (req, res) => {
     try {
@@ -146,7 +190,45 @@ router.put('/conversations/:id', verifyToken, async (req, res) => {
     }
 });
 
-// Get Messages
+// Get Media for Right Panel (Specific Route needs to be before generic :conversationId if it starts with it, but here it is subpath so fine? No, :conversationId matches "search" if not careful. But search is moved up.)
+router.get('/:conversationId/media', verifyToken, async (req, res) => {
+    try {
+        const type = req.query.type || 'media'; // 'media' (img/vid) or 'docs' (file)
+
+        const query = {
+            conversationId: req.params.conversationId,
+            deletedFor: { $ne: req.user.id },
+            'attachments.0': { $exists: true } // Has attachments
+        };
+
+        const messages = await Message.find(query)
+            .select('attachments createdAt sender')
+            .sort({ createdAt: -1 })
+            .limit(50); // Limit for performance
+
+        // Filter and Flatten
+        const items = [];
+        messages.forEach(m => {
+            m.attachments.forEach(att => {
+                const isMedia = ['image', 'video'].includes(att.type);
+                if ((type === 'media' && isMedia) || (type === 'docs' && !isMedia)) {
+                    items.push({
+                        _id: m._id,
+                        url: att.url,
+                        name: att.name,
+                        type: att.type,
+                        sender: m.sender, // For 'Sent by...'
+                        createdAt: m.createdAt
+                    });
+                }
+            });
+        });
+
+        res.status(200).json(items);
+    } catch(err) { res.status(500).json(err); }
+});
+
+// Get Messages (Generic Dynamic Route - MUST BE LAST)
 router.get('/:conversationId', verifyToken, async (req, res) => {
     try {
         const { limit = 50, before } = req.query;
@@ -209,7 +291,6 @@ router.post('/', verifyToken, async (req, res) => {
         });
 
         // Unarchive for everyone else in conversation
-        // Actually, logic is: if new message comes, it pops to top for everyone.
         await Conversation.findByIdAndUpdate(conversationId, {
             $set: { archivedBy: [] }
         });
@@ -237,93 +318,6 @@ router.post('/', verifyToken, async (req, res) => {
         console.error(err);
         res.status(500).json(err);
     }
-});
-
-// Global Search
-router.get('/search/global', verifyToken, async (req, res) => {
-    try {
-        const { q } = req.query;
-        if (!q || !q.trim()) return res.json({ users: [], messages: [] });
-
-        const users = await User.find({
-            _id: { $ne: req.user.id },
-            $or: [
-                { firstName: { $regex: q, $options: 'i' } },
-                { lastName: { $regex: q, $options: 'i' } }
-            ]
-        }).select('firstName lastName profileImage role').limit(5);
-
-        // Find IDs of my convs
-        const myConvs = await Conversation.find({ participants: { $in: [req.user.id] } }).select('_id');
-        const convIds = myConvs.map(c => c._id);
-
-        const messages = await Message.find({
-            conversationId: { $in: convIds },
-            content: { $regex: q, $options: 'i' },
-            type: 'text',
-            deletedFor: { $ne: req.user.id }
-        })
-        .populate('sender', 'firstName lastName')
-        .populate('conversationId')
-        .sort({ createdAt: -1 })
-        .limit(5);
-
-        res.status(200).json({ users, messages });
-    } catch (err) { res.status(500).json(err); }
-});
-
-// Get Media for Right Panel
-router.get('/:conversationId/media', verifyToken, async (req, res) => {
-    try {
-        const type = req.query.type || 'media'; // 'media' (img/vid) or 'docs' (file)
-
-        const query = {
-            conversationId: req.params.conversationId,
-            deletedFor: { $ne: req.user.id },
-            'attachments.0': { $exists: true } // Has attachments
-        };
-
-        const messages = await Message.find(query)
-            .select('attachments createdAt sender')
-            .sort({ createdAt: -1 })
-            .limit(50); // Limit for performance
-
-        // Filter and Flatten
-        const items = [];
-        messages.forEach(m => {
-            m.attachments.forEach(att => {
-                const isMedia = ['image', 'video'].includes(att.type);
-                if ((type === 'media' && isMedia) || (type === 'docs' && !isMedia)) {
-                    items.push({
-                        _id: m._id,
-                        url: att.url,
-                        name: att.name,
-                        type: att.type,
-                        sender: m.sender, // For 'Sent by...'
-                        createdAt: m.createdAt
-                    });
-                }
-            });
-        });
-
-        res.status(200).json(items);
-    } catch(err) { res.status(500).json(err); }
-});
-
-// Unread Count
-router.get('/meta/unread-count', verifyToken, async (req, res) => {
-    try {
-        const convs = await Conversation.find({ participants: { $in: [req.user.id] } }).populate('lastMessage');
-        let count = 0;
-        convs.forEach(c => {
-            if (c.lastMessage &&
-                c.lastMessage.sender.toString() !== req.user.id &&
-                !c.lastMessage.readBy.includes(req.user.id)) {
-                count++;
-            }
-        });
-        res.status(200).json({ count });
-    } catch(err) { res.status(500).json(err); }
 });
 
 module.exports = router;
