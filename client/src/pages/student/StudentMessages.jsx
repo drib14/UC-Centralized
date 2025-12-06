@@ -3,11 +3,8 @@ import ChatLayout from '../../components/chat/ChatLayout';
 
 const StudentMessages = () => {
     return (
-        <div className="container-fluid p-0">
-            <h2 className="mb-4 px-3 pt-3">Messages</h2>
-            <div className="px-3 pb-3">
-                <ChatLayout />
-            </div>
+        <div style={{ height: '100dvh', width: '100vw', overflow: 'hidden' }}>
+            <ChatLayout />
         </div>
     );
 };

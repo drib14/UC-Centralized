@@ -4,7 +4,8 @@ const messageSchema = new mongoose.Schema({
     conversationId: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'Conversation',
-        required: true
+        required: true,
+        index: true
     },
     sender: {
         type: mongoose.Schema.Types.ObjectId,
@@ -12,13 +13,26 @@ const messageSchema = new mongoose.Schema({
         required: true
     },
     content: {
-        type: String
+        type: String,
+        default: ''
     },
+    // Simplified Types: 'text', 'file' (includes images/videos/audio in attachments), 'system', 'call_log'
+    // But keeping explicit 'audio' type for voice messages is useful for UI distinction
     type: {
         type: String,
-        enum: ['text', 'image', 'audio', 'call', 'video_call', 'location', 'poll', 'system'],
+        enum: ['text', 'image', 'video', 'audio', 'file', 'call_log', 'system', 'poll', 'location'],
         default: 'text'
     },
+    // Attachments Array for multi-media
+    attachments: [{
+        url: String,
+        type: { type: String, enum: ['image', 'video', 'audio', 'file'] },
+        name: String,
+        size: Number,
+        duration: Number // For audio/video
+    }],
+
+    // Feature Specific Data
     pollData: {
         question: String,
         options: [{
@@ -29,23 +43,16 @@ const messageSchema = new mongoose.Schema({
     },
     locationData: {
         latitude: Number,
-        longitude: Number,
-        address: String
+        longitude: Number
     },
-    fileUrl: {
-        type: String
-    },
-    attachments: [{
-        url: String,
-        type: { type: String }, // Explicit definition to avoid Mongoose casting error
-        name: String,
-        size: Number,
-        duration: Number // For audio/video duration in seconds
-    }],
+
+    // Status
     readBy: [{
         type: mongoose.Schema.Types.ObjectId,
         ref: 'User'
     }],
+
+    // Deletion
     deletedFor: [{
         type: mongoose.Schema.Types.ObjectId,
         ref: 'User'
@@ -54,17 +61,18 @@ const messageSchema = new mongoose.Schema({
         type: Boolean,
         default: false
     },
-    isEdited: {
-        type: Boolean,
-        default: false
-    },
+
+    // Reactions
     reactions: [{
-        user: {
-            type: mongoose.Schema.Types.ObjectId,
-            ref: 'User'
-        },
+        user: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
         emoji: String
-    }]
+    }],
+
+    replyTo: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Message'
+    }
+
 }, { timestamps: true });
 
 module.exports = mongoose.model('Message', messageSchema);

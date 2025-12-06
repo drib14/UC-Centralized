@@ -1,39 +1,46 @@
 import React, { useState, useEffect, useRef } from 'react';
-import {
-    FaPhone, FaVideo, FaCircleInfo, FaImages, FaFaceSmile, FaPlus, FaThumbsUp, FaPaperPlane, FaArrowLeft,
-    FaPlay, FaPause, FaFile, FaReply, FaTrash, FaLocationDot, FaSquarePollVertical, FaMicrophone, FaEllipsisVertical, FaStop, FaXmark, FaPhoneSlash
-} from 'react-icons/fa6';
-import { FaStickyNote } from 'react-icons/fa'; // Sticker Icon
-import EmojiPicker from 'emoji-picker-react';
-import { useCall } from '../../context/CallContext';
 import API from '../../utils/api';
-import { toast } from 'react-toastify';
+import { useSocket } from '../../context/SocketContext';
+import { useAuth } from '../../context/AuthContext';
+import { useCall } from '../../context/CallContext';
 import UserAvatar from './UserAvatar';
 import PollModal from './PollModal';
 import MediaPreview from './MediaPreview';
 import ChatInfoModal from './ChatInfoModal';
 import StickerPicker from './StickerPicker';
+import EmojiPicker from 'emoji-picker-react';
+import { toast } from 'react-toastify';
+import {
+    FaPhone, FaVideo, FaCircleInfo, FaImages, FaFaceSmile, FaPlus, FaThumbsUp,
+    FaPaperPlane, FaArrowLeft, FaPlay, FaPause, FaFile, FaReply, FaTrash,
+    FaLocationDot, FaSquarePollVertical, FaMicrophone, FaEllipsisVertical,
+    FaXmark, FaPhoneSlash, FaStickyNote
+} from 'react-icons/fa6';
 
-const ChatWindow = ({ conversation, currentUser, socket, onBack, onMessageSent, onDeleteConversation }) => {
-    const [newMessage, setNewMessage] = useState('');
+const ChatWindow = ({ conversationId, onBack }) => {
+    const { user } = useAuth();
+    const { socket } = useSocket();
+    const { callUser } = useCall();
+
+    const [conversation, setConversation] = useState(null);
     const [messages, setMessages] = useState([]);
+    const [newMessage, setNewMessage] = useState('');
+    const [isSending, setIsSending] = useState(false);
+
+    // UI State
     const [showEmojiPicker, setShowEmojiPicker] = useState(false);
     const [showStickerPicker, setShowStickerPicker] = useState(false);
+    const [showPlusMenu, setShowPlusMenu] = useState(false);
+    const [showInfoModal, setShowInfoModal] = useState(false);
+    const [showPollModal, setShowPollModal] = useState(false);
     const [lightboxMedia, setLightboxMedia] = useState(null);
-    const [isUploading, setIsUploading] = useState(false);
-    const [isSending, setIsSending] = useState(false);
     const [menuOpenId, setMenuOpenId] = useState(null);
     const [replyTo, setReplyTo] = useState(null);
-    const [showInfoModal, setShowInfoModal] = useState(false);
-    const [showPlusMenu, setShowPlusMenu] = useState(false);
-    const [showPollModal, setShowPollModal] = useState(false);
+
+    // File/Media Upload
     const [selectedFiles, setSelectedFiles] = useState([]);
-    const [conversationSettings, setConversationSettings] = useState({
-        theme: conversation.theme || '#003399',
-        quickReaction: conversation.quickReaction || '👍',
-        nicknames: conversation.nicknames || {}
-    });
-    const [isMuted, setIsMuted] = useState(conversation.mutedBy?.includes(currentUser._id));
+    const [isUploading, setIsUploading] = useState(false);
+    const fileInputRef = useRef(null);
 
     // Voice Recording
     const [isRecording, setIsRecording] = useState(false);
@@ -42,202 +49,116 @@ const ChatWindow = ({ conversation, currentUser, socket, onBack, onMessageSent, 
     const audioChunksRef = useRef([]);
     const recordingTimerRef = useRef(null);
 
-    const { callUser } = useCall();
-    const otherUser = conversation.participants.find(p => p._id !== currentUser._id) || conversation.participants[0];
-    const fileInputRef = useRef(null);
+    // Swipe & Touch
+    const touchStartRef = useRef(null);
+    const touchEndRef = useRef(null);
+
+    // Refs
     const messagesEndRef = useRef(null);
     const audioRefs = useRef({});
     const [playingAudio, setPlayingAudio] = useState(null);
 
-    // Swipe Handlers
-    const touchStartRef = useRef(null);
-    const touchEndRef = useRef(null);
-
-    const onTouchStart = (e) => {
-        touchEndRef.current = null;
-        touchStartRef.current = e.targetTouches[0].clientX;
-    }
-
-    const onTouchMove = (e) => {
-        touchEndRef.current = e.targetTouches[0].clientX;
-    }
-
-    const onTouchEnd = (msg) => {
-        if (!touchStartRef.current || !touchEndRef.current) return;
-        const distance = touchStartRef.current - touchEndRef.current;
-        const isSwipeRight = distance < -50;
-
-        if (isSwipeRight) {
-            setReplyTo(msg);
-        }
-    }
-
+    // Initial Load
     useEffect(() => {
-        loadMessages();
-        API.markMessagesRead(conversation._id).catch(console.error);
-        setIsMuted(conversation.mutedBy?.includes(currentUser._id));
-        setConversationSettings({
-            theme: conversation.theme || '#003399',
-            quickReaction: conversation.quickReaction || '👍',
-            nicknames: conversation.nicknames || {}
-        });
+        if (conversationId) loadData();
+    }, [conversationId]);
 
-        if (socket) {
-            socket.emit('mark_messages_read', {
-                conversationId: conversation._id,
-                readerId: currentUser._id,
-                senderId: otherUser._id
-            });
-            socket.on('conversation_settings_updated', (data) => {
-                if (data.conversationId === conversation._id) {
-                    setConversationSettings({
-                        theme: data.theme,
-                        quickReaction: data.quickReaction,
-                        nicknames: data.nicknames || {}
-                    });
-                }
-            });
-        }
-        return () => {
-            if(socket) socket.off('conversation_settings_updated');
-        }
-    }, [conversation._id]);
-
+    // Socket Listeners
     useEffect(() => {
-        if (!socket) return;
-        const handleReceive = (data) => {
-            if (data.conversationId === conversation._id) {
-                // Optimistic check: if we already have this message (via local state), don't add duplicate
-                // But backend sends full object. We can check by unique temporary ID if we used one,
-                // or just check if last message is same content/timestamp.
-                // Since we rely on socket for real-time, optimistic UI usually adds it first.
-                // Here we filter by _id if exists.
+        if (!socket || !conversationId) return;
+
+        const handleReceive = (msg) => {
+            if (msg.conversationId === conversationId || msg.conversationId._id === conversationId) {
                 setMessages(prev => {
-                    if (prev.some(m => m._id === data._id)) return prev;
-                    return [...prev, data];
+                    if (prev.some(m => m._id === msg._id)) return prev;
+                    return [...prev, msg];
                 });
                 scrollToBottom();
-                if (onMessageSent) onMessageSent(data);
             }
         };
-        const handleUpdate = (data) => {
-             if (data.conversationId === conversation._id) {
-                 setMessages(prev => prev.map(m => m._id === data._id ? data : m));
-             }
+
+        const handleUpdate = (msg) => {
+            if (msg.conversationId === conversationId || msg.conversationId._id === conversationId) {
+                setMessages(prev => prev.map(m => m._id === msg._id ? msg : m));
+            }
+        };
+
+        const handleSettingsUpdate = (data) => {
+            if (data.conversationId === conversationId) {
+                setConversation(prev => ({ ...prev, ...data }));
+            }
         };
 
         socket.on('receive_message', handleReceive);
         socket.on('message_updated', handleUpdate);
+        socket.on('conversation_settings_updated', handleSettingsUpdate);
+
+        // Mark read on entry
+        socket.emit('mark_messages_read', { conversationId, readerId: user._id, senderId: getOtherUserId() });
+
         return () => {
             socket.off('receive_message', handleReceive);
             socket.off('message_updated', handleUpdate);
-        }
-    }, [socket, conversation._id]);
+            socket.off('conversation_settings_updated', handleSettingsUpdate);
+        };
+    }, [socket, conversationId, conversation]);
 
-    const loadMessages = async () => {
+    const loadData = async () => {
         try {
-            const data = await API.getMessages(conversation._id);
-            setMessages(data);
+            // Load Messages
+            const msgs = await API.get(`/messages/${conversationId}`);
+            setMessages(msgs);
             scrollToBottom();
+
+            // Need conversation details for theme/nicknames.
+            // Optimized fetch: We can reuse the list endpoint or add a specific one.
+            // Since we need it "fast", and API `getMessages` only returns array.
+            // Let's assume we can fetch it via conversation creation/get endpoint which handles existing check
+            // Or just filter from list if cached.
+            // For robustness, let's fetch list and find.
+            const convs = await API.get('/messages/conversations');
+            const currentConv = convs.find(c => c._id === conversationId);
+            if(currentConv) setConversation(currentConv);
+
+            API.markMessagesRead(conversationId);
         } catch (err) {
             console.error(err);
         }
     };
 
     const scrollToBottom = () => {
-        setTimeout(() => {
-            messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-        }, 100);
+        setTimeout(() => messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' }), 100);
     };
 
-    // --- Voice Recording Logic ---
-    const startRecording = async () => {
-        if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
-            try {
-                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-                mediaRecorderRef.current = new MediaRecorder(stream);
-                audioChunksRef.current = [];
-
-                mediaRecorderRef.current.ondataavailable = (event) => {
-                    audioChunksRef.current.push(event.data);
-                };
-
-                mediaRecorderRef.current.onstop = () => {
-                   // Logic handled in stop/send
-                };
-
-                mediaRecorderRef.current.start();
-                setIsRecording(true);
-                setRecordingDuration(0);
-                recordingTimerRef.current = setInterval(() => {
-                    setRecordingDuration(prev => prev + 1);
-                }, 1000);
-            } catch (err) {
-                console.error("Mic Error:", err);
-                toast.error("Microphone access denied");
-            }
-        } else {
-            toast.error("Audio recording not supported");
-        }
+    const getOtherUserId = () => {
+        if (!conversation) return null;
+        const other = conversation.participants.find(p => p._id !== user._id);
+        return other ? other._id : null;
     };
 
-    const stopRecording = () => {
-        if (mediaRecorderRef.current && isRecording) {
-            mediaRecorderRef.current.stop();
-            mediaRecorderRef.current.stream.getTracks().forEach(track => track.stop());
-            clearInterval(recordingTimerRef.current);
-            setIsRecording(false);
-        }
+    const getOtherUser = () => {
+        if (!conversation) return {};
+        return conversation.participants.find(p => p._id !== user._id) || conversation.participants[0];
     };
 
-    const cancelRecording = () => {
-        stopRecording();
-        audioChunksRef.current = [];
-    };
+    // --- Sending Logic ---
+    const handleSend = async (content = newMessage, type = 'text', attachments = [], pollData = null, locationData = null) => {
+        if (!content.trim() && attachments.length === 0 && !pollData && !locationData && type === 'text') return;
 
-    const sendRecording = () => {
-        if (mediaRecorderRef.current) {
-            mediaRecorderRef.current.onstop = async () => {
-                 const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
-                 const file = new File([audioBlob], "voice_message.webm", { type: 'audio/webm' });
-
-                 setIsSending(true);
-                 try {
-                     const { url } = await API.uploadFile(file);
-                     await handleSend('', 'audio', null, [{ url, type: 'audio', duration: recordingDuration }]);
-                 } catch (err) {
-                     toast.error("Failed to send audio");
-                 } finally {
-                     setIsSending(false);
-                 }
-                 clearInterval(recordingTimerRef.current);
-                 setIsRecording(false);
-            };
-            mediaRecorderRef.current.stop();
-            mediaRecorderRef.current.stream.getTracks().forEach(track => track.stop());
-        }
-    };
-
-
-    const handleSend = async (overrideContent = null, overrideType = 'text', fileUrl = null, attachments = [], pollData = null, locationData = null) => {
-        const content = overrideContent !== null ? overrideContent : newMessage;
-        if (!content.trim() && attachments.length === 0 && !fileUrl && !pollData && !locationData && overrideType === 'text') return;
-
-        setIsSending(true);
-
-        // Optimistic UI Update
+        // Optimistic Update
         const tempId = Date.now().toString();
         const optimisticMsg = {
             _id: tempId,
-            conversationId: conversation._id,
-            sender: currentUser,
+            conversationId,
+            sender: user,
             content,
-            type: overrideType,
+            type,
             attachments,
             pollData,
             locationData,
             createdAt: new Date().toISOString(),
-            isPending: true
+            isPending: true,
+            replyTo // Include reply context
         };
 
         setMessages(prev => [...prev, optimisticMsg]);
@@ -245,50 +166,35 @@ const ChatWindow = ({ conversation, currentUser, socket, onBack, onMessageSent, 
         setReplyTo(null);
         setSelectedFiles([]);
         scrollToBottom();
+        setIsSending(true);
 
         try {
-            const sentMsg = await API.post('/messages', {
-                conversationId: conversation._id,
+            const res = await API.post('/messages', {
+                conversationId,
                 content,
-                type: overrideType,
-                fileUrl,
+                type,
                 attachments,
                 pollData,
-                locationData
+                locationData,
+                replyTo: replyTo?._id
             });
 
-            // Replace optimistic message
-            setMessages(prev => prev.map(m => m._id === tempId ? sentMsg : m));
-            if (onMessageSent) onMessageSent(sentMsg);
-
-            socket.emit('send_message', {
-                ...sentMsg,
-                receiverId: otherUser._id
-            });
+            setMessages(prev => prev.map(m => m._id === tempId ? res : m));
+            socket.emit('send_message', { ...res, receiverId: getOtherUserId() });
         } catch (err) {
-            console.error("Failed to send", err);
-            toast.error("Failed to send message");
-            // Remove optimistic message on fail
+            console.error(err);
+            toast.error("Failed to send");
             setMessages(prev => prev.filter(m => m._id !== tempId));
         } finally {
             setIsSending(false);
         }
     };
 
-    const handleFileSelect = (e) => {
-        const files = Array.from(e.target.files);
-        if (files.length === 0) return;
-        setSelectedFiles(prev => [...prev, ...files]);
-        e.target.value = null; // Reset
-    };
-
-    const handleUploadAndSend = async () => {
-        if (selectedFiles.length === 0 && !newMessage.trim()) return;
+    const handleFileUpload = async () => {
+        if (selectedFiles.length === 0) return;
         setIsUploading(true);
-        setIsSending(true);
-
         try {
-            const attachments = [];
+            const uploadedAttachments = [];
             for (const file of selectedFiles) {
                 const { url } = await API.uploadFile(file);
                 let type = 'file';
@@ -296,536 +202,339 @@ const ChatWindow = ({ conversation, currentUser, socket, onBack, onMessageSent, 
                 else if (file.type.startsWith('video')) type = 'video';
                 else if (file.type.startsWith('audio')) type = 'audio';
 
-                attachments.push({
+                uploadedAttachments.push({
                     url, type, name: file.name, size: file.size
                 });
             }
-            await handleSend(newMessage, attachments.length > 0 ? (attachments[0].type === 'image' ? 'image' : 'file') : 'text', null, attachments);
+            const primaryType = uploadedAttachments[0].type === 'image' ? 'image' : 'file';
+            await handleSend(newMessage, primaryType, uploadedAttachments);
         } catch (err) {
             toast.error("Upload failed");
         } finally {
             setIsUploading(false);
-            setIsSending(false);
         }
-    }
-
-    const handleLocation = () => {
-        if (!navigator.geolocation) return toast.error("Geolocation is not supported by your browser");
-
-        navigator.geolocation.getCurrentPosition(async (position) => {
-            const { latitude, longitude } = position.coords;
-            await handleSend('Shared a location', 'location', null, [], null, {
-                latitude, longitude
-            });
-        }, () => {
-            toast.error("Unable to retrieve your location");
-        });
-        setShowPlusMenu(false);
     };
 
-    const handlePollSubmit = async (pollData) => {
-        await handleSend('Created a poll', 'poll', null, [], pollData);
-    };
-
-    const handleVote = async (msgId, optionIndex) => {
+    // --- Voice Recording ---
+    const startRecording = async () => {
         try {
-             await API.put(`/messages/${msgId}/vote`, { optionIndex });
-        } catch (err) {
-            toast.error("Failed to vote");
-        }
+            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            mediaRecorderRef.current = new MediaRecorder(stream);
+            audioChunksRef.current = [];
+
+            mediaRecorderRef.current.ondataavailable = e => audioChunksRef.current.push(e.data);
+            mediaRecorderRef.current.start();
+            setIsRecording(true);
+            setRecordingDuration(0);
+            recordingTimerRef.current = setInterval(() => setRecordingDuration(p => p + 1), 1000);
+        } catch (e) { toast.error("Microphone access denied"); }
     };
 
-    const deleteMessage = async (msgId) => {
-        if (!window.confirm("Unsend this message?")) return;
-        try {
-            setMessages(prev => prev.filter(m => m._id !== msgId));
-            await API.deleteMessage(msgId);
-        } catch (err) {
-            toast.error("Failed to unsend");
-        }
-    };
-
-    const onEmojiClick = (emojiObject) => {
-        setNewMessage(prev => prev + emojiObject.emoji);
-        setShowEmojiPicker(false);
-    };
-
-    const toggleAudio = (url) => {
-        const audio = audioRefs.current[url];
-        if (!audio) return;
-        if (playingAudio === url) {
-            audio.pause();
-            setPlayingAudio(null);
-        } else {
-            if (playingAudio && audioRefs.current[playingAudio]) {
-                audioRefs.current[playingAudio].pause();
-                audioRefs.current[playingAudio].currentTime = 0;
+    const stopRecording = (shouldSend) => {
+        if (!mediaRecorderRef.current) return;
+        mediaRecorderRef.current.onstop = async () => {
+            clearInterval(recordingTimerRef.current);
+            setIsRecording(false);
+            if (shouldSend) {
+                const blob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
+                const file = new File([blob], "voice.webm", { type: 'audio/webm' });
+                setIsUploading(true);
+                try {
+                    const { url } = await API.uploadFile(file);
+                    await handleSend('', 'audio', [{ url, type: 'audio', duration: recordingDuration }]);
+                } catch(e) { toast.error("Failed to send audio"); }
+                setIsUploading(false);
             }
-            audio.play();
-            setPlayingAudio(url);
-            audio.onended = () => setPlayingAudio(null);
-        }
+        };
+        mediaRecorderRef.current.stop();
+        mediaRecorderRef.current.stream.getTracks().forEach(t => t.stop());
     };
 
-    const updateSettings = async (updates) => {
-        try {
-            const newSettings = { ...conversationSettings, ...updates };
-            setConversationSettings(newSettings);
-            await API.put(`/messages/conversations/${conversation._id}/settings`, updates);
-            toast.success("Settings updated");
-        } catch (err) {
-            toast.error("Failed to update settings");
-        }
-    };
-
-    const handleMute = async () => {
-        try {
-            await API.put(`/messages/conversations/${conversation._id}/mute`);
-            setIsMuted(!isMuted);
-            toast.success(isMuted ? "Notifications unmuted" : "Notifications muted");
-        } catch(e) { toast.error("Failed to mute"); }
-    };
-
-    const handleBlock = async () => {
-        if(!window.confirm(`Block ${otherUser.firstName}?`)) return;
-        try {
-            await API.put(`/users/${otherUser._id}/block`);
-            toast.success("User blocked");
-            onBack();
-        } catch(e) {
-            console.error("Block failed", e);
-            toast.error("Failed to block. Try again.");
-        }
-    };
-
-    const handleDeleteConversation = () => {
-        if(!window.confirm("Delete this conversation?")) return;
-        onDeleteConversation(conversation._id);
-    };
-
-    // --- Message Rendering Helpers ---
-    const renderContent = (msg, isMe) => {
-        if (msg.isDeletedForEveryone) {
-            return <em className="text-muted">Message unsent</em>;
-        }
-
-        if (msg.type === 'system') {
-            return <div className="text-center small text-secondary my-2">{msg.content}</div>;
-        }
-
-        if (msg.type === 'call_log') { // Template for call logs
-             return (
-                 <div className="d-flex align-items-center gap-2 p-2 bg-white border rounded-3 text-secondary">
-                     <div className="bg-light rounded-circle p-2"><FaPhoneSlash /></div>
-                     <div>
-                         <div className="fw-bold">{msg.content}</div>
-                         <small className="text-muted">Tap to call back</small>
-                     </div>
-                     <button className="btn btn-primary btn-sm rounded-circle ms-2" onClick={() => callUser(otherUser._id, false)}><FaPhone size={12} /></button>
-                 </div>
-             );
-        }
-
-        if (msg.type === 'location' && msg.locationData) {
-            const { latitude, longitude } = msg.locationData;
-            const mapUrl = `https://www.google.com/maps?q=${latitude},${longitude}`;
-            return (
-                <div className="bg-white p-2 rounded-3 cursor-pointer" style={{width: 200}}>
-                    <a href={mapUrl} target="_blank" rel="noopener noreferrer" className="d-block text-decoration-none text-dark">
-                        <div className="bg-light d-flex align-items-center justify-content-center rounded mb-2" style={{height: 100}}>
-                            <FaLocationDot size={32} className="text-danger" />
-                        </div>
-                        <div className="fw-bold small">Location</div>
-                        <small className="text-muted d-block text-truncate">View on Maps</small>
-                    </a>
-                </div>
-            );
-        }
-
-        if (msg.type === 'poll' && msg.pollData) {
-             const { question, options, allowMultipleAnswers } = msg.pollData;
-             const totalVotes = options.reduce((acc, opt) => acc + opt.votes.length, 0);
-
-             return (
-                 <div className="bg-white p-3 rounded-3 shadow-sm cursor-pointer" style={{minWidth: 250}}>
-                     <div className="fw-bold mb-2">{question}</div>
-                     <small className="text-muted mb-3 d-block">{allowMultipleAnswers ? 'Multiple Choice' : 'Select one'}</small>
-                     <div className="d-flex flex-column gap-2">
-                         {options.map((opt, idx) => {
-                             const isVoted = opt.votes.includes(currentUser._id);
-                             const percent = totalVotes > 0 ? (opt.votes.length / totalVotes) * 100 : 0;
-                             return (
-                                 <div key={idx} className="cursor-pointer" onClick={() => handleVote(msg._id, idx)}>
-                                     <div className="d-flex justify-content-between small mb-1">
-                                         <span>{opt.text}</span>
-                                         <span>{opt.votes.length}</span>
-                                     </div>
-                                     <div className="progress" style={{height: 8}}>
-                                         <div className={`progress-bar ${isVoted ? 'bg-primary' : 'bg-secondary'}`} style={{width: `${percent}%`}}></div>
-                                     </div>
-                                 </div>
-                             );
-                         })}
-                     </div>
-                 </div>
-             );
-        }
-
-        return (
-            <div
-                className={`px-3 py-2 ${msg.type === 'text' ? (isMe ? 'text-white' : 'text-dark') : ''} ${msg.isPending ? 'opacity-75' : ''}`}
-                style={{
-                    backgroundColor: msg.type === 'text' ? (isMe ? conversationSettings.theme : '#f0f2f5') : 'transparent',
-                    borderRadius: '18px',
-                    borderBottomRightRadius: isMe ? '4px' : '18px',
-                    borderBottomLeftRadius: !isMe ? '4px' : '18px',
-                    wordWrap: 'break-word',
-                    cursor: 'pointer'
-                }}
-            >
-                {msg.content}
-            </div>
+    // --- Location ---
+    const handleLocation = () => {
+        if (!navigator.geolocation) return toast.error("Geolocation not supported");
+        navigator.geolocation.getCurrentPosition(
+            (pos) => {
+                handleSend('Shared Location', 'location', [], null, {
+                    latitude: pos.coords.latitude,
+                    longitude: pos.coords.longitude
+                });
+                setShowPlusMenu(false);
+            },
+            () => toast.error("Unable to get location")
         );
     };
 
-    const renderAttachment = (att, index) => {
-        const url = att.url || att;
-        const type = att.type || 'file';
-
-        if (type === 'image') {
-            return (
-                <img
-                    key={index} src={url} alt="att"
-                    className="rounded-3 cursor-pointer shadow-sm"
-                    style={{maxHeight: '200px', maxWidth: '100%', objectFit: 'cover'}}
-                    onClick={() => setLightboxMedia({url, type})}
-                />
-            );
-        }
-        if (type === 'sticker') {
-            return (
-                <img
-                    key={index} src={url} alt="sticker"
-                    className="cursor-pointer hover-scale"
-                    style={{width: 120, height: 120, objectFit: 'contain'}}
-                />
-            );
-        }
-        if (type === 'video') {
-            return (
-                <div key={index} className="position-relative rounded-3 overflow-hidden cursor-pointer" onClick={() => setLightboxMedia({url, type})}>
-                    <video src={url} className="w-100" style={{maxHeight: '200px', objectFit: 'cover'}} />
-                    <div className="position-absolute top-50 start-50 translate-middle text-white">
-                        <FaPlay size={24} />
-                    </div>
-                </div>
-            );
-        }
-        if (type === 'audio') {
-            const isPlaying = playingAudio === url;
-            return (
-                <div key={index} className="d-flex align-items-center gap-2 p-2 bg-white rounded-pill border shadow-sm" style={{minWidth: '200px'}}>
-                    <button className="btn btn-primary rounded-circle btn-sm p-0 d-flex align-items-center justify-content-center" style={{width: 30, height: 30}} onClick={() => toggleAudio(url)}>
-                        {isPlaying ? <FaPause size={12}/> : <FaPlay size={12}/>}
-                    </button>
-                    <div className="flex-grow-1 mx-1" style={{height: 4, background: '#eee'}}>
-                        <div className="h-100 bg-primary" style={{width: isPlaying ? '100%' : '0%', transition: 'width 0.2s linear'}}></div>
-                    </div>
-                    <small className="text-muted" style={{fontSize: '0.7rem'}}>{formatDuration(att.duration || 0)}</small>
-                    <audio ref={el => audioRefs.current[url] = el} src={url} />
-                </div>
-            );
-        }
-        return (
-            <div key={index} className="d-flex align-items-center gap-2 p-2 bg-dark text-white rounded-3 cursor-pointer" onClick={() => window.open(url, '_blank')}>
-                <div className="p-2 bg-secondary rounded-circle"><FaFile /></div>
-                <div className="overflow-hidden">
-                    <div className="text-truncate fw-bold" style={{maxWidth: '150px'}}>{att.name || 'File'}</div>
-                    <small style={{fontSize: '0.7rem'}}>{att.size ? (att.size/1024/1024).toFixed(2) + ' MB' : 'Download'}</small>
-                </div>
-            </div>
-        );
-    };
-
-    // --- Double Tap & Long Press & Swipe ---
-    const tapTimeout = useRef(null);
-    const lastTap = useRef(0);
-
-    const handleTouchStart = (msg) => {
-        const now = Date.now();
-        if (now - lastTap.current < 300) {
-            // Double Tap
-            handleReaction(msg, '❤️');
-            lastTap.current = 0;
-        } else {
-            lastTap.current = now;
-        }
-    };
-
+    // --- Actions ---
     const handleReaction = async (msg, emoji) => {
         try {
-             const updated = await API.put(`/messages/${msg._id}/react`, { emoji });
-             setMessages(prev => prev.map(m => m._id === updated._id ? updated : m));
-        } catch (err) {
-            console.error(err);
+            setMessages(prev => prev.map(m => {
+                if (m._id === msg._id) {
+                    const existingIdx = m.reactions?.findIndex(r => r.user === user._id || r.user._id === user._id);
+                    let newReactions = m.reactions ? [...m.reactions] : [];
+                    if (existingIdx > -1) {
+                         if (newReactions[existingIdx].emoji === emoji) newReactions.splice(existingIdx, 1);
+                         else newReactions[existingIdx].emoji = emoji;
+                    } else {
+                        newReactions.push({ user, emoji });
+                    }
+                    return { ...m, reactions: newReactions };
+                }
+                return m;
+            }));
+            await API.put(`/messages/${msg._id}/react`, { emoji });
+        } catch (e) { console.error(e); }
+    };
+
+    // --- Swipe Handlers ---
+    const onTouchStart = (e) => {
+        touchEndRef.current = null;
+        touchStartRef.current = e.targetTouches[0].clientX;
+    };
+    const onTouchMove = (e) => {
+        touchEndRef.current = e.targetTouches[0].clientX;
+    };
+    const onTouchEnd = (msg) => {
+        if (!touchStartRef.current || !touchEndRef.current) return;
+        const distance = touchStartRef.current - touchEndRef.current;
+        // Swipe Right (Drag left to right) is usually negative distance in X coords?
+        // Wait, Start (Left) - End (Right) = Negative.
+        // If I drag from left (50) to right (200): 50 - 200 = -150.
+        // Yes, swipe right.
+        if (distance < -50) {
+            setReplyTo(msg);
         }
     };
 
-    const formatDuration = (seconds) => {
-        if (!seconds || isNaN(seconds)) return "0:00";
-        const mins = Math.floor(seconds / 60);
-        const secs = Math.floor(seconds % 60);
-        return `${mins}:${secs < 10 ? '0' : ''}${secs}`;
+    const handleDeleteMessage = async (msgId) => {
+        if (!window.confirm("Unsend for everyone?")) return;
+        try {
+            await API.delete( `/messages/${msgId}?mode=everyone`);
+            setMessages(prev => prev.map(m => m._id === msgId ? { ...m, isDeletedForEveryone: true, content: 'Message unsent', attachments: [] } : m));
+        } catch(e) { toast.error("Failed"); }
     };
 
-    const getNickname = (user) => {
-        return (conversationSettings.nicknames && conversationSettings.nicknames[user._id]) || user.firstName;
-    }
+    // --- Renderers ---
+    if (!conversation) return <div className="h-100 d-flex align-items-center justify-content-center">Loading...</div>;
+
+    const otherUser = getOtherUser();
+    const nickname = conversation.nicknames?.[otherUser._id] || otherUser.firstName;
+    const themeColor = conversation.theme || '#003399';
+
+    const renderContent = (msg, isMe) => {
+        if (msg.type === 'location' && msg.locationData) {
+            return (
+                <div className="bg-white p-2 rounded-3 cursor-pointer" style={{width: 200}}>
+                     <a href={`https://www.google.com/maps?q=${msg.locationData.latitude},${msg.locationData.longitude}`} target="_blank" className="text-decoration-none text-dark">
+                         <div className="bg-light d-flex align-items-center justify-content-center rounded mb-2" style={{height: 100}}>
+                             <FaLocationDot size={32} className="text-danger" />
+                         </div>
+                         <div className="fw-bold small">Shared Location</div>
+                     </a>
+                </div>
+            );
+        }
+        if (msg.type === 'poll' && msg.pollData) {
+            return (
+                <div className="bg-white p-3 rounded-3 shadow-sm cursor-pointer" style={{minWidth: 200}}>
+                    <div className="fw-bold mb-2">{msg.pollData.question}</div>
+                    <small className="text-muted d-block mb-2">Tap to vote</small>
+                    <button className="btn btn-sm btn-outline-primary w-100" onClick={() => setShowPollModal(true)}>View Poll</button>
+                </div>
+            );
+        }
+        return msg.content;
+    };
 
     return (
-        <div className="d-flex h-100 w-100 overflow-hidden">
-            <div className="d-flex flex-column h-100 w-100 flex-grow-1 bg-white position-relative" onClick={() => { setMenuOpenId(null); setShowPlusMenu(false); setShowStickerPicker(false); }}>
-                {/* Header */}
-                <div className="p-2 border-bottom d-flex align-items-center justify-content-between shadow-sm flex-shrink-0" style={{height: '60px'}}>
-                    <div className="d-flex align-items-center">
-                        <button className="btn btn-messenger text-primary d-md-none me-2 cursor-pointer" onClick={onBack}><FaArrowLeft size={20}/></button>
-                        <div className="me-2 cursor-pointer" onClick={() => setShowInfoModal(true)}>
-                            <UserAvatar user={otherUser} size={40} showOnlineStatus={true} isOnline={otherUser.isOnline} />
-                        </div>
-                        <div className="cursor-pointer" onClick={() => setShowInfoModal(true)}>
-                            <h6 className="mb-0 fw-bold">{getNickname(otherUser)} {otherUser.lastName}</h6>
-                            <small className="text-muted" style={{fontSize: '0.75rem'}}>
-                                {otherUser.isOnline ? 'Active now' : (otherUser.lastSeen ? `Active ${Math.floor((new Date() - new Date(otherUser.lastSeen))/60000)}m ago` : 'Offline')}
-                            </small>
-                        </div>
+        <div className="d-flex flex-column h-100 bg-white position-relative">
+            {/* Header */}
+            <div className="d-flex align-items-center justify-content-between p-2 border-bottom shadow-sm" style={{height: 60}}>
+                <div className="d-flex align-items-center gap-2">
+                    <button className="btn btn-messenger d-md-none text-primary" onClick={onBack}><FaArrowLeft /></button>
+                    <div className="cursor-pointer" onClick={() => setShowInfoModal(true)}>
+                        <UserAvatar user={otherUser} size={40} showOnlineStatus={true} isOnline={otherUser.isOnline} />
                     </div>
-                    <div className="d-flex gap-2 text-primary me-2">
-                        <div className="btn-messenger" onClick={() => callUser(otherUser._id, false)}><FaPhone size={20} /></div>
-                        <div className="btn-messenger" onClick={() => callUser(otherUser._id, true)}><FaVideo size={20} /></div>
-                        <div className="btn-messenger" onClick={() => setShowInfoModal(true)}><FaCircleInfo size={20} /></div>
+                    <div className="cursor-pointer" onClick={() => setShowInfoModal(true)}>
+                        <div className="fw-bold lh-1">{nickname} {otherUser.lastName}</div>
+                        <small className="text-muted" style={{fontSize: '0.75rem'}}>
+                            {otherUser.isOnline ? 'Active now' : 'Offline'}
+                        </small>
                     </div>
                 </div>
+                <div className="d-flex gap-3 text-primary me-2">
+                    <FaPhone size={20} className="cursor-pointer" onClick={() => callUser(otherUser._id, false)} />
+                    <FaVideo size={20} className="cursor-pointer" onClick={() => callUser(otherUser._id, true)} />
+                    <FaCircleInfo size={20} className="cursor-pointer" onClick={() => setShowInfoModal(true)} />
+                </div>
+            </div>
 
-                {/* Messages Area */}
-                <div className="flex-grow-1 overflow-auto p-3 d-flex flex-column gap-1 w-100">
-                    {messages.map((msg, idx) => {
-                        const isMe = msg.sender._id === currentUser._id || msg.sender === currentUser._id;
-                        const isSystem = msg.type === 'system' || msg.type === 'call_log';
-                        const isLast = idx === messages.length - 1 || messages[idx+1]?.sender._id !== msg.sender._id;
-                        const isMenuOpen = menuOpenId === msg._id;
+            {/* Messages */}
+            <div className="flex-grow-1 overflow-auto p-3 d-flex flex-column gap-1" onClick={() => { setShowPlusMenu(false); setShowEmojiPicker(false); setShowStickerPicker(false); setMenuOpenId(null); }}>
+                {messages.map((msg, i) => {
+                    const isMe = msg.sender._id === user._id;
+                    const isContinuous = messages[i+1]?.sender._id === msg.sender._id;
 
-                        if (isSystem) {
-                             if (msg.type === 'call_log') {
-                                 return <div key={msg._id} className="w-100 d-flex justify-content-center my-2">{renderContent(msg, false)}</div>
-                             }
-                             return <div key={msg._id} className="text-center small text-secondary my-2 w-100">{msg.content}</div>;
-                        }
-
+                    if (msg.type === 'system' || msg.type === 'call_log') {
                         return (
-                            <div
-                                key={msg._id}
-                                className={`d-flex align-items-center gap-2 ${isMe ? 'flex-row-reverse' : ''} mb-1 position-relative message-row`}
-                                onContextMenu={(e) => { e.preventDefault(); setMenuOpenId(msg._id); }}
-                                onTouchStart={onTouchStart}
-                                onTouchMove={onTouchMove}
-                                onTouchEnd={() => onTouchEnd(msg)}
-                            >
-                                {!isMe && (
-                                    <div style={{width: 28}}>
-                                        {isLast && <UserAvatar user={otherUser} size={28} />}
+                            <div key={msg._id} className="text-center my-3">
+                                {msg.type === 'call_log' ? (
+                                    <div className="d-inline-flex align-items-center gap-2 bg-light px-3 py-2 rounded-pill text-secondary border">
+                                        <FaPhoneSlash /> <span>{msg.content}</span>
                                     </div>
-                                )}
-
-                                {/* Hover Actions (Desktop) - Left of My Message, Right of Their Message */}
-                                <div className={`message-actions d-none d-md-flex gap-1 ${isMe ? 'order-1 me-2' : 'order-2 ms-2'}`} style={{zIndex: 1}}>
-                                    <div className="btn-messenger text-muted" style={{width: 24, height: 24}} onClick={() => handleReaction(msg, '👍')} title="Like"><FaThumbsUp size={12} /></div>
-                                    <div className="btn-messenger text-muted" style={{width: 24, height: 24}} onClick={() => setReplyTo(msg)} title="Reply"><FaReply size={12} /></div>
-                                    <div className="btn-messenger text-muted" style={{width: 24, height: 24}} onClick={() => setMenuOpenId(msg._id)}><FaEllipsisVertical size={12} /></div>
-                                </div>
-
-                                <div className={`d-flex flex-column ${isMe ? 'align-items-end order-2' : 'align-items-start order-1'}`} style={{maxWidth: '70%'}}>
-                                    {msg.attachments && msg.attachments.length > 0 && (
-                                        <div className="d-flex flex-column gap-1 mb-1">
-                                            {msg.attachments.map((att, i) => renderAttachment(att, i))}
-                                        </div>
-                                    )}
-                                    {msg.content || msg.type === 'poll' || msg.type === 'location' ? (
-                                        <div
-                                            onClick={() => handleTouchStart(msg)}
-                                        >
-                                            {renderContent(msg, isMe)}
-                                        </div>
-                                    ) : null}
-
-                                    {/* Reactions */}
-                                    {msg.reactions && msg.reactions.length > 0 && (
-                                        <div className="position-absolute bg-white rounded-pill shadow-sm px-1 border cursor-pointer" style={{bottom: -10, [isMe ? 'right' : 'left']: 0, fontSize: '0.8rem', zIndex: 1}}>
-                                            {msg.reactions.map((r, i) => <span key={i}>{r.emoji}</span>)}
-                                        </div>
-                                    )}
-                                </div>
-
-                                {/* Message Actions Menu (Popover) - Mobile Long Press or Desktop Click */}
-                                {isMenuOpen && (
-                                    <div
-                                        className={`position-absolute bg-white shadow rounded-3 p-1 z-3 d-flex gap-2`}
-                                        style={{
-                                            bottom: '100%',
-                                            [isMe ? 'right' : 'left']: '0',
-                                            marginBottom: '5px'
-                                        }}
-                                        onClick={(e) => e.stopPropagation()}
-                                    >
-                                        <button className="btn btn-sm btn-light rounded-circle cursor-pointer" onClick={() => setReplyTo(msg)} title="Reply">
-                                            <FaReply size={12} />
-                                        </button>
-                                        {isMe && (
-                                            <button className="btn btn-sm btn-light rounded-circle text-danger cursor-pointer" onClick={() => deleteMessage(msg._id)} title="Unsend">
-                                                <FaTrash size={12} />
-                                            </button>
-                                        )}
-                                    </div>
+                                ) : (
+                                    <small className="text-muted">{msg.content}</small>
                                 )}
                             </div>
                         );
-                    })}
-                    <div ref={messagesEndRef} />
-                </div>
+                    }
 
-                {/* Media Preview before send */}
-                <MediaPreview
-                    files={selectedFiles}
-                    onRemove={(idx) => setSelectedFiles(prev => prev.filter((_, i) => i !== idx))}
-                    onAddMore={() => fileInputRef.current.click()}
-                />
-
-                {/* Footer */}
-                <div className="p-2 border-top position-relative flex-shrink-0 bg-white" style={{zIndex: 10}}>
-                    {replyTo && (
-                        <div className="px-3 py-2 bg-light border-bottom d-flex justify-content-between align-items-center">
-                            <small className="text-muted">Replying to {replyTo.sender._id === currentUser._id ? 'yourself' : otherUser.firstName}</small>
-                            <button className="btn-close btn-sm" onClick={() => setReplyTo(null)}></button>
-                        </div>
-                    )}
-
-                    <div className="d-flex align-items-center gap-2 pt-2">
-                        {showEmojiPicker && (
-                            <div className="position-absolute bottom-100 start-0 mb-2 ms-3 shadow-lg z-3">
-                                <EmojiPicker onEmojiClick={onEmojiClick} />
-                            </div>
-                        )}
-
-                        {/* Sticker Picker */}
-                        {showStickerPicker && (
-                            <div className="position-absolute bottom-100 start-0 mb-2 ms-3 shadow-lg z-3">
-                                <StickerPicker onSelect={(url) => {
-                                    handleSend('', 'sticker', null, [{ url, type: 'sticker' }]);
-                                    setShowStickerPicker(false);
-                                }} />
-                            </div>
-                        )}
-
-                        {/* Plus Menu Popup */}
-                        {showPlusMenu && (
-                             <div className="position-absolute bottom-100 start-0 mb-2 ms-2 bg-white shadow-lg rounded-3 p-2 z-3 d-flex flex-column gap-2" style={{minWidth: 150}}>
-                                 <div className="d-flex align-items-center gap-2 p-2 hover-bg-light rounded cursor-pointer" onClick={() => setShowPollModal(true)}>
-                                     <div className="bg-warning text-white rounded-circle p-1 d-flex align-items-center justify-content-center" style={{width:30, height:30}}><FaSquarePollVertical /></div>
-                                     <span className="small fw-bold cursor-pointer">Polls</span>
+                    return (
+                        <div key={msg._id}
+                            className={`d-flex ${isMe ? 'justify-content-end' : 'justify-content-start'} mb-1 position-relative group`}
+                            onTouchStart={onTouchStart}
+                            onTouchMove={onTouchMove}
+                            onTouchEnd={() => onTouchEnd(msg)}
+                            onContextMenu={(e) => { e.preventDefault(); setMenuOpenId(msg._id); }}
+                        >
+                             {!isMe && (
+                                 <div className="me-2" style={{width: 28, opacity: isContinuous ? 0 : 1}}>
+                                     <UserAvatar user={otherUser} size={28} />
                                  </div>
-                                 <div className="d-flex align-items-center gap-2 p-2 hover-bg-light rounded cursor-pointer" onClick={handleLocation}>
-                                     <div className="bg-danger text-white rounded-circle p-1 d-flex align-items-center justify-content-center" style={{width:30, height:30}}><FaLocationDot /></div>
-                                     <span className="small fw-bold cursor-pointer">Location</span>
-                                 </div>
+                             )}
+
+                             <div className="position-relative" style={{ maxWidth: '75%' }}>
+                                 {msg.replyTo && (
+                                     <div className="small text-muted mb-1 ms-2 border-start border-2 ps-2">
+                                         Replying to {msg.replyTo.sender.firstName}: {msg.replyTo.content || 'Attachment'}
+                                     </div>
+                                 )}
+
+                                 {msg.isDeletedForEveryone ? (
+                                     <div className="border px-3 py-2 rounded-3 text-muted fst-italic bg-light">Message unsent</div>
+                                 ) : (
+                                     <div
+                                         className={`px-3 py-2 ${msg.type === 'text' ? (isMe ? 'text-white' : 'text-dark') : ''}`}
+                                         style={{
+                                             backgroundColor: msg.type === 'text' ? (isMe ? themeColor : '#e4e6eb') : 'transparent',
+                                             borderRadius: '18px',
+                                             borderBottomRightRadius: isMe && isContinuous ? '4px' : '18px',
+                                             borderTopRightRadius: isMe && !isContinuous ? '18px' : (isMe ? '4px' : '18px'),
+                                             borderBottomLeftRadius: !isMe && isContinuous ? '4px' : '18px',
+                                             borderTopLeftRadius: !isMe && !isContinuous ? '18px' : (!isMe ? '4px' : '18px'),
+                                         }}
+                                         onDoubleClick={() => handleReaction(msg, '❤️')}
+                                     >
+                                         {msg.attachments?.map((att, idx) => (
+                                             <div key={idx} className="mb-1">
+                                                 {att.type === 'image' && <img src={att.url} className="rounded-3 mw-100 cursor-pointer" onClick={() => setLightboxMedia(att)} />}
+                                                 {att.type === 'video' && <video src={att.url} controls className="rounded-3 mw-100" />}
+                                                 {att.type === 'audio' && (
+                                                     <div className="d-flex align-items-center gap-2 bg-white rounded-pill px-2 py-1 border shadow-sm" style={{minWidth: 150}}>
+                                                         <button className="btn btn-sm btn-primary rounded-circle" onClick={() => {
+                                                             const a = audioRefs.current[att.url];
+                                                             if(a?.paused) a.play(); else a?.pause();
+                                                         }}><FaPlay size={10} /></button>
+                                                         <audio ref={el => audioRefs.current[att.url] = el} src={att.url} />
+                                                     </div>
+                                                 )}
+                                                 {att.type === 'sticker' && <img src={att.url} style={{width: 120}} />}
+                                             </div>
+                                         ))}
+                                         {renderContent(msg, isMe)}
+                                     </div>
+                                 )}
+
+                                 {msg.reactions?.length > 0 && (
+                                     <div className="position-absolute bg-white rounded-pill px-1 shadow-sm border" style={{bottom: -10, [isMe ? 'right' : 'left']: 0, fontSize: '0.8rem'}}>
+                                         {msg.reactions.map((r, idx) => <span key={idx}>{r.emoji}</span>)}
+                                     </div>
+                                 )}
                              </div>
-                        )}
 
-                        <input type="file" ref={fileInputRef} className="d-none" multiple onChange={handleFileSelect} />
-
-                        {/* Plus Button */}
-                        <div className={`btn-messenger ${showPlusMenu ? 'rotate-45' : ''}`} style={{transition: 'transform 0.2s', zIndex: 11}} onClick={() => setShowPlusMenu(!showPlusMenu)}>
-                             <FaPlus className="text-primary" size={20} />
+                             {menuOpenId === msg._id && (
+                                 <div className="position-absolute bg-white shadow rounded p-2 d-flex gap-2 z-3" style={{top: -40, [isMe ? 'right' : 'left']: 0}}>
+                                     <FaReply className="text-secondary cursor-pointer" onClick={() => { setReplyTo(msg); setMenuOpenId(null); }} />
+                                     {isMe && <FaTrash className="text-danger cursor-pointer" onClick={() => handleDeleteMessage(msg._id)} />}
+                                 </div>
+                             )}
                         </div>
-                        <div className="btn-messenger" style={{zIndex: 11}} onClick={() => fileInputRef.current.click()}>
-                             <FaImages className="text-primary" size={20} />
-                        </div>
-                        <div className="btn-messenger" style={{zIndex: 11}} onClick={() => { setShowStickerPicker(!showStickerPicker); setShowEmojiPicker(false); }}>
-                             <FaStickyNote className="text-primary" size={20} />
-                        </div>
-
-                        <div className="flex-grow-1 bg-light rounded-pill px-3 py-2 d-flex align-items-center">
-                            {isRecording ? (
-                                <div className="d-flex align-items-center w-100 text-danger animate-pulse">
-                                     <div className="bg-danger rounded-circle me-2" style={{width:10, height:10}}></div>
-                                     <span className="fw-bold flex-grow-1">{formatDuration(recordingDuration)}</span>
-                                     <div className="btn-messenger text-danger" onClick={cancelRecording}><FaXmark /></div>
-                                </div>
-                            ) : (
-                                <>
-                                    <input
-                                        type="text"
-                                        className="bg-transparent border-0 w-100 no-focus-outline"
-                                        placeholder="Aa"
-                                        value={newMessage}
-                                        onChange={e => setNewMessage(e.target.value)}
-                                        onKeyDown={e => e.key === 'Enter' && !isSending && (selectedFiles.length > 0 ? handleUploadAndSend() : handleSend())}
-                                        disabled={isSending}
-                                    />
-                                    <div className="btn-messenger text-primary" style={{width:30, height:30}} onClick={() => { setShowEmojiPicker(!showEmojiPicker); setShowStickerPicker(false); }}>
-                                         <FaFaceSmile size={20} />
-                                    </div>
-                                </>
-                            )}
-                        </div>
-
-                        {isRecording ? (
-                             <div className={`btn-messenger text-primary ${isSending ? 'opacity-50' : ''}`} onClick={!isSending ? sendRecording : null}><FaPaperPlane size={20} /></div>
-                        ) : (
-                            newMessage || selectedFiles.length > 0 || isUploading ? (
-                                <div className={`btn-messenger text-primary ${(isUploading || isSending) ? 'opacity-50' : ''}`} onClick={(!isUploading && !isSending) ? () => selectedFiles.length > 0 ? handleUploadAndSend() : handleSend() : null}>
-                                     <FaPaperPlane size={20} />
-                                </div>
-                            ) : (
-                                <div className="btn-messenger text-primary" onClick={startRecording}>
-                                     <FaMicrophone size={20} />
-                                </div>
-                            )
-                        )}
-
-                        {!newMessage && !selectedFiles.length && !isRecording && (
-                             <div className="btn-messenger text-primary fs-4" onClick={() => handleSend(conversationSettings.quickReaction, 'text')}>
-                                 {conversationSettings.quickReaction}
-                            </div>
-                        )}
-                    </div>
-                </div>
-
-                {/* Lightbox */}
-                {lightboxMedia && (
-                    <div className="position-fixed top-0 start-0 w-100 h-100 bg-black bg-opacity-90 z-3 d-flex align-items-center justify-content-center p-4" onClick={() => setLightboxMedia(null)} style={{zIndex: 9999}}>
-                        {lightboxMedia.type === 'video' ? (
-                            <video src={lightboxMedia.url} controls autoPlay className="mw-100 mh-100" />
-                        ) : (
-                            <img src={lightboxMedia.url} className="mw-100 mh-100 object-fit-contain" />
-                        )}
-                    </div>
-                )}
-
-                <PollModal show={showPollModal} onClose={() => setShowPollModal(false)} onSubmit={handlePollSubmit} />
-
-                <ChatInfoModal
-                    show={showInfoModal}
-                    onClose={() => setShowInfoModal(false)}
-                    user={otherUser}
-                    conversation={{...conversation, ...conversationSettings}}
-                    currentUser={currentUser}
-                    onUpdateSettings={updateSettings}
-                    onDelete={handleDeleteConversation}
-                    onBlock={handleBlock}
-                    onMute={handleMute}
-                    nickname={getNickname(otherUser)}
-                    isMuted={isMuted}
-                />
+                    );
+                })}
+                <div ref={messagesEndRef} />
             </div>
+
+            {/* Input Area */}
+            <div className="p-2 bg-white border-top">
+                 {replyTo && (
+                     <div className="d-flex justify-content-between align-items-center bg-light p-2 rounded mb-2 border-start border-primary border-4">
+                         <small>Replying to {replyTo.sender.firstName}</small>
+                         <FaXmark className="cursor-pointer" onClick={() => setReplyTo(null)} />
+                     </div>
+                 )}
+
+                 <MediaPreview files={selectedFiles} onRemove={i => setSelectedFiles(p => p.filter((_, idx) => idx !== i))} />
+
+                 <div className="d-flex align-items-center gap-2">
+                     <FaPlus className="text-primary cursor-pointer fs-4" onClick={() => setShowPlusMenu(!showPlusMenu)} />
+                     {showPlusMenu && (
+                         <div className="position-absolute bottom-100 start-0 m-2 bg-white shadow rounded p-2 d-flex flex-column gap-2" style={{width: 150}}>
+                             <div className="d-flex align-items-center gap-2 cursor-pointer p-1 hover-bg-light" onClick={() => setShowPollModal(true)}><FaSquarePollVertical /> Poll</div>
+                             <div className="d-flex align-items-center gap-2 cursor-pointer p-1 hover-bg-light" onClick={handleLocation}><FaLocationDot /> Location</div>
+                             <div className="d-flex align-items-center gap-2 cursor-pointer p-1 hover-bg-light" onClick={() => fileInputRef.current.click()}><FaImages /> Media</div>
+                         </div>
+                     )}
+                     <input type="file" multiple className="d-none" ref={fileInputRef} onChange={e => setSelectedFiles([...selectedFiles, ...e.target.files])} />
+
+                     <div className="flex-grow-1 bg-light rounded-pill px-3 py-2 d-flex align-items-center position-relative">
+                         {isRecording ? (
+                             <div className="d-flex align-items-center w-100 text-danger justify-content-between">
+                                 <div className="record-pulse rounded-circle bg-danger" style={{width: 10, height: 10}}></div>
+                                 <span className="fw-bold">{new Date(recordingDuration * 1000).toISOString().substr(14, 5)}</span>
+                                 <FaXmark className="cursor-pointer" onClick={() => stopRecording(false)} />
+                             </div>
+                         ) : (
+                             <>
+                                <input
+                                    className="bg-transparent border-0 w-100 no-focus-outline"
+                                    placeholder="Aa"
+                                    value={newMessage}
+                                    onChange={e => setNewMessage(e.target.value)}
+                                    onKeyDown={e => e.key === 'Enter' && (selectedFiles.length ? handleFileUpload() : handleSend())}
+                                />
+                                <FaFaceSmile className="text-primary cursor-pointer fs-5" onClick={() => setShowEmojiPicker(!showEmojiPicker)} />
+                             </>
+                         )}
+                     </div>
+
+                     {isRecording ? (
+                         <FaPaperPlane className="text-primary cursor-pointer fs-4" onClick={() => stopRecording(true)} />
+                     ) : (
+                         (newMessage || selectedFiles.length) ? (
+                            <FaPaperPlane className="text-primary cursor-pointer fs-4" onClick={selectedFiles.length ? handleFileUpload : () => handleSend()} />
+                         ) : (
+                             <FaMicrophone className="text-primary cursor-pointer fs-4" onClick={startRecording} />
+                         )
+                     )}
+
+                     {!newMessage && !selectedFiles.length && !isRecording && (
+                         <span className="fs-4 cursor-pointer" onClick={() => handleSend(conversation.quickReaction || '👍', 'text')}>{conversation.quickReaction || '👍'}</span>
+                     )}
+                 </div>
+
+                 {showEmojiPicker && (
+                     <div className="position-absolute bottom-100 right-0 mb-2 shadow"><EmojiPicker onEmojiClick={e => setNewMessage(p => p + e.emoji)} /></div>
+                 )}
+            </div>
+
+            {/* Modals */}
+            <PollModal show={showPollModal} onClose={() => setShowPollModal(false)} onSubmit={(data) => { handleSend('Poll', 'poll', [], data); setShowPollModal(false); }} />
+            <ChatInfoModal show={showInfoModal} onClose={() => setShowInfoModal(false)} user={otherUser} conversation={conversation} currentUser={user} onUpdateSettings={d => setConversation(p => ({...p, ...d}))} />
+            {lightboxMedia && (
+                <div className="position-fixed top-0 start-0 w-100 h-100 bg-black z-3 d-flex justify-content-center align-items-center" onClick={() => setLightboxMedia(null)}>
+                     <img src={lightboxMedia.url} className="mh-100 mw-100" />
+                </div>
+            )}
         </div>
     );
 };
