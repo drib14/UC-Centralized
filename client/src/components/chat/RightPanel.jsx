@@ -4,6 +4,7 @@ import { useChat } from '../../context/ChatContext';
 import { useAuth } from '../../context/AuthContext';
 import UserAvatar from './UserAvatar';
 import { toast } from 'react-toastify';
+import BlockUserModal from './BlockUserModal';
 
 const RightPanel = () => {
     const { selectedConversation } = useChat();
@@ -11,6 +12,7 @@ const RightPanel = () => {
     const [media, setMedia] = useState([]);
     const [files, setFiles] = useState([]);
     const [activeTab, setActiveTab] = useState('overview'); // overview, media, files
+    const [showBlockModal, setShowBlockModal] = useState(false);
 
     useEffect(() => {
         if (selectedConversation) {
@@ -42,15 +44,6 @@ const RightPanel = () => {
         image = other.profileImage;
         otherUser = other;
     }
-
-    const handleBlock = async () => {
-        if (!otherUser) return;
-        if (!window.confirm(`Block ${otherUser.firstName}?`)) return;
-        try {
-            await API.put(`/users/${otherUser._id}/block`);
-            toast.success("User blocked");
-        } catch(e) { toast.error("Failed to block"); }
-    };
 
     return (
         <div className="d-flex flex-column h-100 border-start bg-white">
@@ -90,8 +83,7 @@ const RightPanel = () => {
 
                         {selectedConversation.type !== 'group' && (
                             <div className="mt-4 border-top pt-3">
-                                <button className="btn btn-outline-danger w-100 mb-2" onClick={handleBlock}>Block</button>
-                                <button className="btn btn-danger w-100" onClick={() => toast.error("Report submitted")}>Report</button>
+                                <button className="btn btn-outline-danger w-100 mb-2" onClick={() => setShowBlockModal(true)}>Block / Report</button>
                             </div>
                         )}
                     </div>
@@ -122,6 +114,13 @@ const RightPanel = () => {
                     </div>
                 )}
             </div>
+
+            <BlockUserModal
+                show={showBlockModal}
+                onHide={() => setShowBlockModal(false)}
+                user={otherUser}
+                onBlock={() => setShowBlockModal(false)}
+            />
         </div>
     );
 };

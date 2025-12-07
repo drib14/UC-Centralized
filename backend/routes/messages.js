@@ -5,6 +5,7 @@ const User = require('../models/User');
 const { verifyToken } = require('../middleware/auth');
 const parser = require('../config/cloudinary');
 const { notifyUser } = require('../utils/notificationService');
+const mongoose = require('mongoose');
 
 // --- Helper Functions ---
 const populateConversation = (query) => {
@@ -27,7 +28,7 @@ router.post('/upload', verifyToken, (req, res) => {
     });
 });
 
-// Get unread count - MOVED TO TOP to avoid 500 error on /:conversationId collision
+// Get unread count
 router.get('/unread-count', verifyToken, async (req, res) => {
     try {
         const convs = await Conversation.find({ participants: { $in: [req.user.id] } }).populate('lastMessage');
@@ -83,6 +84,11 @@ router.post('/conversations', verifyToken, async (req, res) => {
             // Create/Find Direct Chat
             if (!receiverId) return res.status(400).json({ message: "Receiver ID required for direct chat" });
 
+            // Check if receiverId is valid ObjectId, otherwise it might be a search query passed mistakenly
+            if (!mongoose.Types.ObjectId.isValid(receiverId)) {
+                 return res.status(400).json({ message: "Invalid user ID" });
+            }
+
             let conv = await Conversation.findOne({
                 type: 'direct',
                 participants: { $all: [senderId, receiverId], $size: 2 }
@@ -95,7 +101,6 @@ router.post('/conversations', verifyToken, async (req, res) => {
                 });
                 await conv.save();
             } else {
-                // If it was archived, unarchive it
                 if (conv.archivedBy.includes(senderId)) {
                     await conv.updateOne({ $pull: { archivedBy: senderId } });
                 }
@@ -110,7 +115,7 @@ router.post('/conversations', verifyToken, async (req, res) => {
     }
 });
 
-// Global Search - MOVED TO TOP to avoid 500 error on /:conversationId collision
+// Global Search
 router.get('/search/global', verifyToken, async (req, res) => {
     try {
         const { q } = req.query;
@@ -124,7 +129,6 @@ router.get('/search/global', verifyToken, async (req, res) => {
             ]
         }).select('firstName lastName profileImage role').limit(5);
 
-        // Find IDs of my convs
         const myConvs = await Conversation.find({ participants: { $in: [req.user.id] } }).select('_id');
         const convIds = myConvs.map(c => c._id);
 
@@ -146,19 +150,18 @@ router.get('/search/global', verifyToken, async (req, res) => {
 // Update Conversation (Group Info, Members, Settings)
 router.put('/conversations/:id', verifyToken, async (req, res) => {
     try {
-        const { name, image, addMembers, removeMembers, theme, quickReaction, nicknames } = req.body;
+        const { name, image, addMembers, removeMembers, theme, quickReaction, nicknames, mute, block, unblock } = req.body;
         const conv = await Conversation.findById(req.params.id);
 
         if (!conv) return res.status(404).json({ message: "Conversation not found" });
 
-        // Group Admin Checks for critical updates
+        // Admin checks for group details
         const isAdmin = conv.admins?.includes(req.user.id);
 
         if (conv.type === 'group') {
             if (name && isAdmin) conv.name = name;
             if (image && isAdmin) conv.image = image;
             if (addMembers && isAdmin) {
-                // Add new members
                 const newMembers = addMembers.filter(id => !conv.participants.includes(id));
                 conv.participants.push(...newMembers);
             }
@@ -167,14 +170,36 @@ router.put('/conversations/:id', verifyToken, async (req, res) => {
             }
         }
 
-        // Customization (Allowed for all participants)
+        // Customization & Settings
         if (theme) conv.theme = theme;
         if (quickReaction) conv.quickReaction = quickReaction;
         if (nicknames) conv.nicknames = { ...conv.nicknames, ...nicknames };
 
+        if (mute !== undefined) {
+            if (mute) {
+                if (!conv.mutedBy.includes(req.user.id)) conv.mutedBy.push(req.user.id);
+            } else {
+                conv.mutedBy = conv.mutedBy.filter(id => id.toString() !== req.user.id);
+            }
+        }
+
+        // Block logic: we don't store "blocked" on conversation usually, but on User model.
+        // But user asked for conversation blocking visual.
+        // Let's store "blockedBy" in conversation for direct chats?
+        // Actually best practice is User.blockedUsers array.
+        // But for this request, let's allow "archived/blocked" state on conversation if simpler.
+        // Let's stick to User model for blocking, but here we can handle the request proxy.
+        if (block && conv.type === 'direct') {
+             const otherId = conv.participants.find(p => p.toString() !== req.user.id);
+             await User.findByIdAndUpdate(req.user.id, { $addToSet: { blockedUsers: otherId } });
+        }
+        if (unblock && conv.type === 'direct') {
+             const otherId = conv.participants.find(p => p.toString() !== req.user.id);
+             await User.findByIdAndUpdate(req.user.id, { $pull: { blockedUsers: otherId } });
+        }
+
         await conv.save();
 
-        // Notify update via socket
         const io = req.app.get('io');
         const populated = await populateConversation(Conversation.findById(conv._id));
 
@@ -190,23 +215,22 @@ router.put('/conversations/:id', verifyToken, async (req, res) => {
     }
 });
 
-// Get Media for Right Panel (Specific Route needs to be before generic :conversationId if it starts with it, but here it is subpath so fine? No, :conversationId matches "search" if not careful. But search is moved up.)
+// Get Media
 router.get('/:conversationId/media', verifyToken, async (req, res) => {
     try {
-        const type = req.query.type || 'media'; // 'media' (img/vid) or 'docs' (file)
+        const type = req.query.type || 'media';
 
         const query = {
             conversationId: req.params.conversationId,
             deletedFor: { $ne: req.user.id },
-            'attachments.0': { $exists: true } // Has attachments
+            'attachments.0': { $exists: true }
         };
 
         const messages = await Message.find(query)
             .select('attachments createdAt sender')
             .sort({ createdAt: -1 })
-            .limit(50); // Limit for performance
+            .limit(50);
 
-        // Filter and Flatten
         const items = [];
         messages.forEach(m => {
             m.attachments.forEach(att => {
@@ -217,7 +241,7 @@ router.get('/:conversationId/media', verifyToken, async (req, res) => {
                         url: att.url,
                         name: att.name,
                         type: att.type,
-                        sender: m.sender, // For 'Sent by...'
+                        sender: m.sender,
                         createdAt: m.createdAt
                     });
                 }
@@ -228,7 +252,7 @@ router.get('/:conversationId/media', verifyToken, async (req, res) => {
     } catch(err) { res.status(500).json(err); }
 });
 
-// Get Messages (Generic Dynamic Route - MUST BE LAST)
+// Get Messages
 router.get('/:conversationId', verifyToken, async (req, res) => {
     try {
         const { limit = 50, before } = req.query;
@@ -247,10 +271,10 @@ router.get('/:conversationId', verifyToken, async (req, res) => {
                 path: 'replyTo',
                 populate: { path: 'sender', select: 'firstName lastName' }
             })
-            .sort({ createdAt: -1 }) // Newest first for pagination
+            .sort({ createdAt: -1 })
             .limit(parseInt(limit));
 
-        res.status(200).json(messages.reverse()); // Reverse back to chrono for UI
+        res.status(200).json(messages.reverse());
     } catch (err) {
         res.status(500).json(err);
     }
@@ -261,10 +285,20 @@ router.post('/', verifyToken, async (req, res) => {
     try {
         let { conversationId, content, type, attachments, pollData, locationData, replyTo } = req.body;
 
-        // Guards
         if (typeof attachments === 'string') try { attachments = JSON.parse(attachments); } catch(e){}
         if (typeof pollData === 'string') try { pollData = JSON.parse(pollData); } catch(e){}
         if (typeof locationData === 'string') try { locationData = JSON.parse(locationData); } catch(e){}
+
+        // Check blocking
+        const conv = await Conversation.findById(conversationId);
+        if (conv.type === 'direct') {
+            const otherId = conv.participants.find(p => p.toString() !== req.user.id);
+            const otherUser = await User.findById(otherId);
+            if (otherUser.blockedUsers.includes(req.user.id)) {
+                return res.status(403).json({ message: "You cannot message this user." });
+            }
+            // Check if I blocked them? Usually allowed to send, but let's be strict if UI disables it.
+        }
 
         const msg = new Message({
             conversationId,
@@ -283,31 +317,23 @@ router.post('/', verifyToken, async (req, res) => {
             .populate('sender', 'firstName lastName profileImage')
             .populate('replyTo');
 
-        // Update Conversation
         await Conversation.findByIdAndUpdate(conversationId, {
             lastMessage: savedMsg._id,
             updatedAt: Date.now(),
-            $pull: { archivedBy: req.user.id } // Unarchive for sender
+            $pull: { archivedBy: req.user.id }
         });
 
-        // Unarchive for everyone else in conversation
         await Conversation.findByIdAndUpdate(conversationId, {
             $set: { archivedBy: [] }
         });
 
-        // Notify
-        const conv = await Conversation.findById(conversationId);
         const io = req.app.get('io');
 
         conv.participants.forEach(p => {
-            // Emit to everyone including sender (for confirmation/multi-device)
             io.to(p.toString()).emit("receive_message", populatedMsg);
 
-            // Push Notification logic
             if (p.toString() !== req.user.id) {
-                 // DB Notification (simplified)
                  if (['text', 'image', 'video', 'file'].includes(type)) {
-                     // Fire and forget notification
                      notifyUser(p, 'message', `New message`, conversationId, '/student/messages', false, req, req.user.id).catch(console.error);
                  }
             }
