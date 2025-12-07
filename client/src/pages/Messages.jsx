@@ -72,6 +72,30 @@ const Messages = () => {
         }
     };
 
+    // --- HANDLERS (Defined before socket effect to be used if needed, though mostly independent) ---
+
+    const handleEditMessage = async (messageId, newContent) => {
+        try {
+            await api.editMessage(messageId, newContent);
+            // Optimistic update
+            setMessages(prev => prev.map(m => m._id === messageId ? { ...m, content: newContent } : m));
+        } catch (err) {
+            console.error(err);
+            toast.error("Failed to edit message");
+        }
+    };
+
+    const handleDeleteMessage = async (messageId) => {
+        try {
+            await api.deleteMessage(messageId);
+            // Optimistic update
+            setMessages(prev => prev.filter(m => m._id !== messageId));
+        } catch (err) {
+            console.error(err);
+            toast.error("Failed to delete message");
+        }
+    };
+
     // --- SOCKET EVENTS ---
     useEffect(() => {
         if (!socket) return;
@@ -150,6 +174,32 @@ const Messages = () => {
              }
         };
 
+        const handleMessageUpdated = (updatedMessage) => {
+            if (selectedConversation && selectedConversation._id === updatedMessage.conversationId) {
+                setMessages(prev => prev.map(m => m._id === updatedMessage._id ? updatedMessage : m));
+            }
+            // Update preview if it was the last message
+            setConversations(prev => prev.map(c => {
+                if (c._id === updatedMessage.conversationId && c.lastMessage?._id === updatedMessage._id) {
+                    return { ...c, lastMessage: updatedMessage };
+                }
+                return c;
+            }));
+        };
+
+        const handleMessageDeleted = (deletedMessageId) => {
+            // Check if current conversation affected (we don't have conversationId in deletion payload readily unless we pass it, but API returns "Message deleted" string or similar.
+            // Wait, socket event emits `req.params.id`. We don't know conversationId here easily without fetching or checking all.
+            // But we can filter `messages` state locally.
+            setMessages(prev => prev.filter(m => m._id !== deletedMessageId));
+
+            // If we want to update the conversation preview (if last message was deleted), we should probably re-fetch conversations.
+            // Since we don't know easily if it was the last message without more logic, safe bet is to re-fetch if we are in that conversation or just generally.
+            // But we don't want to spam fetch.
+            // Let's just fetchConversations() to be safe.
+            fetchConversations();
+        };
+
         socket.on("receive_message", handleReceiveMessage);
         socket.on("conversation_updated", handleConversationUpdated);
         socket.on("conversation_deleted", (convId) => {
@@ -163,6 +213,8 @@ const Messages = () => {
         socket.on("stop_typing", handleStopTyping);
         socket.on("messages_read", handleMessagesRead);
         socket.on("user_status_change", handleUserStatusChange);
+        socket.on('message_updated', handleMessageUpdated);
+        socket.on('message_deleted', handleMessageDeleted);
 
         return () => {
             socket.off("receive_message", handleReceiveMessage);
@@ -172,11 +224,13 @@ const Messages = () => {
             socket.off("stop_typing", handleStopTyping);
             socket.off("messages_read", handleMessagesRead);
             socket.off("user_status_change", handleUserStatusChange);
+            socket.off('message_updated', handleMessageUpdated);
+            socket.off('message_deleted', handleMessageDeleted);
         };
     }, [socket, selectedConversation, fetchConversations, user._id]);
 
 
-    // --- HANDLERS ---
+    // --- MORE HANDLERS ---
 
     const handleSelectConversation = (conv) => {
         setSelectedConversation(conv);
@@ -229,7 +283,6 @@ const Messages = () => {
         }
     };
 
-    // ... (typing handlers, delete, mute - same as before) ...
     const handleTyping = () => {
         if (socket && selectedConversation && !selectedConversation.isTemp) {
             const recipient = selectedConversation.otherUser?._id;
@@ -383,7 +436,7 @@ const Messages = () => {
                 sidebarSearch={sidebarSearch}
                 setSidebarSearch={setSidebarSearch}
                 userSearchResults={userSearchResults}
-                sidebarUserResults={sidebarUserResults} // Pass this
+                sidebarUserResults={sidebarUserResults}
                 showNewChatModal={showNewChatModal}
                 setShowNewChatModal={setShowNewChatModal}
                 newChatSearch={newChatSearch}
@@ -393,6 +446,8 @@ const Messages = () => {
                 onStopTyping={handleStopTyping}
                 onViewImage={handleViewImage}
                 onViewVideo={handleViewVideo}
+                onEditMessage={handleEditMessage} // New
+                onDeleteMessage={handleDeleteMessage} // New
             />
             <ImageModal show={!!viewImage} onClose={() => setViewImage(null)} imageUrl={viewImage} />
             <VideoModal show={!!viewVideo} onClose={() => setViewVideo(null)} videoUrl={viewVideo} />

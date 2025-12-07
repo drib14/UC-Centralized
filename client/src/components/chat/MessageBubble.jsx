@@ -1,8 +1,23 @@
 import React, { useState } from 'react';
-import { FaFile, FaFilePdf, FaFileWord, FaFileExcel, FaDownload, FaCheck, FaCheckDouble, FaPlay } from 'react-icons/fa';
+import { FaFile, FaFilePdf, FaFileWord, FaFileExcel, FaDownload, FaCheck, FaCheckDouble, FaPlay, FaEllipsisV, FaEdit, FaTrash, FaTimes, FaSave } from 'react-icons/fa';
 
-const MessageBubble = ({ message, isOwn, sender, showAvatar, showHeader, onViewImage, onViewVideo }) => {
+const MessageBubble = ({ message, isOwn, sender, showAvatar, showHeader, onViewImage, onViewVideo, onEditMessage, onDeleteMessage }) => {
     const [imageLoaded, setImageLoaded] = useState(false);
+    const [isEditing, setIsEditing] = useState(false);
+    const [editContent, setEditContent] = useState(message.content || "");
+
+    const handleSaveEdit = () => {
+        if (editContent.trim() !== message.content) {
+            onEditMessage(message._id, editContent);
+        }
+        setIsEditing(false);
+    };
+
+    const handleDelete = () => {
+        if (window.confirm("Delete this message?")) {
+            onDeleteMessage(message._id);
+        }
+    };
 
     const formatTime = (dateString) => {
         const date = new Date(dateString);
@@ -26,9 +41,32 @@ const MessageBubble = ({ message, isOwn, sender, showAvatar, showHeader, onViewI
     };
 
     const isMedia = message.type === 'image' || message.type === 'video';
+    const effectiveIsMedia = !isEditing && isMedia;
 
     // Determine content based on type
     const renderContent = () => {
+        if (isEditing) {
+             return (
+                 <div className="d-flex flex-column" style={{ minWidth: '200px' }}>
+                     <textarea
+                        className="form-control form-control-sm mb-1"
+                        value={editContent}
+                        onChange={e => setEditContent(e.target.value)}
+                        rows={2}
+                        autoFocus
+                     />
+                     <div className="btn-group btn-group-sm align-self-end">
+                         <button className="btn btn-outline-secondary" onClick={() => { setIsEditing(false); setEditContent(message.content || ""); }}>
+                             <FaTimes />
+                         </button>
+                         <button className="btn btn-primary" onClick={handleSaveEdit}>
+                             <FaSave />
+                         </button>
+                     </div>
+                 </div>
+             );
+        }
+
         switch (message.type) {
             case 'image':
                 return (
@@ -93,13 +131,6 @@ const MessageBubble = ({ message, isOwn, sender, showAvatar, showHeader, onViewI
         if (!isOwn) return null;
         // Logic: if readBy contains others besides sender
         const isRead = message.readBy && message.readBy.length > 1;
-        // Text color depends on background (white if media or own bubble, muted if other)
-        // Actually for media, we are outside a bubble, so text should be muted/dark?
-        // But for 'isOwn', we usually want it inside?
-        // Wait, if isMedia is true, we removed the bubble container.
-        // So the status is floating below or beside?
-        // The container logic below handles this.
-
         return (
             <span className={`ms-1 small ${isRead ? 'text-primary' : 'text-muted'}`} title={isRead ? "Seen" : "Sent"}>
                 {isRead ? <FaCheckDouble size={10} /> : <FaCheck size={10} />}
@@ -140,53 +171,63 @@ const MessageBubble = ({ message, isOwn, sender, showAvatar, showHeader, onViewI
                     <small className="text-muted ms-1 mb-1" style={{ fontSize: '0.75rem' }}>{sender?.firstName}</small>
                 )}
 
-                {/* Content Container */}
-                {/* If media, no bubble styling. If text/file, bubble styling. */}
-                <div
-                    className={`
-                        ${!isMedia ? (isOwn ? 'p-2 px-3 bg-primary text-white shadow-sm' : 'p-2 px-3 bg-white text-dark border shadow-sm') : 'mb-1 shadow-sm'}
-                        position-relative
-                    `}
-                    style={{
-                        borderRadius: isMedia ? '12px' : '18px',
-                        borderBottomRightRadius: isOwn ? '4px' : (isMedia ? '12px' : '18px'),
-                        borderBottomLeftRadius: !isOwn ? '4px' : (isMedia ? '12px' : '18px'),
-                        width: 'fit-content',
-                        minWidth: isMedia ? 'auto' : '60px'
-                    }}
-                >
-                    {renderContent()}
+                {/* Wrapper for Menu + Bubble */}
+                <div className={`d-flex ${isOwn ? 'flex-row-reverse' : 'flex-row'} align-items-center group`}>
 
-                    {/* Timestamp & Status */}
-                    {/* For text, inside bubble. For media, maybe overlay or below? */}
-                    {/* User said "dont put it on bubble". So for media, it's just the image. */}
-                    {/* Where does timestamp go? Usually overlay or below. */}
-                    {/* I'll put it below for media to be clean, or overlay if it fits. */}
-                    {/* Let's keep it consistent: always inside the container div.
-                        If media container has no bg, it might be hard to read.
-                        I'll stick to putting it at the bottom of the content container for now.
-                        For media, I'll add a subtle gradient or background for the timestamp if needed,
-                        OR just put it in the corner of the image container.
-                    */}
-                    {!isMedia && (
-                        <div className={`d-flex align-items-center justify-content-end mt-1 ${isOwn ? 'text-white-50' : 'text-muted'}`} style={{ fontSize: '0.65rem', lineHeight: 1 }}>
-                            <span className="me-1">{formatTime(message.createdAt)}</span>
-                            {/* Override status color for own bubble */}
-                            <span className={`${isOwn ? 'text-white-50' : ''}`}>
-                                {getReadStatus()}
-                            </span>
+                    {/* Bubble */}
+                    <div
+                        className={`
+                            ${!effectiveIsMedia ? (isOwn ? 'p-2 px-3 bg-primary text-white shadow-sm' : 'p-2 px-3 bg-white text-dark border shadow-sm') : 'mb-1 shadow-sm'}
+                            position-relative
+                        `}
+                        style={{
+                            borderRadius: effectiveIsMedia ? '12px' : '18px',
+                            borderBottomRightRadius: isOwn ? '4px' : (effectiveIsMedia ? '12px' : '18px'),
+                            borderBottomLeftRadius: !isOwn ? '4px' : (effectiveIsMedia ? '12px' : '18px'),
+                            width: 'fit-content',
+                            minWidth: effectiveIsMedia ? 'auto' : '60px'
+                        }}
+                    >
+                        {renderContent()}
+
+                        {/* Timestamp & Status (Hide if editing) */}
+                        {!effectiveIsMedia && !isEditing && (
+                            <div className={`d-flex align-items-center justify-content-end mt-1 ${isOwn ? 'text-white-50' : 'text-muted'}`} style={{ fontSize: '0.65rem', lineHeight: 1 }}>
+                                <span className="me-1">{formatTime(message.createdAt)}</span>
+                                <span className={`${isOwn ? 'text-white-50' : ''}`}>
+                                    {getReadStatus()}
+                                </span>
+                            </div>
+                        )}
+                    </div>
+
+                    {/* Actions Menu (Only for Own Messages & Not Editing) */}
+                    {isOwn && !isEditing && (
+                        <div className="dropdown ms-2 me-2 opacity-0 hover-opacity-100 transition-opacity">
+                            <button className="btn btn-sm btn-link text-muted p-0" data-bs-toggle="dropdown" aria-expanded="false">
+                                <FaEllipsisV size={12} />
+                            </button>
+                            <ul className="dropdown-menu shadow-sm" style={{ zIndex: 1000 }}>
+                                <li><button className="dropdown-item small" onClick={() => setIsEditing(true)}><FaEdit className="me-2"/> Edit</button></li>
+                                <li><button className="dropdown-item small text-danger" onClick={handleDelete}><FaTrash className="me-2"/> Delete</button></li>
+                            </ul>
                         </div>
                     )}
                 </div>
 
                 {/* Timestamp for Media (Outside/Below) */}
-                {isMedia && (
+                {effectiveIsMedia && (
                     <div className="d-flex align-items-center justify-content-end mt-1 pe-1" style={{ fontSize: '0.65rem', lineHeight: 1 }}>
                         <span className="text-muted me-1">{formatTime(message.createdAt)}</span>
                         {getReadStatus()}
                     </div>
                 )}
             </div>
+
+            <style>{`
+                .hover-opacity-100:hover, .group:hover .hover-opacity-100 { opacity: 1 !important; }
+                .transition-opacity { transition: opacity 0.2s ease-in-out; }
+            `}</style>
         </div>
     );
 };

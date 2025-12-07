@@ -327,4 +327,64 @@ router.put('/:conversationId/read', verifyToken, async (req, res) => {
     }
 });
 
+// EDIT MESSAGE
+router.put('/:id', verifyToken, async (req, res) => {
+    try {
+        const message = await Message.findById(req.params.id);
+        if (!message) return res.status(404).json("Message not found");
+        if (message.sender.toString() !== req.user.id) return res.status(403).json("You can only edit your own messages");
+
+        const updatedMessage = await Message.findByIdAndUpdate(
+            req.params.id,
+            { $set: { content: req.body.content } },
+            { new: true }
+        ).populate('sender', 'firstName lastName profileImage name role');
+
+        // Socket Emission
+        const conversation = await Conversation.findById(message.conversationId);
+        const io = req.app.get('io');
+        conversation.participants.forEach(participantId => {
+             io.to(participantId.toString()).emit("message_updated", updatedMessage);
+        });
+
+        res.status(200).json(updatedMessage);
+    } catch (err) {
+        res.status(500).json(err);
+    }
+});
+
+// DELETE MESSAGE
+router.delete('/:id', verifyToken, async (req, res) => {
+    try {
+        const mode = req.query.mode || 'everyone'; // 'me' or 'everyone'
+        const message = await Message.findById(req.params.id);
+
+        if (!message) return res.status(404).json("Message not found");
+        if (message.sender.toString() !== req.user.id && mode === 'everyone') return res.status(403).json("You can only delete your own messages");
+
+        // Logic for 'delete for everyone' vs 'delete for me'
+        // For now, implementing 'delete for everyone' (actual delete)
+        if (mode === 'everyone') {
+             await Message.findByIdAndDelete(req.params.id);
+
+             // Socket Emission
+             const conversation = await Conversation.findById(message.conversationId);
+             const io = req.app.get('io');
+             conversation.participants.forEach(participantId => {
+                  io.to(participantId.toString()).emit("message_deleted", req.params.id);
+             });
+
+             res.status(200).json("Message deleted");
+        } else {
+             // 'delete for me' logic would go here (e.g. adding to a 'hiddenFor' array)
+             // Not requested explicitly but good to acknowledge.
+             // Since user said "crud on chat bubbles", deleting usually implies removing it.
+             // I'll stick to 'everyone' delete for simplicity unless complex requirements appear.
+             res.status(501).json("Delete for me not implemented yet");
+        }
+    } catch (err) {
+        res.status(500).json(err);
+    }
+});
+
 module.exports = router;
