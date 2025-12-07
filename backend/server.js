@@ -18,9 +18,6 @@ const oauthRoute = require('./routes/oauth');
 const messageRoute = require('./routes/messages');
 const notificationRoute = require('./routes/notifications');
 
-// Models
-const User = require('./models/User');
-
 dotenv.config();
 
 const app = express();
@@ -57,66 +54,10 @@ const connectDB = async () => {
 };
 
 // --- SOCKET.IO LOGIC ---
-io.on("connection", async (socket) => {
-    // Ensure DB connectivity
-    if (mongoose.connection.readyState === 0) connectDB();
-
-    // 1. User Presence & Rooms
-    socket.on("join_room", async (userId) => {
-        if (!userId) return;
-        socket.join(userId); // Join room named by User ID
-        try {
-            await User.findByIdAndUpdate(userId, { isOnline: true, lastSeen: Date.now() });
-            io.emit("user_status_change", { userId, isOnline: true });
-        } catch (e) { console.error("Status Update Error:", e); }
-
-        socket.on("disconnect", async () => {
-            try {
-                await User.findByIdAndUpdate(userId, { isOnline: false, lastSeen: Date.now() });
-                io.emit("user_status_change", { userId, isOnline: false, lastSeen: Date.now() });
-            } catch (e) {}
-        });
-    });
-
-    // 2. Messaging Events
-    // Note: Main message sending is handled via API POST /messages which then broadcasts using io.to(userId).
-    // However, we can handle typing indicators here.
-    socket.on("typing", (data) => {
-        // data: { receiverId, conversationId }
-        socket.to(data.receiverId).emit("user_typing", data);
-    });
-
-    socket.on("stop_typing", (data) => {
-        socket.to(data.receiverId).emit("user_stop_typing", data);
-    });
-
-    // 3. WebRTC Signaling (Restored)
-    socket.on("call_user", (data) => {
-        // data: { userToCall, signalData, from, name, isVideo }
-        io.to(data.userToCall).emit("call_user", {
-            signal: data.signalData,
-            from: data.from,
-            name: data.name,
-            isVideo: data.isVideo
-        });
-    });
-
-    socket.on("answer_call", (data) => {
-        // data: { to, signal }
-        io.to(data.to).emit("call_accepted", data.signal);
-    });
-
-    socket.on("ice_candidate", (data) => {
-        // data: { to, candidate }
-        io.to(data.to).emit("ice_candidate", data.candidate);
-    });
-
-    socket.on("end_call", (data) => {
-        io.to(data.to).emit("call_ended");
-    });
-
-    // 4. Call Logs (Optional - handled via API usually, but if client emits end_call we can log)
-    // For now, we rely on the API or client-side logic to post a 'call_log' message.
+// Cleaned up socket logic for maintenance mode
+io.on("connection", (socket) => {
+    // Basic connectivity logs
+    // console.log("Socket connected:", socket.id);
 });
 
 // --- ROUTES ---

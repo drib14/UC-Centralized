@@ -2,7 +2,6 @@ html, body, #root {
   height: 100%;
   margin: 0;
   padding: 0;
-  overflow: hidden; /* Prevent body scrolling */
 }
 
 body {
@@ -14,9 +13,9 @@ body {
 }
 
 #wrapper {
-    height: 100%;
     display: flex;
-    overflow: hidden;
+    width: 100%;
+    align-items: stretch;
 }
 
 code {
@@ -65,67 +64,6 @@ code {
 
 .animate-pulse {
     animation: pulse 1.5s infinite;
-}
-
-/* Chat Sidebar Actions */
-.action-btn-wrapper {
-    opacity: 0;
-    transition: opacity 0.2s;
-}
-
-.group-hover-trigger:hover .action-btn-wrapper {
-    opacity: 1;
-}
-
-/* Mobile: Always visible if action menu is open, or override hover on touch devices?
-   Actually, standard hover doesn't work on touch.
-   But user said "show it in hover effect".
-   On mobile, tapping the row opens chat.
-   User said "click on mobile screens" previously to show menu?
-   If I hide it, they can't click it.
-   So on Mobile (max-width 768px), we should make it visible?
-   Or rely on the user clicking the *area* where the button is? No, buttons need to be visible to be clicked.
-   Let's force visibility on mobile.
-*/
-@media (max-width: 768px) {
-    .action-btn-wrapper {
-        opacity: 1 !important;
-    }
-}
-
-/* Messenger Style Buttons */
-.btn-messenger {
-    width: 36px;
-    height: 36px;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: background-color 0.2s;
-    cursor: pointer;
-    color: #003399; /* UC Blue */
-}
-
-.btn-messenger:hover {
-    background-color: #e6e6e6; /* Slightly darker gray for better visibility */
-}
-
-.btn-messenger.text-muted {
-    color: #65676b !important;
-}
-
-/* Message Hover Actions */
-.message-actions {
-    opacity: 0;
-    transition: opacity 0.2s;
-}
-
-.message-row:hover .message-actions {
-    opacity: 1;
-}
-
-.hover-bg-gray:hover {
-    background-color: #f0f2f5 !important;
 }
 
 .cursor-pointer {
