@@ -195,13 +195,16 @@ router.post('/', verifyToken, parser.single('file'), async (req, res) => {
              responseMessage.sender.profilePicture = responseMessage.sender.profileImage || responseMessage.sender.profilePicture;
         }
 
-        // Emit to conversation room
-        io.to(chatId.toString()).emit("receive_message", responseMessage);
-
-        // Notify participants (for sidebar update)
+        // Emit to all participants' individual rooms
+        // This ensures they receive it even if they haven't joined the "conversation" room explicitly
         const conversation = await Conversation.findById(chatId);
         conversation.participants.forEach(participantId => {
-            io.to(participantId.toString()).emit("conversation_updated", {
+            const pId = participantId.toString();
+            // Emit full message for Chat Window
+            io.to(pId).emit("receive_message", responseMessage);
+
+            // Emit update for Sidebar
+            io.to(pId).emit("conversation_updated", {
                 conversationId: chatId,
                 lastMessage: responseMessage
             });

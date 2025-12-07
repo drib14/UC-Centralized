@@ -30,22 +30,22 @@ const MessageBubble = ({ message, isOwn, sender, showAvatar, showHeader }) => {
         switch (message.type) {
             case 'image':
                 return (
-                    <div className="message-image-container position-relative rounded overflow-hidden mb-1" style={{ maxWidth: '250px' }}>
+                    <div className="message-image-container position-relative rounded overflow-hidden mb-1" style={{ maxWidth: '100%' }}>
                         {!imageLoaded && <div className="placeholder-glow" style={{ height: '150px', width: '200px' }}><div className="placeholder w-100 h-100"></div></div>}
                         <img
                             src={message.fileUrl}
                             alt="Shared image"
                             className={`img-fluid ${imageLoaded ? 'd-block' : 'd-none'}`}
                             onLoad={() => setImageLoaded(true)}
-                            style={{ cursor: 'pointer' }}
+                            style={{ cursor: 'pointer', maxHeight: '300px' }}
                             onClick={() => window.open(message.fileUrl, '_blank')}
                         />
                     </div>
                 );
             case 'video':
                 return (
-                    <div className="message-video-container rounded overflow-hidden mb-1" style={{ maxWidth: '300px' }}>
-                         <video controls src={message.fileUrl} className="w-100" style={{ maxHeight: '200px' }} />
+                    <div className="message-video-container rounded overflow-hidden mb-1" style={{ maxWidth: '100%' }}>
+                         <video controls src={message.fileUrl} className="w-100" style={{ maxHeight: '300px' }} />
                     </div>
                 );
             case 'audio':
@@ -58,7 +58,7 @@ const MessageBubble = ({ message, isOwn, sender, showAvatar, showHeader }) => {
                 // Attempt to get filename from URL
                 const fileName = message.fileUrl.split('/').pop() || "Attachment";
                 return (
-                    <div className="d-flex align-items-center p-2 rounded bg-light border mb-1" style={{ maxWidth: '250px' }}>
+                    <div className="d-flex align-items-center p-2 rounded bg-light border mb-1" style={{ maxWidth: '100%' }}>
                         <div className="me-2 fs-4">{getFileIcon(message.fileUrl)}</div>
                         <div className="flex-grow-1 text-truncate small" style={{ maxWidth: '150px' }}>{fileName}</div>
                         <a href={message.fileUrl} target="_blank" rel="noreferrer" className="btn btn-sm btn-light border-0 ms-2 text-primary">
@@ -77,7 +77,7 @@ const MessageBubble = ({ message, isOwn, sender, showAvatar, showHeader }) => {
         // Logic: if readBy contains others besides sender
         const isRead = message.readBy && message.readBy.length > 1;
         return (
-            <span className={`ms-1 small ${isRead ? 'text-primary' : 'text-white-50'}`} title={isRead ? "Seen" : "Sent"}>
+            <span className={`ms-1 small ${isRead ? 'text-info' : 'text-white-50'}`} title={isRead ? "Seen" : "Sent"}>
                 {isRead ? <FaCheckDouble size={10} /> : <FaCheck size={10} />}
             </span>
         );
@@ -122,7 +122,9 @@ const MessageBubble = ({ message, isOwn, sender, showAvatar, showHeader }) => {
                     style={{
                         borderRadius: '18px',
                         borderBottomRightRadius: isOwn ? '4px' : '18px',
-                        borderBottomLeftRadius: !isOwn ? '4px' : '18px'
+                        borderBottomLeftRadius: !isOwn ? '4px' : '18px',
+                        width: 'fit-content', // Ensure it shrinks to text
+                        minWidth: '60px' // Minimum width for timestamp
                     }}
                 >
                     {renderContent()}
