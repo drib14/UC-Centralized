@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
-import { FaFile, FaFilePdf, FaFileWord, FaFileExcel, FaDownload, FaCheck, FaCheckDouble, FaPlay, FaEllipsisV, FaEdit, FaTrash, FaTimes, FaSave } from 'react-icons/fa';
+import { FaFile, FaFilePdf, FaFileWord, FaFileExcel, FaDownload, FaCheck, FaCheckDouble, FaPlay, FaEllipsisV, FaEdit, FaTrash, FaTimes, FaSave, FaShare } from 'react-icons/fa';
 
-const MessageBubble = ({ message, isOwn, sender, showAvatar, showHeader, onViewImage, onViewVideo, onEditMessage, onDeleteMessage }) => {
+const MessageBubble = ({ message, isOwn, sender, showAvatar, showHeader, onViewImage, onViewVideo, onEditMessage, onDeleteMessage, onRequestForward }) => {
     const [imageLoaded, setImageLoaded] = useState(false);
     const [isEditing, setIsEditing] = useState(false);
     const [editContent, setEditContent] = useState(message.content || "");
@@ -14,9 +14,11 @@ const MessageBubble = ({ message, isOwn, sender, showAvatar, showHeader, onViewI
     };
 
     const handleDelete = () => {
-        if (window.confirm("Delete this message?")) {
-            onDeleteMessage(message._id);
-        }
+        onDeleteMessage(message._id, isOwn);
+    };
+
+    const handleForward = () => {
+        onRequestForward(message);
     };
 
     const formatTime = (dateString) => {
@@ -165,14 +167,14 @@ const MessageBubble = ({ message, isOwn, sender, showAvatar, showHeader, onViewI
                 </div>
             )}
 
-            <div className={`d-flex flex-column ${isOwn ? 'align-items-end' : 'align-items-start'}`} style={{ maxWidth: '75%' }}>
+            <div className={`d-flex flex-column ${isOwn ? 'align-items-end' : 'align-items-start'} group`} style={{ maxWidth: '75%' }}>
                 {/* Sender Name */}
                 {!isOwn && showHeader && (
                     <small className="text-muted ms-1 mb-1" style={{ fontSize: '0.75rem' }}>{sender?.firstName}</small>
                 )}
 
                 {/* Wrapper for Menu + Bubble */}
-                <div className={`d-flex ${isOwn ? 'flex-row-reverse' : 'flex-row'} align-items-center group`}>
+                <div className={`d-flex ${isOwn ? 'flex-row-reverse' : 'flex-row'} align-items-center`}>
 
                     {/* Bubble */}
                     <div
@@ -193,7 +195,7 @@ const MessageBubble = ({ message, isOwn, sender, showAvatar, showHeader, onViewI
                         {/* Timestamp & Status (Hide if editing) */}
                         {!effectiveIsMedia && !isEditing && (
                             <div className={`d-flex align-items-center justify-content-end mt-1 ${isOwn ? 'text-white-50' : 'text-muted'}`} style={{ fontSize: '0.65rem', lineHeight: 1 }}>
-                                <span className="me-1">{formatTime(message.createdAt)}</span>
+                                <span className={`me-1 opacity-0 hover-opacity-100 transition-opacity ${isOwn ? 'text-white-50' : ''}`}>{formatTime(message.createdAt)}</span>
                                 <span className={`${isOwn ? 'text-white-50' : ''}`}>
                                     {getReadStatus()}
                                 </span>
@@ -201,14 +203,15 @@ const MessageBubble = ({ message, isOwn, sender, showAvatar, showHeader, onViewI
                         )}
                     </div>
 
-                    {/* Actions Menu (Only for Own Messages & Not Editing) */}
-                    {isOwn && !isEditing && (
+                    {/* Actions Menu */}
+                    {!isEditing && (
                         <div className="dropdown ms-2 me-2 opacity-0 hover-opacity-100 transition-opacity">
                             <button className="btn btn-sm btn-link text-muted p-0" data-bs-toggle="dropdown" aria-expanded="false">
                                 <FaEllipsisV size={12} />
                             </button>
                             <ul className="dropdown-menu shadow-sm" style={{ zIndex: 1000 }}>
-                                <li><button className="dropdown-item small" onClick={() => setIsEditing(true)}><FaEdit className="me-2"/> Edit</button></li>
+                                {isOwn && <li><button className="dropdown-item small" onClick={() => setIsEditing(true)}><FaEdit className="me-2"/> Edit</button></li>}
+                                <li><button className="dropdown-item small" onClick={handleForward}><FaShare className="me-2"/> Forward</button></li>
                                 <li><button className="dropdown-item small text-danger" onClick={handleDelete}><FaTrash className="me-2"/> Delete</button></li>
                             </ul>
                         </div>
@@ -218,7 +221,7 @@ const MessageBubble = ({ message, isOwn, sender, showAvatar, showHeader, onViewI
                 {/* Timestamp for Media (Outside/Below) */}
                 {effectiveIsMedia && (
                     <div className="d-flex align-items-center justify-content-end mt-1 pe-1" style={{ fontSize: '0.65rem', lineHeight: 1 }}>
-                        <span className="text-muted me-1">{formatTime(message.createdAt)}</span>
+                        <span className="text-muted me-1 opacity-0 hover-opacity-100 transition-opacity">{formatTime(message.createdAt)}</span>
                         {getReadStatus()}
                     </div>
                 )}
