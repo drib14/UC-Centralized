@@ -99,7 +99,6 @@ const Messages = () => {
              // data: { conversationId, readBy }
              if (selectedConversation && selectedConversation._id === data.conversationId) {
                  // Update messages state to reflect read status
-                 // This is a bit complex as we need to update 'readBy' array of previous messages
                  setMessages(prev => prev.map(m => {
                      // If user not in readBy, add them
                      if (!m.readBy.includes(data.readBy)) {
@@ -173,17 +172,14 @@ const Messages = () => {
         if (file) formData.append("file", file);
 
         try {
-            const res = await api.post('/messages', formData, {
-                headers: { "Content-Type": "multipart/form-data" }
-            });
+            // FIX: Use api.request with isMultipart=true explicitly
+            const res = await api.request('/messages', 'POST', formData, true);
 
             // If it was temp, we now have a real conversation
             if (selectedConversation.isTemp) {
                 const realConvId = res.data.conversationId;
                 // Fetch full conversation details to get proper object structure
                 await fetchConversations();
-                // We can't synchronously get the new list from state here.
-                // We will rely on fetchConversations updating state, but we need to select it.
                 // Hack: manually fetch all again and find it.
                 const allConvs = await api.get('/messages/conversations');
                 const newConv = allConvs.data.find(c => c._id === realConvId);
@@ -269,18 +265,30 @@ const Messages = () => {
         }
     };
 
-    const handleSearchUser = async (query) => {
-        if (!query) {
-            setUserSearchResults([]);
-            return;
-        }
-        try {
-            const res = await api.get(`/messages/search/users?q=${query}`);
-            setUserSearchResults(Array.isArray(res.data) ? res.data : []);
-        } catch (err) {
-            console.error(err);
-            setUserSearchResults([]);
-        }
+    // SEARCH LOGIC WITH DEBOUNCE
+    // Trigger search when newChatSearch changes
+    useEffect(() => {
+        const delayDebounceFn = setTimeout(async () => {
+            if (newChatSearch.trim()) {
+                try {
+                    const res = await api.get(`/messages/search/users?q=${newChatSearch}`);
+                    setUserSearchResults(Array.isArray(res.data) ? res.data : []);
+                } catch (err) {
+                    console.error("Search error:", err);
+                    setUserSearchResults([]);
+                }
+            } else {
+                setUserSearchResults([]);
+            }
+        }, 500); // 500ms debounce
+
+        return () => clearTimeout(delayDebounceFn);
+    }, [newChatSearch]);
+
+    // Handle Search User (Prop for Sidebar)
+    // We update the state here, which triggers the useEffect
+    const handleSearchUser = (query) => {
+        setNewChatSearch(query);
     };
 
     const handleNewChat = async (targetUser) => {
@@ -329,7 +337,7 @@ const Messages = () => {
             showNewChatModal={showNewChatModal}
             setShowNewChatModal={setShowNewChatModal}
             newChatSearch={newChatSearch}
-            setNewChatSearch={setNewChatSearch}
+            setNewChatSearch={handleSearchUser} // Pass the handler that updates state
             isTyping={isTyping}
             onTyping={handleTyping}
             onStopTyping={handleStopTyping}
