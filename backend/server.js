@@ -4,6 +4,7 @@ const dotenv = require('dotenv');
 const cors = require('cors');
 const http = require('http');
 const { Server } = require("socket.io");
+const User = require('./models/User'); // Import User model
 
 // Routes
 const authRoute = require('./routes/auth');
@@ -54,10 +55,63 @@ const connectDB = async () => {
 };
 
 // --- SOCKET.IO LOGIC ---
-// Cleaned up socket logic for maintenance mode
+const userSocketMap = new Map(); // Map<userId, socketId>
+const socketUserMap = new Map(); // Map<socketId, userId>
+
 io.on("connection", (socket) => {
-    // Basic connectivity logs
-    // console.log("Socket connected:", socket.id);
+    console.log("Socket connected:", socket.id);
+
+    // Join Room & Set Online
+    socket.on('join_room', async (userId) => {
+        if (!userId) return;
+
+        socket.join(userId);
+        userSocketMap.set(userId, socket.id);
+        socketUserMap.set(socket.id, userId);
+
+        // Update User Status
+        try {
+            await User.findByIdAndUpdate(userId, { isOnline: true, lastSeen: new Date() });
+            io.emit('user_status_change', { userId, isOnline: true });
+        } catch (err) {
+            console.error("Error updating online status:", err);
+        }
+    });
+
+    // Typing Indicators
+    socket.on('typing', (data) => {
+        // data: { recipientId, conversationId }
+        // Emit to the recipient
+        io.to(data.recipientId).emit('typing', {
+            conversationId: data.conversationId,
+            senderId: socketUserMap.get(socket.id)
+        });
+    });
+
+    socket.on('stop_typing', (data) => {
+        io.to(data.recipientId).emit('stop_typing', {
+            conversationId: data.conversationId,
+            senderId: socketUserMap.get(socket.id)
+        });
+    });
+
+    // Disconnect
+    socket.on('disconnect', async () => {
+        console.log("Socket disconnected:", socket.id);
+        const userId = socketUserMap.get(socket.id);
+
+        if (userId) {
+            userSocketMap.delete(userId);
+            socketUserMap.delete(socket.id);
+
+            try {
+                await User.findByIdAndUpdate(userId, { isOnline: false, lastSeen: new Date() });
+                io.emit('user_status_change', { userId, isOnline: false, lastSeen: new Date() });
+            } catch (err) {
+                console.error("Error updating offline status:", err);
+            }
+        }
+    });
 });
 
 // --- ROUTES ---

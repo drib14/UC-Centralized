@@ -19,12 +19,12 @@ import VerifyCode from './pages/VerifyCode';
 import ResetPassword from './pages/ResetPassword';
 import Documentation from './pages/Documentation';
 import OAuthConsent from './pages/OAuthConsent';
+import Messages from './pages/Messages';
 
 import StudentDashboard from './pages/student/StudentDashboard';
 import StudentEvents from './pages/student/StudentEvents';
 import StudentMerch from './pages/student/StudentMerch';
 import StudentCart from './pages/student/StudentCart';
-import StudentMessages from './pages/student/StudentMessages';
 import StudentProfile from './pages/student/StudentProfile';
 import DeveloperDashboard from './pages/student/DeveloperDashboard';
 
@@ -93,7 +93,7 @@ function App() {
                                     <Route path="events" element={<StudentEvents />} />
                                     <Route path="merch" element={<StudentMerch />} />
                                     <Route path="cart" element={<StudentCart />} />
-                                    <Route path="messages" element={<StudentMessages />} />
+                                    <Route path="messages" element={<Messages />} />
                                     <Route path="notifications" element={<Notifications />} />
                                     <Route path="profile" element={<StudentProfile />} />
                                     <Route path="developer" element={<DeveloperDashboard />} />
@@ -109,6 +109,7 @@ function App() {
                                     <Route path="announcements" element={<AdminAnnouncements />} />
                                     <Route path="orders" element={<AdminOrders />} />
                                     <Route path="pos" element={<AdminPOS />} />
+                                    <Route path="messages" element={<Messages />} />
                                     <Route path="notifications" element={<Notifications />} />
                                     <Route path="profile" element={<StudentProfile />} />
                                 </Route>

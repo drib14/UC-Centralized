@@ -31,7 +31,7 @@ router.get('/conversations', verifyToken, async (req, res) => {
         const conversations = await Conversation.find({
             participants: { $in: [req.user.id] }
         })
-        .populate('participants', 'firstName lastName profilePicture name role')
+        .populate('participants', 'firstName lastName profilePicture name role isOnline lastSeen')
         .populate('lastMessage')
         .sort({ updatedAt: -1 });
 
@@ -61,9 +61,6 @@ router.get('/search/users', verifyToken, async (req, res) => {
         const query = req.query.q || '';
         if (!query) return res.status(200).json([]);
 
-        // Search students only? Request said "student to student"
-        // And exclude self
-
         // Split query to handle full name search "First Last"
         const parts = query.trim().split(/\s+/);
         let searchConditions = [
@@ -86,12 +83,12 @@ router.get('/search/users', verifyToken, async (req, res) => {
             });
         }
 
-        // Broaden search to include generic 'student' role logic if needed
         const users = await User.find({
-            role: { $in: ['student', 'admin', 'developer'] }, // Broadened to include other potential roles in case of data inconsistencies, but filter out pure admins if needed. Actually user said "Student to student", but often test users have weird roles. Let's keep it safe but broader.
+            // Expanded to include admins in search
+            role: { $in: ['student', 'admin', 'developer'] },
             _id: { $ne: req.user.id },
             $or: searchConditions
-        }).select('firstName lastName profilePicture name department role');
+        }).select('firstName lastName profilePicture name department role isOnline lastSeen');
 
         res.status(200).json(users);
     } catch (err) {
@@ -176,7 +173,7 @@ router.post('/', verifyToken, parser.single('file'), async (req, res) => {
         });
 
         // Populate sender for the response
-        await savedMessage.populate('sender', 'firstName lastName profilePicture name');
+        await savedMessage.populate('sender', 'firstName lastName profilePicture name role');
 
         res.status(200).json(savedMessage);
 
@@ -199,7 +196,7 @@ router.get('/:conversationId', verifyToken, async (req, res) => {
 
         const messages = await Message.find({
             conversationId: req.params.conversationId
-        }).populate('sender', 'firstName lastName profilePicture name');
+        }).populate('sender', 'firstName lastName profilePicture name role');
 
         res.status(200).json(messages);
     } catch (err) {
@@ -272,6 +269,19 @@ router.put('/:conversationId/read', verifyToken, async (req, res) => {
             },
             { $addToSet: { readBy: req.user.id } }
         );
+
+        // Notify sender via socket that messages are read (for "seen" indicators)
+        const conversation = await Conversation.findById(req.params.conversationId);
+        if (conversation) {
+            const io = req.app.get('io');
+            const otherParticipants = conversation.participants.filter(p => p.toString() !== req.user.id);
+            otherParticipants.forEach(p => {
+                 io.to(p.toString()).emit("messages_read", {
+                     conversationId: req.params.conversationId,
+                     readBy: req.user.id
+                 });
+            });
+        }
 
         res.status(200).json("Messages read");
     } catch (err) {
