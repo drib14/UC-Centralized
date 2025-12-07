@@ -187,20 +187,11 @@ const MessageBubble = ({ message, isOwn, sender, showAvatar, showHeader, onViewI
                             borderBottomRightRadius: isOwn ? '4px' : (effectiveIsMedia ? '12px' : '18px'),
                             borderBottomLeftRadius: !isOwn ? '4px' : (effectiveIsMedia ? '12px' : '18px'),
                             width: 'fit-content',
-                            minWidth: effectiveIsMedia ? 'auto' : '60px'
+                            minWidth: effectiveIsMedia ? 'auto' : '60px',
+                            maxWidth: '100%' // Ensure it doesn't overflow parent
                         }}
                     >
                         {renderContent()}
-
-                        {/* Timestamp & Status (Hide if editing) */}
-                        {!effectiveIsMedia && !isEditing && (
-                            <div className={`d-flex align-items-center justify-content-end mt-1 ${isOwn ? 'text-white-50' : 'text-muted'}`} style={{ fontSize: '0.65rem', lineHeight: 1 }}>
-                                <span className={`me-1 opacity-0 hover-opacity-100 transition-opacity ${isOwn ? 'text-white-50' : ''}`}>{formatTime(message.createdAt)}</span>
-                                <span className={`${isOwn ? 'text-white-50' : ''}`}>
-                                    {getReadStatus()}
-                                </span>
-                            </div>
-                        )}
                     </div>
 
                     {/* Actions Menu */}
@@ -218,13 +209,11 @@ const MessageBubble = ({ message, isOwn, sender, showAvatar, showHeader, onViewI
                     )}
                 </div>
 
-                {/* Timestamp for Media (Outside/Below) */}
-                {effectiveIsMedia && (
-                    <div className="d-flex align-items-center justify-content-end mt-1 pe-1" style={{ fontSize: '0.65rem', lineHeight: 1 }}>
-                        <span className="text-muted me-1 opacity-0 hover-opacity-100 transition-opacity">{formatTime(message.createdAt)}</span>
-                        {getReadStatus()}
-                    </div>
-                )}
+                {/* Timestamp & Status (Always Outside/Below now) */}
+                <div className="d-flex align-items-center justify-content-end mt-1 pe-1" style={{ fontSize: '0.65rem', lineHeight: 1 }}>
+                    <span className="text-muted me-1 opacity-50">{formatTime(message.createdAt)}</span>
+                    {getReadStatus()}
+                </div>
             </div>
 
             <style>{`

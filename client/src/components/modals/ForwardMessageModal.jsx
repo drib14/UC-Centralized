@@ -35,7 +35,6 @@ const ForwardMessageModal = ({ show, onClose, onForward }) => {
     const list = searchTerm ? results : recentChats;
 
     const getAvatar = (item) => {
-        // item can be user (search) or conversation (recent)
         if (item.otherUser) return item.otherUser.profilePicture;
         return item.profilePicture;
     };
@@ -48,6 +47,13 @@ const ForwardMessageModal = ({ show, onClose, onForward }) => {
     const getId = (item) => {
         if (item.otherUser) return item.otherUser._id;
         return item._id;
+    };
+
+    const getInitials = (item) => {
+        let u = item.otherUser || item;
+        const f = u.firstName ? u.firstName.charAt(0) : (u.name ? u.name.charAt(0) : '');
+        const l = u.lastName ? u.lastName.charAt(0) : (u.name && u.name.includes(' ') ? u.name.split(' ').pop().charAt(0) : '');
+        return (f + l).toUpperCase() || 'U';
     };
 
     return (
@@ -76,7 +82,19 @@ const ForwardMessageModal = ({ show, onClose, onForward }) => {
                                 return (
                                     <button key={id} className="list-group-item list-group-item-action d-flex align-items-center justify-content-between" onClick={() => onForward(id)}>
                                         <div className="d-flex align-items-center">
-                                            <img src={getAvatar(item) || "https://via.placeholder.com/32"} className="rounded-circle me-3" width="32" height="32" alt="" style={{objectFit: 'cover'}}/>
+                                            {getAvatar(item) ? (
+                                                <img
+                                                    src={getAvatar(item)}
+                                                    className="rounded-circle me-3 border"
+                                                    width="32" height="32"
+                                                    alt=""
+                                                    style={{objectFit: 'cover'}}
+                                                />
+                                            ) : (
+                                                <div className="rounded-circle me-3 bg-light border d-flex align-items-center justify-content-center text-primary fw-bold" style={{width: '32px', height: '32px', minWidth: '32px'}}>
+                                                    <small>{getInitials(item)}</small>
+                                                </div>
+                                            )}
                                             <span>{getName(item)}</span>
                                         </div>
                                         <FaPaperPlane className="text-muted" />
