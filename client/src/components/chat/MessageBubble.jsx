@@ -9,6 +9,13 @@ const MessageBubble = ({ message, isOwn, sender, showAvatar, showHeader }) => {
         return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     };
 
+    const getInitials = (user) => {
+        if (!user) return 'U';
+        const f = user.firstName ? user.firstName.charAt(0) : (user.name ? user.name.charAt(0) : '');
+        const l = user.lastName ? user.lastName.charAt(0) : (user.name && user.name.includes(' ') ? user.name.split(' ').pop().charAt(0) : '');
+        return (f + l).toUpperCase() || 'U';
+    };
+
     const getFileIcon = (filename) => {
         if (!filename) return <FaFile />;
         const ext = filename.split('.').pop().toLowerCase();
@@ -68,11 +75,9 @@ const MessageBubble = ({ message, isOwn, sender, showAvatar, showHeader }) => {
     const getReadStatus = () => {
         if (!isOwn) return null;
         // Logic: if readBy contains others besides sender
-        // We assume message object has 'readBy' array populated with IDs
-        // And we check if length > 1 (sender always reads their own)
         const isRead = message.readBy && message.readBy.length > 1;
         return (
-            <span className={`ms-1 small ${isRead ? 'text-primary' : 'text-muted'}`} title={isRead ? "Seen" : "Sent"}>
+            <span className={`ms-1 small ${isRead ? 'text-primary' : 'text-white-50'}`} title={isRead ? "Seen" : "Sent"}>
                 {isRead ? <FaCheckDouble size={10} /> : <FaCheck size={10} />}
             </span>
         );
@@ -84,14 +89,21 @@ const MessageBubble = ({ message, isOwn, sender, showAvatar, showHeader }) => {
             {!isOwn && (
                 <div className="me-2 d-flex align-items-end" style={{ width: '32px' }}>
                     {showAvatar ? (
-                        <img
-                            src={sender?.profilePicture || "https://via.placeholder.com/32"}
-                            alt={sender?.firstName}
-                            className="rounded-circle border"
-                            width="32"
-                            height="32"
-                            title={`${sender?.firstName} ${sender?.lastName}`}
-                        />
+                         sender?.profilePicture ? (
+                            <img
+                                src={sender.profilePicture}
+                                alt={sender.firstName}
+                                className="rounded-circle border"
+                                width="32"
+                                height="32"
+                                title={`${sender?.firstName} ${sender?.lastName}`}
+                                style={{ objectFit: 'cover' }}
+                            />
+                        ) : (
+                            <div className="rounded-circle border bg-white d-flex align-items-center justify-content-center text-primary fw-bold" style={{width: '32px', height: '32px', fontSize: '12px'}} title={`${sender?.firstName} ${sender?.lastName}`}>
+                                {getInitials(sender)}
+                            </div>
+                        )
                     ) : (
                         <div style={{ width: '32px' }}></div>
                     )}
@@ -108,16 +120,16 @@ const MessageBubble = ({ message, isOwn, sender, showAvatar, showHeader }) => {
                 <div
                     className={`p-2 px-3 shadow-sm position-relative ${isOwn ? 'bg-primary text-white rounded-start-3 rounded-top-3' : 'bg-white text-dark border rounded-end-3 rounded-top-3'}`}
                     style={{
-                        borderRadius: '1.2rem',
-                        borderBottomRightRadius: isOwn ? '0.2rem' : '1.2rem',
-                        borderBottomLeftRadius: !isOwn ? '0.2rem' : '1.2rem'
+                        borderRadius: '18px',
+                        borderBottomRightRadius: isOwn ? '4px' : '18px',
+                        borderBottomLeftRadius: !isOwn ? '4px' : '18px'
                     }}
                 >
                     {renderContent()}
 
                     {/* Timestamp & Status inside bubble bottom right */}
                     <div className={`d-flex align-items-center justify-content-end mt-1 ${isOwn ? 'text-white-50' : 'text-muted'}`} style={{ fontSize: '0.65rem', lineHeight: 1 }}>
-                        <span>{formatTime(message.createdAt)}</span>
+                        <span className="me-1">{formatTime(message.createdAt)}</span>
                         {getReadStatus()}
                     </div>
                 </div>

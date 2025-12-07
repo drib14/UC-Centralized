@@ -36,6 +36,13 @@ const ChatSidebar = ({
         return date.toLocaleDateString([], { month: 'short', day: 'numeric' });
     };
 
+    const getInitials = (user) => {
+        if (!user) return 'U';
+        const f = user.firstName ? user.firstName.charAt(0) : (user.name ? user.name.charAt(0) : '');
+        const l = user.lastName ? user.lastName.charAt(0) : (user.name && user.name.includes(' ') ? user.name.split(' ').pop().charAt(0) : '');
+        return (f + l).toUpperCase() || 'U';
+    };
+
     return (
         <div className="d-flex flex-column h-100 bg-white">
             {/* Header */}
@@ -81,14 +88,20 @@ const ChatSidebar = ({
                                 style={{ cursor: 'pointer', transition: 'background-color 0.2s' }}
                             >
                                 <div className="position-relative me-3">
-                                    <img
-                                        src={other?.profilePicture || "https://via.placeholder.com/48"}
-                                        alt={other?.firstName}
-                                        className="rounded-circle border"
-                                        width="48"
-                                        height="48"
-                                        style={{ objectFit: 'cover' }}
-                                    />
+                                    {other?.profilePicture ? (
+                                        <img
+                                            src={other.profilePicture}
+                                            alt={other.firstName}
+                                            className="rounded-circle border"
+                                            width="48"
+                                            height="48"
+                                            style={{ objectFit: 'cover' }}
+                                        />
+                                    ) : (
+                                        <div className="rounded-circle border bg-light d-flex align-items-center justify-content-center text-primary fw-bold" style={{width: '48px', height: '48px'}}>
+                                            {getInitials(other)}
+                                        </div>
+                                    )}
                                     {isOnline && (
                                         <span
                                             className="position-absolute bottom-0 end-0 bg-success border border-white rounded-circle"
@@ -162,12 +175,19 @@ const ChatSidebar = ({
                                                 className="list-group-item list-group-item-action d-flex align-items-center"
                                                 onClick={() => onNewChat(user)}
                                             >
-                                                <img
-                                                    src={user.profilePicture || "https://via.placeholder.com/32"}
-                                                    alt={user.firstName}
-                                                    className="rounded-circle me-3"
-                                                    width="32" height="32"
-                                                />
+                                                {user.profilePicture ? (
+                                                    <img
+                                                        src={user.profilePicture}
+                                                        alt={user.firstName}
+                                                        className="rounded-circle me-3"
+                                                        width="32" height="32"
+                                                        style={{objectFit: 'cover'}}
+                                                    />
+                                                ) : (
+                                                    <div className="rounded-circle me-3 bg-light border d-flex align-items-center justify-content-center text-primary fw-bold" style={{width: '32px', height: '32px', minWidth: '32px'}}>
+                                                        <small>{getInitials(user)}</small>
+                                                    </div>
+                                                )}
                                                 <div>
                                                     <div className="fw-bold">{user.firstName} {user.lastName || user.name}</div>
                                                     <small className="text-muted text-capitalize">{user.role} • {user.department}</small>

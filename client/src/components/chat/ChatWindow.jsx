@@ -1,5 +1,5 @@
 import React, { useRef, useEffect } from 'react';
-import { FaPhone, FaVideo, FaEllipsisV, FaArrowLeft, FaTrash, FaBellSlash, FaBell } from 'react-icons/fa';
+import { FaEllipsisV, FaArrowLeft, FaTrash, FaBellSlash, FaBell } from 'react-icons/fa';
 import MessageBubble from './MessageBubble';
 import ChatInput from './ChatInput';
 import TypingIndicator from './TypingIndicator';
@@ -13,9 +13,9 @@ const ChatWindow = ({
     onMuteConversation,
     onBack,
     isMuted,
-    isTyping, // Boolean: is the other person typing?
-    onTyping, // Function to emit typing
-    onStopTyping // Function to emit stop typing
+    isTyping,
+    onTyping,
+    onStopTyping
 }) => {
     const messagesEndRef = useRef(null);
     const otherUser = conversation.otherUser || conversation.participants.find(p => p._id !== currentUser._id) || {};
@@ -28,17 +28,20 @@ const ChatWindow = ({
         scrollToBottom();
     }, [messages, isTyping]);
 
+    const getInitials = (user) => {
+        if (!user) return 'U';
+        const f = user.firstName ? user.firstName.charAt(0) : (user.name ? user.name.charAt(0) : '');
+        const l = user.lastName ? user.lastName.charAt(0) : (user.name && user.name.includes(' ') ? user.name.split(' ').pop().charAt(0) : '');
+        return (f + l).toUpperCase() || 'U';
+    };
+
     // Grouping Logic
     const groupedMessages = [];
     let currentGroup = null;
 
     messages.forEach((msg, index) => {
         const isOwn = msg.sender._id === currentUser._id;
-        const date = new Date(msg.createdAt);
 
-        // Date separator logic can be added here (e.g., check if day changed from previous msg)
-
-        // Group by sender
         if (currentGroup && currentGroup.senderId === msg.sender._id) {
             currentGroup.messages.push(msg);
         } else {
@@ -63,12 +66,19 @@ const ChatWindow = ({
 
                 <div className="d-flex align-items-center flex-grow-1">
                     <div className="position-relative me-3">
-                        <img
-                            src={otherUser.profilePicture || "https://via.placeholder.com/40"}
-                            alt={otherUser.firstName}
-                            className="rounded-circle border"
-                            width="40" height="40"
-                        />
+                        {otherUser.profilePicture ? (
+                            <img
+                                src={otherUser.profilePicture}
+                                alt={otherUser.firstName}
+                                className="rounded-circle border"
+                                width="40" height="40"
+                                style={{ objectFit: 'cover' }}
+                            />
+                        ) : (
+                            <div className="rounded-circle border bg-light d-flex align-items-center justify-content-center text-primary fw-bold" style={{width: '40px', height: '40px'}}>
+                                {getInitials(otherUser)}
+                            </div>
+                        )}
                         {otherUser.isOnline && (
                             <span className="position-absolute bottom-0 end-0 bg-success border border-white rounded-circle" style={{ width: '10px', height: '10px' }}></span>
                         )}
@@ -82,14 +92,6 @@ const ChatWindow = ({
                 </div>
 
                 <div className="d-flex align-items-center gap-2">
-                    {/* Placeholder Actions */}
-                    <button className="btn btn-light rounded-circle text-muted" title="Voice Call (Coming Soon)">
-                        <FaPhone />
-                    </button>
-                    <button className="btn btn-light rounded-circle text-muted" title="Video Call (Coming Soon)">
-                        <FaVideo />
-                    </button>
-
                     <div className="dropdown">
                         <button className="btn btn-light rounded-circle text-muted" data-bs-toggle="dropdown">
                             <FaEllipsisV />
@@ -121,7 +123,13 @@ const ChatWindow = ({
                     {/* Welcome / Info if empty */}
                     {messages.length === 0 && (
                         <div className="text-center my-5 text-muted">
-                            <img src={otherUser.profilePicture || "https://via.placeholder.com/80"} className="rounded-circle mb-3 border shadow-sm" width="80" height="80" alt="" />
+                            {otherUser.profilePicture ? (
+                                <img src={otherUser.profilePicture} className="rounded-circle mb-3 border shadow-sm" width="80" height="80" alt="" style={{ objectFit: 'cover' }} />
+                            ) : (
+                                <div className="rounded-circle mb-3 border shadow-sm bg-white d-flex align-items-center justify-content-center text-primary display-4 fw-bold mx-auto" style={{width: '80px', height: '80px'}}>
+                                    {getInitials(otherUser)}
+                                </div>
+                            )}
                             <h5>Say hello to {otherUser.firstName}! 👋</h5>
                             <p>This is the beginning of your conversation.</p>
                         </div>
@@ -145,12 +153,18 @@ const ChatWindow = ({
                     {isTyping && (
                          <div className="mb-3 align-self-start">
                              <div className="d-flex align-items-center ms-2">
-                                <img
-                                    src={otherUser.profilePicture || "https://via.placeholder.com/24"}
-                                    className="rounded-circle me-2"
-                                    width="24" height="24"
-                                    alt=""
-                                />
+                                {otherUser.profilePicture ? (
+                                    <img
+                                        src={otherUser.profilePicture}
+                                        className="rounded-circle me-2"
+                                        width="24" height="24"
+                                        alt=""
+                                    />
+                                ) : (
+                                    <div className="rounded-circle me-2 bg-white border d-flex align-items-center justify-content-center text-primary fw-bold" style={{width: '24px', height: '24px', fontSize: '10px'}}>
+                                        {getInitials(otherUser)}
+                                    </div>
+                                )}
                                 <TypingIndicator />
                              </div>
                          </div>
