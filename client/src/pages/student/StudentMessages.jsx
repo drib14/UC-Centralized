@@ -216,9 +216,10 @@ const StudentMessages = () => {
         }
         try {
             const res = await api.get(`/messages/search/users?q=${query}`);
-            setUserSearchResults(res.data);
+            setUserSearchResults(Array.isArray(res.data) ? res.data : []);
         } catch (err) {
             console.error(err);
+            setUserSearchResults([]);
         }
     };
 

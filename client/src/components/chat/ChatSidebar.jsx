@@ -160,7 +160,7 @@ const ChatSidebar = ({
                                     <span className="input-group-text"><FaSearch /></span>
                                 </div>
                                 <div className="list-group overflow-auto" style={{ maxHeight: '300px' }}>
-                                    {searchResults.map(user => (
+                                    {(Array.isArray(searchResults) ? searchResults : []).map(user => (
                                         <button
                                             key={user._id}
                                             className="list-group-item list-group-item-action d-flex align-items-center"
