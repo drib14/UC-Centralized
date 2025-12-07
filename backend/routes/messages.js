@@ -216,8 +216,69 @@ router.post('/', verifyToken, parser.single('file'), async (req, res) => {
     }
 });
 
-// GET MESSAGES (Dynamic ID)
-router.get('/:conversationId', verifyToken, async (req, res) => {
+// EDIT MESSAGE
+router.put('/:id', verifyToken, async (req, res) => {
+    try {
+        const message = await Message.findById(req.params.id);
+        if (!message) return res.status(404).json("Message not found");
+        if (message.sender.toString() !== req.user.id) return res.status(403).json("You can only edit your own messages");
+
+        const updatedMessage = await Message.findByIdAndUpdate(
+            req.params.id,
+            { $set: { content: req.body.content } },
+            { new: true }
+        ).populate('sender', 'firstName lastName profileImage name role');
+
+        // Socket Emission
+        const conversation = await Conversation.findById(message.conversationId);
+        const io = req.app.get('io');
+        conversation.participants.forEach(participantId => {
+             io.to(participantId.toString()).emit("message_updated", updatedMessage);
+        });
+
+        res.status(200).json(updatedMessage);
+    } catch (err) {
+        res.status(500).json(err);
+    }
+});
+
+// DELETE MESSAGE
+router.delete('/:id', verifyToken, async (req, res) => {
+    try {
+        const mode = req.query.mode || 'everyone'; // 'me' or 'everyone'
+        const message = await Message.findById(req.params.id);
+
+        if (!message) return res.status(404).json("Message not found");
+
+        if (mode === 'everyone') {
+            if (message.sender.toString() !== req.user.id) return res.status(403).json("You can only delete your own messages for everyone");
+
+             await Message.findByIdAndDelete(req.params.id);
+
+             // Socket Emission
+             const conversation = await Conversation.findById(message.conversationId);
+             const io = req.app.get('io');
+             conversation.participants.forEach(participantId => {
+                  io.to(participantId.toString()).emit("message_deleted", req.params.id);
+             });
+
+             res.status(200).json("Message deleted");
+        } else {
+             // Delete for me
+             await Message.findByIdAndUpdate(req.params.id, {
+                 $addToSet: { deletedFor: req.user.id }
+             });
+             res.status(200).json("Message deleted for you");
+        }
+    } catch (err) {
+        res.status(500).json(err);
+    }
+});
+
+// --- CONVERSATION ROUTES (Moved after Message routes or namespaced) ---
+
+// GET MESSAGES (Dynamic ID - now namespaced)
+router.get('/conversations/:conversationId', verifyToken, async (req, res) => {
     try {
         // Verify participation
         const conversation = await Conversation.findOne({
@@ -248,7 +309,7 @@ router.get('/:conversationId', verifyToken, async (req, res) => {
 });
 
 // DELETE CONVERSATION
-router.delete('/:conversationId', verifyToken, async (req, res) => {
+router.delete('/conversations/:conversationId', verifyToken, async (req, res) => {
     try {
         const conversation = await Conversation.findOneAndDelete({
             _id: req.params.conversationId,
@@ -272,7 +333,7 @@ router.delete('/:conversationId', verifyToken, async (req, res) => {
 });
 
 // MUTE CONVERSATION
-router.put('/:conversationId/mute', verifyToken, async (req, res) => {
+router.put('/conversations/:conversationId/mute', verifyToken, async (req, res) => {
     try {
         const conversation = await Conversation.findOne({
             _id: req.params.conversationId,
@@ -302,7 +363,7 @@ router.put('/:conversationId/mute', verifyToken, async (req, res) => {
 });
 
 // MARK READ
-router.put('/:conversationId/read', verifyToken, async (req, res) => {
+router.put('/conversations/:conversationId/read', verifyToken, async (req, res) => {
     try {
         await Message.updateMany(
             {
@@ -327,65 +388,6 @@ router.put('/:conversationId/read', verifyToken, async (req, res) => {
         }
 
         res.status(200).json("Messages read");
-    } catch (err) {
-        res.status(500).json(err);
-    }
-});
-
-// EDIT MESSAGE
-router.put('/:id', verifyToken, async (req, res) => {
-    try {
-        const message = await Message.findById(req.params.id);
-        if (!message) return res.status(404).json("Message not found");
-        if (message.sender.toString() !== req.user.id) return res.status(403).json("You can only edit your own messages");
-
-        const updatedMessage = await Message.findByIdAndUpdate(
-            req.params.id,
-            { $set: { content: req.body.content } },
-            { new: true }
-        ).populate('sender', 'firstName lastName profileImage name role');
-
-        // Socket Emission
-        const conversation = await Conversation.findById(message.conversationId);
-        const io = req.app.get('io');
-        conversation.participants.forEach(participantId => {
-             io.to(participantId.toString()).emit("message_updated", updatedMessage);
-        });
-
-        res.status(200).json(updatedMessage);
-    } catch (err) {
-        res.status(500).json(err);
-    }
-});
-
-// DELETE MESSAGE
-router.delete('/:id', verifyToken, async (req, res) => {
-    try {
-        const mode = req.query.mode || 'everyone';
-        const message = await Message.findById(req.params.id);
-
-        if (!message) return res.status(404).json("Message not found");
-
-        if (mode === 'everyone') {
-            if (message.sender.toString() !== req.user.id) return res.status(403).json("You can only delete your own messages for everyone");
-
-             await Message.findByIdAndDelete(req.params.id);
-
-             // Socket Emission
-             const conversation = await Conversation.findById(message.conversationId);
-             const io = req.app.get('io');
-             conversation.participants.forEach(participantId => {
-                  io.to(participantId.toString()).emit("message_deleted", req.params.id);
-             });
-
-             res.status(200).json("Message deleted");
-        } else {
-             // Delete for me
-             await Message.findByIdAndUpdate(req.params.id, {
-                 $addToSet: { deletedFor: req.user.id }
-             });
-             res.status(200).json("Message deleted for you");
-        }
     } catch (err) {
         res.status(500).json(err);
     }

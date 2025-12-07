@@ -175,7 +175,7 @@ class API {
     }
 
     static getMessages(conversationId) {
-        return this.request(`/messages/${conversationId}`);
+        return this.request(`/messages/conversations/${conversationId}`);
     }
 
     static createConversation(receiverId) {
@@ -209,7 +209,7 @@ class API {
     }
 
     static markMessagesRead(conversationId) {
-        return this.request(`/messages/${conversationId}/read`, 'PUT');
+        return this.request(`/messages/conversations/${conversationId}/read`, 'PUT');
     }
 
     // Notifications
