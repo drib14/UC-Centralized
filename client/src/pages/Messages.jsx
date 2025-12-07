@@ -15,10 +15,11 @@ const Messages = () => {
     const [messages, setMessages] = useState([]);
     const [sidebarSearch, setSidebarSearch] = useState("");
     const [newChatSearch, setNewChatSearch] = useState("");
-    const [userSearchResults, setUserSearchResults] = useState([]);
+    const [userSearchResults, setUserSearchResults] = useState([]); // For Modal
+    const [sidebarUserResults, setSidebarUserResults] = useState([]); // For Sidebar
     const [showNewChatModal, setShowNewChatModal] = useState(false);
     const [loading, setLoading] = useState(true);
-    const [isTyping, setIsTyping] = useState(false); // If the OTHER person is typing
+    const [isTyping, setIsTyping] = useState(false);
 
     // Media Modal State
     const [viewImage, setViewImage] = useState(null);
@@ -77,20 +78,15 @@ const Messages = () => {
 
         const handleReceiveMessage = (message) => {
             if (selectedConversation && selectedConversation._id === message.conversationId) {
-                // Deduplicate based on _id
                 setMessages(prev => {
                     if (prev.some(m => m._id === message._id)) return prev;
                     return [...prev, message];
                 });
-
                 markAsRead(message.conversationId);
-
-                // Also update last message in conversation list
                 setConversations(prev => prev.map(c =>
                     c._id === message.conversationId ? { ...c, lastMessage: message } : c
                 ));
             } else {
-                // Update conversation list (unread count, last msg)
                 fetchConversations();
             }
         };
@@ -108,7 +104,6 @@ const Messages = () => {
         };
 
         const handleMessagesRead = (data) => {
-             // data: { conversationId, readBy }
              if (selectedConversation && selectedConversation._id === data.conversationId) {
                  setMessages(prev => prev.map(m => {
                      if (!m.readBy.includes(data.readBy)) {
@@ -132,25 +127,21 @@ const Messages = () => {
         };
 
         const handleUserStatusChange = (data) => {
-             // data: { userId, isOnline, lastSeen }
              setConversations(prev => prev.map(c => {
                  const isParticipant = c.participants.some(p => p._id === data.userId);
                  if (isParticipant) {
                      const updatedParticipants = c.participants.map(p =>
                          p._id === data.userId ? { ...p, isOnline: data.isOnline, lastSeen: data.lastSeen } : p
                      );
-                     // Helper to update the 'otherUser' convenience object if it matches
                      let updatedOtherUser = c.otherUser;
                      if (c.otherUser && c.otherUser._id === data.userId) {
                          updatedOtherUser = { ...c.otherUser, isOnline: data.isOnline, lastSeen: data.lastSeen };
                      }
-
                      return { ...c, participants: updatedParticipants, otherUser: updatedOtherUser };
                  }
                  return c;
              }));
 
-             // Update selected conversation if needed
              if (selectedConversation && selectedConversation.otherUser?._id === data.userId) {
                  setSelectedConversation(prev => ({
                      ...prev,
@@ -189,9 +180,11 @@ const Messages = () => {
 
     const handleSelectConversation = (conv) => {
         setSelectedConversation(conv);
-        setMessages([]); // Clear previous messages while loading
+        setMessages([]);
         setIsTyping(false);
         fetchMessages(conv._id);
+        // Clear sidebar search when a conversation is selected? Maybe optional.
+        // setSidebarSearch("");
     };
 
     const handleSendMessage = async (content, type = 'text', file = null) => {
@@ -219,7 +212,6 @@ const Messages = () => {
                 setSelectedConversation(newConv);
                 setMessages([res]);
             } else {
-                // Deduplicate (in case socket event arrives fast)
                 setMessages(prev => {
                     if (prev.some(m => m._id === res._id)) return prev;
                     return [...prev, res];
@@ -237,6 +229,7 @@ const Messages = () => {
         }
     };
 
+    // ... (typing handlers, delete, mute - same as before) ...
     const handleTyping = () => {
         if (socket && selectedConversation && !selectedConversation.isTemp) {
             const recipient = selectedConversation.otherUser?._id;
@@ -301,7 +294,7 @@ const Messages = () => {
         }
     };
 
-    // SEARCH LOGIC WITH DEBOUNCE
+    // SEARCH LOGIC (MODAL)
     useEffect(() => {
         const delayDebounceFn = setTimeout(async () => {
             if (newChatSearch.trim()) {
@@ -320,6 +313,25 @@ const Messages = () => {
         return () => clearTimeout(delayDebounceFn);
     }, [newChatSearch]);
 
+    // SEARCH LOGIC (SIDEBAR)
+    useEffect(() => {
+        const delayDebounceFn = setTimeout(async () => {
+            if (sidebarSearch.trim()) {
+                try {
+                    const res = await api.get(`/messages/search/users?q=${sidebarSearch}`);
+                    setSidebarUserResults(Array.isArray(res) ? res : []);
+                } catch (err) {
+                    console.error("Sidebar Search error:", err);
+                    setSidebarUserResults([]);
+                }
+            } else {
+                setSidebarUserResults([]);
+            }
+        }, 500);
+
+        return () => clearTimeout(delayDebounceFn);
+    }, [sidebarSearch]);
+
     const handleSearchUser = (query) => {
         setNewChatSearch(query);
     };
@@ -330,6 +342,7 @@ const Messages = () => {
             handleSelectConversation(existing);
             setShowNewChatModal(false);
             setNewChatSearch("");
+            setSidebarSearch(""); // Clear sidebar search on selection
         } else {
             const tempConv = {
                 _id: "temp_" + targetUser._id,
@@ -343,6 +356,7 @@ const Messages = () => {
             setMessages([]);
             setShowNewChatModal(false);
             setNewChatSearch("");
+            setSidebarSearch(""); // Clear sidebar search
         }
     };
 
@@ -369,6 +383,7 @@ const Messages = () => {
                 sidebarSearch={sidebarSearch}
                 setSidebarSearch={setSidebarSearch}
                 userSearchResults={userSearchResults}
+                sidebarUserResults={sidebarUserResults} // Pass this
                 showNewChatModal={showNewChatModal}
                 setShowNewChatModal={setShowNewChatModal}
                 newChatSearch={newChatSearch}

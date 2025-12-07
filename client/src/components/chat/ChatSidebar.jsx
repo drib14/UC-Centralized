@@ -10,6 +10,7 @@ const ChatSidebar = ({
     setSearchTerm,
     onSearchUser,
     searchResults,
+    sidebarUserResults,
     showNewChatModal,
     setShowNewChatModal,
     newChatSearchTerm,
@@ -23,6 +24,11 @@ const ChatSidebar = ({
         const name = `${other?.firstName || ''} ${other?.lastName || ''} ${other?.name || ''}`.toLowerCase();
         return name.includes(searchTerm.toLowerCase());
     });
+
+    // Filter API results (exclude existing conversations)
+    const otherPeople = (sidebarUserResults || []).filter(u =>
+        !conversations.some(c => c.otherUser?._id === u._id)
+    );
 
     const formatTime = (dateString) => {
         if (!dateString) return '';
@@ -64,7 +70,7 @@ const ChatSidebar = ({
                     <input
                         type="text"
                         className="form-control bg-light border-0"
-                        placeholder="Search chats..."
+                        placeholder="Search chats or people..."
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
                     />
@@ -73,25 +79,93 @@ const ChatSidebar = ({
 
             {/* Conversation List */}
             <div className="flex-grow-1 overflow-auto custom-scrollbar">
-                {filteredConversations.length > 0 ? (
-                    filteredConversations.map(conv => {
-                        const other = conv.otherUser;
-                        const isSelected = selectedConversation && selectedConversation._id === conv._id;
-                        const isUnread = conv.unreadCount > 0;
-                        const isOnline = other?.isOnline;
 
-                        return (
+                {/* Existing Conversations */}
+                {filteredConversations.length > 0 && (
+                    <>
+                        {searchTerm && <div className="px-3 py-2 text-muted small fw-bold bg-light">CONVERSATIONS</div>}
+                        {filteredConversations.map(conv => {
+                            const other = conv.otherUser;
+                            const isSelected = selectedConversation && selectedConversation._id === conv._id;
+                            const isUnread = conv.unreadCount > 0;
+                            const isOnline = other?.isOnline;
+
+                            return (
+                                <div
+                                    key={conv._id}
+                                    className={`d-flex align-items-center p-3 cursor-pointer border-bottom-light ${isSelected ? 'bg-primary-subtle' : 'hover-bg-light'}`}
+                                    onClick={() => onSelectConversation(conv)}
+                                    style={{ cursor: 'pointer', transition: 'background-color 0.2s' }}
+                                >
+                                    <div className="position-relative me-3">
+                                        {other?.profilePicture ? (
+                                            <img
+                                                src={other.profilePicture}
+                                                alt={other.firstName}
+                                                className="rounded-circle border"
+                                                width="48"
+                                                height="48"
+                                                style={{ objectFit: 'cover' }}
+                                            />
+                                        ) : (
+                                            <div className="rounded-circle border bg-light d-flex align-items-center justify-content-center text-primary fw-bold" style={{width: '48px', height: '48px'}}>
+                                                {getInitials(other)}
+                                            </div>
+                                        )}
+                                        {isOnline && (
+                                            <span
+                                                className="position-absolute bottom-0 end-0 bg-success border border-white rounded-circle"
+                                                style={{ width: '12px', height: '12px' }}
+                                            ></span>
+                                        )}
+                                    </div>
+                                    <div className="flex-grow-1 overflow-hidden">
+                                        <div className="d-flex justify-content-between align-items-baseline mb-1">
+                                            <h6 className={`mb-0 text-truncate ${isUnread ? 'fw-bold' : ''}`}>
+                                                {other?.firstName} {other?.lastName || other?.name}
+                                            </h6>
+                                            <small className={`${isUnread ? 'text-primary fw-bold' : 'text-muted'}`} style={{ fontSize: '0.75rem' }}>
+                                                {conv.lastMessage ? formatTime(conv.lastMessage.createdAt) : ''}
+                                            </small>
+                                        </div>
+                                        <div className="d-flex justify-content-between align-items-center">
+                                            <p className={`mb-0 text-truncate small ${isUnread ? 'fw-bold text-dark' : 'text-muted'}`} style={{ maxWidth: '85%' }}>
+                                                {conv.lastMessage ? (
+                                                    <>
+                                                        {conv.lastMessage.sender === currentUser._id && "You: "}
+                                                        {conv.lastMessage.type === 'text' ? conv.lastMessage.content : `Sent a ${conv.lastMessage.type}`}
+                                                    </>
+                                                ) : (
+                                                    <span className="text-secondary fst-italic">No messages yet</span>
+                                                )}
+                                            </p>
+                                            {isUnread && (
+                                                <span className="badge bg-primary rounded-pill">{conv.unreadCount}</span>
+                                            )}
+                                        </div>
+                                    </div>
+                                </div>
+                            );
+                        })}
+                    </>
+                )}
+
+                {/* Other People (API Results) */}
+                {searchTerm && otherPeople.length > 0 && (
+                    <>
+                        <div className="px-3 py-2 text-muted small fw-bold bg-light">MORE PEOPLE</div>
+                        {otherPeople.map(user => (
                             <div
-                                key={conv._id}
-                                className={`d-flex align-items-center p-3 cursor-pointer border-bottom-light ${isSelected ? 'bg-primary-subtle' : 'hover-bg-light'}`}
-                                onClick={() => onSelectConversation(conv)}
+                                key={user._id}
+                                className="d-flex align-items-center p-3 cursor-pointer border-bottom-light hover-bg-light"
+                                onClick={() => onNewChat(user)}
                                 style={{ cursor: 'pointer', transition: 'background-color 0.2s' }}
                             >
                                 <div className="position-relative me-3">
-                                    {other?.profilePicture ? (
+                                    {user.profilePicture ? (
                                         <img
-                                            src={other.profilePicture}
-                                            alt={other.firstName}
+                                            src={user.profilePicture}
+                                            alt={user.firstName}
                                             className="rounded-circle border"
                                             width="48"
                                             height="48"
@@ -99,45 +173,27 @@ const ChatSidebar = ({
                                         />
                                     ) : (
                                         <div className="rounded-circle border bg-light d-flex align-items-center justify-content-center text-primary fw-bold" style={{width: '48px', height: '48px'}}>
-                                            {getInitials(other)}
+                                            {getInitials(user)}
                                         </div>
                                     )}
-                                    {isOnline && (
+                                    {user.isOnline && (
                                         <span
                                             className="position-absolute bottom-0 end-0 bg-success border border-white rounded-circle"
                                             style={{ width: '12px', height: '12px' }}
                                         ></span>
                                     )}
                                 </div>
-                                <div className="flex-grow-1 overflow-hidden">
-                                    <div className="d-flex justify-content-between align-items-baseline mb-1">
-                                        <h6 className={`mb-0 text-truncate ${isUnread ? 'fw-bold' : ''}`}>
-                                            {other?.firstName} {other?.lastName || other?.name}
-                                        </h6>
-                                        <small className={`${isUnread ? 'text-primary fw-bold' : 'text-muted'}`} style={{ fontSize: '0.75rem' }}>
-                                            {conv.lastMessage ? formatTime(conv.lastMessage.createdAt) : ''}
-                                        </small>
-                                    </div>
-                                    <div className="d-flex justify-content-between align-items-center">
-                                        <p className={`mb-0 text-truncate small ${isUnread ? 'fw-bold text-dark' : 'text-muted'}`} style={{ maxWidth: '85%' }}>
-                                            {conv.lastMessage ? (
-                                                <>
-                                                    {conv.lastMessage.sender === currentUser._id && "You: "}
-                                                    {conv.lastMessage.type === 'text' ? conv.lastMessage.content : `Sent a ${conv.lastMessage.type}`}
-                                                </>
-                                            ) : (
-                                                <span className="text-secondary fst-italic">No messages yet</span>
-                                            )}
-                                        </p>
-                                        {isUnread && (
-                                            <span className="badge bg-primary rounded-pill">{conv.unreadCount}</span>
-                                        )}
-                                    </div>
+                                <div>
+                                    <h6 className="mb-0">{user.firstName} {user.lastName || user.name}</h6>
+                                    <small className="text-muted text-capitalize">{user.role} • {user.department}</small>
                                 </div>
                             </div>
-                        );
-                    })
-                ) : (
+                        ))}
+                    </>
+                )}
+
+                {/* Empty State */}
+                {filteredConversations.length === 0 && (!searchTerm || otherPeople.length === 0) && (
                     <div className="text-center p-4 text-muted">
                         <small>No conversations found</small>
                     </div>

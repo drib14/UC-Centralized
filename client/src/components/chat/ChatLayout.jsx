@@ -20,6 +20,7 @@ const ChatLayout = ({
     sidebarSearch,
     setSidebarSearch,
     userSearchResults,
+    sidebarUserResults, // New prop
     showNewChatModal,
     setShowNewChatModal,
     newChatSearch,
@@ -43,7 +44,8 @@ const ChatLayout = ({
                         searchTerm={sidebarSearch}
                         setSearchTerm={setSidebarSearch}
                         onSearchUser={onSearchUser}
-                        searchResults={userSearchResults}
+                        searchResults={userSearchResults} // For modal
+                        sidebarUserResults={sidebarUserResults} // For sidebar list
                         showNewChatModal={showNewChatModal}
                         setShowNewChatModal={setShowNewChatModal}
                         newChatSearchTerm={newChatSearch}
