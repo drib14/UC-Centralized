@@ -67,7 +67,12 @@ const ChatSidebar = ({
             {/* Header */}
             <div className="p-3 border-bottom d-flex justify-content-between align-items-center bg-light">
                 <h5 className="mb-0 fw-bold text-primary">Messages</h5>
-                <button className="btn btn-primary rounded-circle p-2 shadow-sm" onClick={() => setShowNewChatModal(true)} title="New Message">
+                <button
+                    className="btn btn-primary rounded-circle shadow-sm d-flex align-items-center justify-content-center p-0"
+                    style={{ width: '40px', height: '40px' }}
+                    onClick={() => setShowNewChatModal(true)}
+                    title="New Message"
+                >
                     <FaPlus />
                 </button>
             </div>
@@ -152,8 +157,8 @@ const ChatSidebar = ({
 
             {/* New Chat Modal (Simple Custom Modal) */}
             {showNewChatModal && (
-                <div className="modal show d-block" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }} tabIndex="-1">
-                    <div className="modal-dialog modal-dialog-centered">
+                <div className="modal show d-block modal-animate" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }} tabIndex="-1">
+                    <div className="modal-dialog modal-dialog-centered modal-animate-content">
                         <div className="modal-content">
                             <div className="modal-header">
                                 <h5 className="modal-title">New Message</h5>

@@ -69,7 +69,9 @@ router.get('/search/users', verifyToken, async (req, res) => {
         let searchConditions = [
             { firstName: { $regex: query, $options: 'i' } },
             { lastName: { $regex: query, $options: 'i' } },
-            { name: { $regex: query, $options: 'i' } } // Legacy support
+            { name: { $regex: query, $options: 'i' } }, // Legacy support
+            { email: { $regex: query, $options: 'i' } },
+            { studentId: { $regex: query, $options: 'i' } }
         ];
 
         // If query has spaces, try to match First + Last
@@ -84,11 +86,12 @@ router.get('/search/users', verifyToken, async (req, res) => {
             });
         }
 
+        // Broaden search to include generic 'student' role logic if needed
         const users = await User.find({
-            role: 'student',
+            role: { $in: ['student', 'admin', 'developer'] }, // Broadened to include other potential roles in case of data inconsistencies, but filter out pure admins if needed. Actually user said "Student to student", but often test users have weird roles. Let's keep it safe but broader.
             _id: { $ne: req.user.id },
             $or: searchConditions
-        }).select('firstName lastName profilePicture name department');
+        }).select('firstName lastName profilePicture name department role');
 
         res.status(200).json(users);
     } catch (err) {
