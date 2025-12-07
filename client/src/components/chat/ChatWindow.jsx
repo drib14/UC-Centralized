@@ -19,7 +19,8 @@ const ChatWindow = ({
     onViewImage,
     onViewVideo,
     onEditMessage,
-    onDeleteMessage
+    onDeleteMessage,
+    onRequestForward
 }) => {
     const messagesEndRef = useRef(null);
     const otherUser = conversation.otherUser || conversation.participants.find(p => p._id !== currentUser._id) || {};
@@ -153,6 +154,7 @@ const ChatWindow = ({
                                     onViewVideo={onViewVideo}
                                     onEditMessage={onEditMessage}
                                     onDeleteMessage={onDeleteMessage}
+                                    onRequestForward={onRequestForward}
                                 />
                             ))}
                         </div>
