@@ -31,7 +31,8 @@ const Messages = () => {
     const fetchConversations = useCallback(async () => {
         try {
             const res = await api.get('/messages/conversations');
-            setConversations(Array.isArray(res.data) ? res.data : []);
+            // Fix: res IS the array, not res.data
+            setConversations(Array.isArray(res) ? res : []);
             setLoading(false);
         } catch (err) {
             console.error(err);
@@ -47,7 +48,8 @@ const Messages = () => {
     const fetchMessages = async (convId) => {
         try {
             const res = await api.get(`/messages/${convId}`);
-            setMessages(res.data);
+            // Fix: res IS the array
+            setMessages(res);
             await markAsRead(convId);
         } catch (err) {
             console.error(err);
@@ -173,24 +175,27 @@ const Messages = () => {
 
         try {
             // FIX: Use api.request with isMultipart=true explicitly
+            // api.request RETURNS the message object directly (res)
             const res = await api.request('/messages', 'POST', formData, true);
 
             // If it was temp, we now have a real conversation
             if (selectedConversation.isTemp) {
-                const realConvId = res.data.conversationId;
+                const realConvId = res.conversationId; // Fix: res.conversationId
+
                 // Fetch full conversation details to get proper object structure
                 await fetchConversations();
+
                 // Hack: manually fetch all again and find it.
                 const allConvs = await api.get('/messages/conversations');
-                const newConv = allConvs.data.find(c => c._id === realConvId);
+                const newConv = allConvs.find(c => c._id === realConvId); // Fix: allConvs.find
                 setSelectedConversation(newConv);
-                setMessages([res.data]);
+                setMessages([res]); // Fix: [res]
             } else {
-                setMessages(prev => [...prev, res.data]);
+                setMessages(prev => [...prev, res]); // Fix: res
                 // Update local conversation list last message
                 setConversations(prev => prev.map(c =>
                     c._id === selectedConversation._id
-                    ? { ...c, lastMessage: res.data }
+                    ? { ...c, lastMessage: res } // Fix: res
                     : c
                 ));
             }
@@ -234,7 +239,7 @@ const Messages = () => {
     const handleMuteConversation = async (convId) => {
         try {
             const res = await api.put(`/messages/${convId}/mute`);
-            const isMuted = res.data.muted;
+            const isMuted = res.muted; // Fix: res.muted
 
             setConversations(prev => prev.map(c => {
                 if (c._id !== convId) return c;
@@ -272,7 +277,9 @@ const Messages = () => {
             if (newChatSearch.trim()) {
                 try {
                     const res = await api.get(`/messages/search/users?q=${newChatSearch}`);
-                    setUserSearchResults(Array.isArray(res.data) ? res.data : []);
+                    // Fix: res IS the array
+                    console.log("[Messages] Search Result:", res);
+                    setUserSearchResults(Array.isArray(res) ? res : []);
                 } catch (err) {
                     console.error("Search error:", err);
                     setUserSearchResults([]);
