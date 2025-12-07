@@ -2,6 +2,8 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useSocket } from '../context/SocketContext';
 import ChatLayout from '../components/chat/ChatLayout';
+import ImageModal from '../components/modals/ImageModal';
+import VideoModal from '../components/modals/VideoModal';
 import { toast } from 'react-toastify';
 import api from '../utils/api';
 
@@ -18,6 +20,10 @@ const Messages = () => {
     const [loading, setLoading] = useState(true);
     const [isTyping, setIsTyping] = useState(false); // If the OTHER person is typing
 
+    // Media Modal State
+    const [viewImage, setViewImage] = useState(null);
+    const [viewVideo, setViewVideo] = useState(null);
+
     // Mobile Responsive State
     const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
 
@@ -31,7 +37,6 @@ const Messages = () => {
     const fetchConversations = useCallback(async () => {
         try {
             const res = await api.get('/messages/conversations');
-            // Fix: res IS the array, not res.data
             setConversations(Array.isArray(res) ? res : []);
             setLoading(false);
         } catch (err) {
@@ -48,7 +53,6 @@ const Messages = () => {
     const fetchMessages = async (convId) => {
         try {
             const res = await api.get(`/messages/${convId}`);
-            // Fix: res IS the array
             setMessages(res);
             await markAsRead(convId);
         } catch (err) {
@@ -73,8 +77,14 @@ const Messages = () => {
 
         const handleReceiveMessage = (message) => {
             if (selectedConversation && selectedConversation._id === message.conversationId) {
-                setMessages(prev => [...prev, message]);
+                // Deduplicate based on _id
+                setMessages(prev => {
+                    if (prev.some(m => m._id === message._id)) return prev;
+                    return [...prev, message];
+                });
+
                 markAsRead(message.conversationId);
+
                 // Also update last message in conversation list
                 setConversations(prev => prev.map(c =>
                     c._id === message.conversationId ? { ...c, lastMessage: message } : c
@@ -100,9 +110,7 @@ const Messages = () => {
         const handleMessagesRead = (data) => {
              // data: { conversationId, readBy }
              if (selectedConversation && selectedConversation._id === data.conversationId) {
-                 // Update messages state to reflect read status
                  setMessages(prev => prev.map(m => {
-                     // If user not in readBy, add them
                      if (!m.readBy.includes(data.readBy)) {
                          return { ...m, readBy: [...m.readBy, data.readBy] };
                      }
@@ -112,17 +120,43 @@ const Messages = () => {
         };
 
         const handleConversationUpdated = (data) => {
-             // Update sidebar preview
              setConversations(prev => {
                  const exists = prev.find(c => c._id === data.conversationId);
                  if (exists) {
                      return prev.map(c => c._id === data.conversationId ? { ...c, lastMessage: data.lastMessage } : c);
                  } else {
-                     // New conversation started by someone else, re-fetch full list
                      fetchConversations();
                      return prev;
                  }
              });
+        };
+
+        const handleUserStatusChange = (data) => {
+             // data: { userId, isOnline, lastSeen }
+             setConversations(prev => prev.map(c => {
+                 const isParticipant = c.participants.some(p => p._id === data.userId);
+                 if (isParticipant) {
+                     const updatedParticipants = c.participants.map(p =>
+                         p._id === data.userId ? { ...p, isOnline: data.isOnline, lastSeen: data.lastSeen } : p
+                     );
+                     // Helper to update the 'otherUser' convenience object if it matches
+                     let updatedOtherUser = c.otherUser;
+                     if (c.otherUser && c.otherUser._id === data.userId) {
+                         updatedOtherUser = { ...c.otherUser, isOnline: data.isOnline, lastSeen: data.lastSeen };
+                     }
+
+                     return { ...c, participants: updatedParticipants, otherUser: updatedOtherUser };
+                 }
+                 return c;
+             }));
+
+             // Update selected conversation if needed
+             if (selectedConversation && selectedConversation.otherUser?._id === data.userId) {
+                 setSelectedConversation(prev => ({
+                     ...prev,
+                     otherUser: { ...prev.otherUser, isOnline: data.isOnline, lastSeen: data.lastSeen }
+                 }));
+             }
         };
 
         socket.on("receive_message", handleReceiveMessage);
@@ -137,6 +171,7 @@ const Messages = () => {
         socket.on("typing", handleTyping);
         socket.on("stop_typing", handleStopTyping);
         socket.on("messages_read", handleMessagesRead);
+        socket.on("user_status_change", handleUserStatusChange);
 
         return () => {
             socket.off("receive_message", handleReceiveMessage);
@@ -145,6 +180,7 @@ const Messages = () => {
             socket.off("typing", handleTyping);
             socket.off("stop_typing", handleStopTyping);
             socket.off("messages_read", handleMessagesRead);
+            socket.off("user_status_change", handleUserStatusChange);
         };
     }, [socket, selectedConversation, fetchConversations, user._id]);
 
@@ -162,7 +198,6 @@ const Messages = () => {
         if (!selectedConversation) return;
 
         const formData = new FormData();
-        // If it's a temp conversation, use recipientId
         if (selectedConversation.isTemp) {
             formData.append("recipientId", selectedConversation.recipientId);
         } else {
@@ -174,28 +209,24 @@ const Messages = () => {
         if (file) formData.append("file", file);
 
         try {
-            // FIX: Use api.request with isMultipart=true explicitly
-            // api.request RETURNS the message object directly (res)
             const res = await api.request('/messages', 'POST', formData, true);
 
-            // If it was temp, we now have a real conversation
             if (selectedConversation.isTemp) {
-                const realConvId = res.conversationId; // Fix: res.conversationId
-
-                // Fetch full conversation details to get proper object structure
+                const realConvId = res.conversationId;
                 await fetchConversations();
-
-                // Hack: manually fetch all again and find it.
                 const allConvs = await api.get('/messages/conversations');
-                const newConv = allConvs.find(c => c._id === realConvId); // Fix: allConvs.find
+                const newConv = allConvs.find(c => c._id === realConvId);
                 setSelectedConversation(newConv);
-                setMessages([res]); // Fix: [res]
+                setMessages([res]);
             } else {
-                setMessages(prev => [...prev, res]); // Fix: res
-                // Update local conversation list last message
+                // Deduplicate (in case socket event arrives fast)
+                setMessages(prev => {
+                    if (prev.some(m => m._id === res._id)) return prev;
+                    return [...prev, res];
+                });
                 setConversations(prev => prev.map(c =>
                     c._id === selectedConversation._id
-                    ? { ...c, lastMessage: res } // Fix: res
+                    ? { ...c, lastMessage: res }
                     : c
                 ));
             }
@@ -239,7 +270,7 @@ const Messages = () => {
     const handleMuteConversation = async (convId) => {
         try {
             const res = await api.put(`/messages/${convId}/mute`);
-            const isMuted = res.muted; // Fix: res.muted
+            const isMuted = res.muted;
 
             setConversations(prev => prev.map(c => {
                 if (c._id !== convId) return c;
@@ -271,14 +302,11 @@ const Messages = () => {
     };
 
     // SEARCH LOGIC WITH DEBOUNCE
-    // Trigger search when newChatSearch changes
     useEffect(() => {
         const delayDebounceFn = setTimeout(async () => {
             if (newChatSearch.trim()) {
                 try {
                     const res = await api.get(`/messages/search/users?q=${newChatSearch}`);
-                    // Fix: res IS the array
-                    console.log("[Messages] Search Result:", res);
                     setUserSearchResults(Array.isArray(res) ? res : []);
                 } catch (err) {
                     console.error("Search error:", err);
@@ -287,30 +315,26 @@ const Messages = () => {
             } else {
                 setUserSearchResults([]);
             }
-        }, 500); // 500ms debounce
+        }, 500);
 
         return () => clearTimeout(delayDebounceFn);
     }, [newChatSearch]);
 
-    // Handle Search User (Prop for Sidebar)
-    // We update the state here, which triggers the useEffect
     const handleSearchUser = (query) => {
         setNewChatSearch(query);
     };
 
     const handleNewChat = async (targetUser) => {
-        // Check if conversation already exists locally
         const existing = conversations.find(c => c.participants.some(p => p._id === targetUser._id));
         if (existing) {
             handleSelectConversation(existing);
             setShowNewChatModal(false);
             setNewChatSearch("");
         } else {
-            // Temporary object for UI
             const tempConv = {
                 _id: "temp_" + targetUser._id,
                 participants: [user, targetUser],
-                otherUser: targetUser, // Explicitly set for UI
+                otherUser: targetUser,
                 isTemp: true,
                 recipientId: targetUser._id,
                 mutedBy: []
@@ -322,33 +346,42 @@ const Messages = () => {
         }
     };
 
+    const handleViewImage = (url) => setViewImage(url);
+    const handleViewVideo = (url) => setViewVideo(url);
+
     if (loading) return <div className="d-flex justify-content-center align-items-center vh-100"><div className="spinner-border text-primary"></div></div>;
 
     return (
-        <ChatLayout
-            isMobile={isMobile}
-            conversations={conversations}
-            selectedConversation={selectedConversation}
-            messages={messages}
-            user={user}
-            onSelectConversation={handleSelectConversation}
-            onSendMessage={handleSendMessage}
-            onDeleteConversation={handleDeleteConversation}
-            onMuteConversation={handleMuteConversation}
-            onNewChat={handleNewChat}
-            onSearchUser={handleSearchUser}
-            onBack={() => setSelectedConversation(null)}
-            sidebarSearch={sidebarSearch}
-            setSidebarSearch={setSidebarSearch}
-            userSearchResults={userSearchResults}
-            showNewChatModal={showNewChatModal}
-            setShowNewChatModal={setShowNewChatModal}
-            newChatSearch={newChatSearch}
-            setNewChatSearch={handleSearchUser} // Pass the handler that updates state
-            isTyping={isTyping}
-            onTyping={handleTyping}
-            onStopTyping={handleStopTyping}
-        />
+        <>
+            <ChatLayout
+                isMobile={isMobile}
+                conversations={conversations}
+                selectedConversation={selectedConversation}
+                messages={messages}
+                user={user}
+                onSelectConversation={handleSelectConversation}
+                onSendMessage={handleSendMessage}
+                onDeleteConversation={handleDeleteConversation}
+                onMuteConversation={handleMuteConversation}
+                onNewChat={handleNewChat}
+                onSearchUser={handleSearchUser}
+                onBack={() => setSelectedConversation(null)}
+                sidebarSearch={sidebarSearch}
+                setSidebarSearch={setSidebarSearch}
+                userSearchResults={userSearchResults}
+                showNewChatModal={showNewChatModal}
+                setShowNewChatModal={setShowNewChatModal}
+                newChatSearch={newChatSearch}
+                setNewChatSearch={handleSearchUser}
+                isTyping={isTyping}
+                onTyping={handleTyping}
+                onStopTyping={handleStopTyping}
+                onViewImage={handleViewImage}
+                onViewVideo={handleViewVideo}
+            />
+            <ImageModal show={!!viewImage} onClose={() => setViewImage(null)} imageUrl={viewImage} />
+            <VideoModal show={!!viewVideo} onClose={() => setViewVideo(null)} videoUrl={viewVideo} />
+        </>
     );
 };
 

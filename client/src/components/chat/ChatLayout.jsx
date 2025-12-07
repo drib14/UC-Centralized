@@ -26,7 +26,9 @@ const ChatLayout = ({
     setNewChatSearch,
     isTyping,
     onTyping,
-    onStopTyping
+    onStopTyping,
+    onViewImage,
+    onViewVideo
 }) => {
     return (
         <div className="container-fluid p-0" style={{ height: 'calc(100vh - 60px)', overflow: 'hidden' }}>
@@ -65,6 +67,8 @@ const ChatLayout = ({
                             isTyping={isTyping}
                             onTyping={onTyping}
                             onStopTyping={onStopTyping}
+                            onViewImage={onViewImage}
+                            onViewVideo={onViewVideo}
                         />
                     ) : (
                         <div className="d-flex flex-column align-items-center justify-content-center h-100 bg-light text-muted p-4 text-center">

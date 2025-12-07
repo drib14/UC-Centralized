@@ -15,7 +15,9 @@ const ChatWindow = ({
     isMuted,
     isTyping,
     onTyping,
-    onStopTyping
+    onStopTyping,
+    onViewImage,
+    onViewVideo
 }) => {
     const messagesEndRef = useRef(null);
     const otherUser = conversation.otherUser || conversation.participants.find(p => p._id !== currentUser._id) || {};
@@ -145,6 +147,8 @@ const ChatWindow = ({
                                     sender={group.sender}
                                     showAvatar={!group.isOwn && mIndex === group.messages.length - 1}
                                     showHeader={!group.isOwn && mIndex === 0}
+                                    onViewImage={onViewImage}
+                                    onViewVideo={onViewVideo}
                                 />
                             ))}
                         </div>

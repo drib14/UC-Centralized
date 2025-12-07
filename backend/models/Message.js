@@ -10,6 +10,7 @@ const messageSchema = new mongoose.Schema({
         default: 'text'
     },
     fileUrl: { type: String, default: "" }, // Cloudinary URL
+    fileName: { type: String, default: "" }, // Original Filename
     readBy: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }] // Track who read it
 }, { timestamps: true });
 

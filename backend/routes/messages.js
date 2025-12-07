@@ -94,15 +94,8 @@ router.get('/search/users', verifyToken, async (req, res) => {
 
         console.log(`[Search] Found ${allMatches.length} matches (ignoring role filter)`);
 
-        // If we want to enforce roles, do it here.
-        // For now, I'll return ALL matches to debug why "no users found".
-        // The previous filter was: role: { $in: ['student', 'admin', 'developer'] }
-        // Let's verify if the matched users have these roles.
-
         const validRoles = ['student', 'admin', 'developer'];
         const filteredMatches = allMatches.filter(u => {
-            // If role is missing/undefined, maybe include them? Or strictly 'student'?
-            // The schema default is 'student'.
             const userRole = u.role || 'student';
             return validRoles.includes(userRole);
         });
@@ -166,6 +159,8 @@ router.post('/', verifyToken, parser.single('file'), async (req, res) => {
         // Handle File Upload
         if (req.file) {
             messageData.fileUrl = req.file.path;
+            messageData.fileName = req.file.originalname; // Save original filename
+
             if (!messageData.type || messageData.type === 'text') {
                 if (req.file.mimetype.startsWith('image')) messageData.type = 'image';
                 else if (req.file.mimetype.startsWith('video')) messageData.type = 'video';
@@ -196,7 +191,6 @@ router.post('/', verifyToken, parser.single('file'), async (req, res) => {
         }
 
         // Emit to all participants' individual rooms
-        // This ensures they receive it even if they haven't joined the "conversation" room explicitly
         const conversation = await Conversation.findById(chatId);
         conversation.participants.forEach(participantId => {
             const pId = participantId.toString();
