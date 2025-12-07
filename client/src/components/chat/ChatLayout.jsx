@@ -20,7 +20,7 @@ const ChatLayout = ({
     sidebarSearch,
     setSidebarSearch,
     userSearchResults,
-    sidebarUserResults, // New prop
+    sidebarUserResults,
     showNewChatModal,
     setShowNewChatModal,
     newChatSearch,
@@ -29,7 +29,9 @@ const ChatLayout = ({
     onTyping,
     onStopTyping,
     onViewImage,
-    onViewVideo
+    onViewVideo,
+    onEditMessage,
+    onRequestDelete
 }) => {
     return (
         <div className="container-fluid p-0" style={{ height: 'calc(100vh - 60px)', overflow: 'hidden' }}>
@@ -44,8 +46,8 @@ const ChatLayout = ({
                         searchTerm={sidebarSearch}
                         setSearchTerm={setSidebarSearch}
                         onSearchUser={onSearchUser}
-                        searchResults={userSearchResults} // For modal
-                        sidebarUserResults={sidebarUserResults} // For sidebar list
+                        searchResults={userSearchResults}
+                        sidebarUserResults={sidebarUserResults}
                         showNewChatModal={showNewChatModal}
                         setShowNewChatModal={setShowNewChatModal}
                         newChatSearchTerm={newChatSearch}
@@ -71,6 +73,8 @@ const ChatLayout = ({
                             onStopTyping={onStopTyping}
                             onViewImage={onViewImage}
                             onViewVideo={onViewVideo}
+                            onEditMessage={onEditMessage}
+                            onDeleteMessage={onRequestDelete}
                         />
                     ) : (
                         <div className="d-flex flex-column align-items-center justify-content-center h-100 bg-light text-muted p-4 text-center">

@@ -4,6 +4,7 @@ import { useSocket } from '../context/SocketContext';
 import ChatLayout from '../components/chat/ChatLayout';
 import ImageModal from '../components/modals/ImageModal';
 import VideoModal from '../components/modals/VideoModal';
+import DeleteMessageModal from '../components/modals/DeleteMessageModal';
 import { toast } from 'react-toastify';
 import api from '../utils/api';
 
@@ -15,8 +16,8 @@ const Messages = () => {
     const [messages, setMessages] = useState([]);
     const [sidebarSearch, setSidebarSearch] = useState("");
     const [newChatSearch, setNewChatSearch] = useState("");
-    const [userSearchResults, setUserSearchResults] = useState([]); // For Modal
-    const [sidebarUserResults, setSidebarUserResults] = useState([]); // For Sidebar
+    const [userSearchResults, setUserSearchResults] = useState([]);
+    const [sidebarUserResults, setSidebarUserResults] = useState([]);
     const [showNewChatModal, setShowNewChatModal] = useState(false);
     const [loading, setLoading] = useState(true);
     const [isTyping, setIsTyping] = useState(false);
@@ -24,6 +25,9 @@ const Messages = () => {
     // Media Modal State
     const [viewImage, setViewImage] = useState(null);
     const [viewVideo, setViewVideo] = useState(null);
+
+    // Delete Modal State
+    const [deleteModal, setDeleteModal] = useState({ show: false, messageId: null, isOwn: false });
 
     // Mobile Responsive State
     const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
@@ -72,12 +76,11 @@ const Messages = () => {
         }
     };
 
-    // --- HANDLERS (Defined before socket effect to be used if needed, though mostly independent) ---
+    // --- HANDLERS ---
 
     const handleEditMessage = async (messageId, newContent) => {
         try {
             await api.editMessage(messageId, newContent);
-            // Optimistic update
             setMessages(prev => prev.map(m => m._id === messageId ? { ...m, content: newContent } : m));
         } catch (err) {
             console.error(err);
@@ -85,14 +88,32 @@ const Messages = () => {
         }
     };
 
-    const handleDeleteMessage = async (messageId) => {
+    const handleRequestDelete = (messageId, isOwn) => {
+        setDeleteModal({ show: true, messageId, isOwn });
+    };
+
+    const confirmDeleteForMe = async () => {
         try {
-            await api.deleteMessage(messageId);
-            // Optimistic update
-            setMessages(prev => prev.filter(m => m._id !== messageId));
+            await api.deleteMessage(deleteModal.messageId, 'me');
+            setMessages(prev => prev.filter(m => m._id !== deleteModal.messageId));
+            setDeleteModal({ show: false, messageId: null, isOwn: false });
+            toast.success("Deleted for you");
         } catch (err) {
             console.error(err);
-            toast.error("Failed to delete message");
+            toast.error("Failed to delete");
+        }
+    };
+
+    const confirmDeleteForEveryone = async () => {
+        try {
+            await api.deleteMessage(deleteModal.messageId, 'everyone');
+            // Optimistic update
+            setMessages(prev => prev.filter(m => m._id !== deleteModal.messageId));
+            setDeleteModal({ show: false, messageId: null, isOwn: false });
+            toast.success("Deleted for everyone");
+        } catch (err) {
+            console.error(err);
+            toast.error("Failed to delete");
         }
     };
 
@@ -178,7 +199,6 @@ const Messages = () => {
             if (selectedConversation && selectedConversation._id === updatedMessage.conversationId) {
                 setMessages(prev => prev.map(m => m._id === updatedMessage._id ? updatedMessage : m));
             }
-            // Update preview if it was the last message
             setConversations(prev => prev.map(c => {
                 if (c._id === updatedMessage.conversationId && c.lastMessage?._id === updatedMessage._id) {
                     return { ...c, lastMessage: updatedMessage };
@@ -188,15 +208,7 @@ const Messages = () => {
         };
 
         const handleMessageDeleted = (deletedMessageId) => {
-            // Check if current conversation affected (we don't have conversationId in deletion payload readily unless we pass it, but API returns "Message deleted" string or similar.
-            // Wait, socket event emits `req.params.id`. We don't know conversationId here easily without fetching or checking all.
-            // But we can filter `messages` state locally.
             setMessages(prev => prev.filter(m => m._id !== deletedMessageId));
-
-            // If we want to update the conversation preview (if last message was deleted), we should probably re-fetch conversations.
-            // Since we don't know easily if it was the last message without more logic, safe bet is to re-fetch if we are in that conversation or just generally.
-            // But we don't want to spam fetch.
-            // Let's just fetchConversations() to be safe.
             fetchConversations();
         };
 
@@ -230,15 +242,13 @@ const Messages = () => {
     }, [socket, selectedConversation, fetchConversations, user._id]);
 
 
-    // --- MORE HANDLERS ---
+    // --- HANDLERS (SEARCH & MISC) ---
 
     const handleSelectConversation = (conv) => {
         setSelectedConversation(conv);
         setMessages([]);
         setIsTyping(false);
         fetchMessages(conv._id);
-        // Clear sidebar search when a conversation is selected? Maybe optional.
-        // setSidebarSearch("");
     };
 
     const handleSendMessage = async (content, type = 'text', file = null) => {
@@ -347,7 +357,7 @@ const Messages = () => {
         }
     };
 
-    // SEARCH LOGIC (MODAL)
+    // SEARCH LOGIC
     useEffect(() => {
         const delayDebounceFn = setTimeout(async () => {
             if (newChatSearch.trim()) {
@@ -366,7 +376,6 @@ const Messages = () => {
         return () => clearTimeout(delayDebounceFn);
     }, [newChatSearch]);
 
-    // SEARCH LOGIC (SIDEBAR)
     useEffect(() => {
         const delayDebounceFn = setTimeout(async () => {
             if (sidebarSearch.trim()) {
@@ -395,7 +404,7 @@ const Messages = () => {
             handleSelectConversation(existing);
             setShowNewChatModal(false);
             setNewChatSearch("");
-            setSidebarSearch(""); // Clear sidebar search on selection
+            setSidebarSearch("");
         } else {
             const tempConv = {
                 _id: "temp_" + targetUser._id,
@@ -409,7 +418,7 @@ const Messages = () => {
             setMessages([]);
             setShowNewChatModal(false);
             setNewChatSearch("");
-            setSidebarSearch(""); // Clear sidebar search
+            setSidebarSearch("");
         }
     };
 
@@ -446,11 +455,18 @@ const Messages = () => {
                 onStopTyping={handleStopTyping}
                 onViewImage={handleViewImage}
                 onViewVideo={handleViewVideo}
-                onEditMessage={handleEditMessage} // New
-                onDeleteMessage={handleDeleteMessage} // New
+                onEditMessage={handleEditMessage}
+                onRequestDelete={handleRequestDelete} // Changed prop name
             />
             <ImageModal show={!!viewImage} onClose={() => setViewImage(null)} imageUrl={viewImage} />
             <VideoModal show={!!viewVideo} onClose={() => setViewVideo(null)} videoUrl={viewVideo} />
+            <DeleteMessageModal
+                show={deleteModal.show}
+                onClose={() => setDeleteModal({ ...deleteModal, show: false })}
+                onDeleteForMe={confirmDeleteForMe}
+                onDeleteForEveryone={confirmDeleteForEveryone}
+                isOwnMessage={deleteModal.isOwn}
+            />
         </>
     );
 };

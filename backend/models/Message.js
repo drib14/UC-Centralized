@@ -11,7 +11,8 @@ const messageSchema = new mongoose.Schema({
     },
     fileUrl: { type: String, default: "" }, // Cloudinary URL
     fileName: { type: String, default: "" }, // Original Filename
-    readBy: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }] // Track who read it
+    readBy: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }], // Track who read it
+    deletedFor: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }] // Users who deleted this message for themselves
 }, { timestamps: true });
 
 module.exports = mongoose.model('Message', messageSchema);

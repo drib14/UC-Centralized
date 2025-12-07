@@ -13,7 +13,8 @@ router.get('/unread-count', verifyToken, async (req, res) => {
         const count = await Message.countDocuments({
             sender: { $ne: req.user.id },
             readBy: { $ne: req.user.id },
-            conversationId: { $in: await Conversation.find({ participants: req.user.id }).distinct('_id') }
+            conversationId: { $in: await Conversation.find({ participants: req.user.id }).distinct('_id') },
+            deletedFor: { $ne: req.user.id } // Exclude deleted
         });
         res.status(200).json({ count });
     } catch (err) {
@@ -36,7 +37,8 @@ router.get('/conversations', verifyToken, async (req, res) => {
             const unreadCount = await Message.countDocuments({
                 conversationId: conv._id,
                 sender: { $ne: req.user.id },
-                readBy: { $ne: req.user.id }
+                readBy: { $ne: req.user.id },
+                deletedFor: { $ne: req.user.id }
             });
             const convObj = conv.toObject();
             convObj.unreadCount = unreadCount;
@@ -224,7 +226,8 @@ router.get('/:conversationId', verifyToken, async (req, res) => {
         if (!conversation) return res.status(403).json("Access denied or not found");
 
         const messages = await Message.find({
-            conversationId: req.params.conversationId
+            conversationId: req.params.conversationId,
+            deletedFor: { $ne: req.user.id } // Filter deleted messages
         }).populate('sender', 'firstName lastName profileImage name role');
 
         // Map profileImage -> profilePicture
@@ -360,11 +363,10 @@ router.delete('/:id', verifyToken, async (req, res) => {
         const message = await Message.findById(req.params.id);
 
         if (!message) return res.status(404).json("Message not found");
-        if (message.sender.toString() !== req.user.id && mode === 'everyone') return res.status(403).json("You can only delete your own messages");
 
-        // Logic for 'delete for everyone' vs 'delete for me'
-        // For now, implementing 'delete for everyone' (actual delete)
         if (mode === 'everyone') {
+            if (message.sender.toString() !== req.user.id) return res.status(403).json("You can only delete your own messages for everyone");
+
              await Message.findByIdAndDelete(req.params.id);
 
              // Socket Emission
@@ -376,11 +378,11 @@ router.delete('/:id', verifyToken, async (req, res) => {
 
              res.status(200).json("Message deleted");
         } else {
-             // 'delete for me' logic would go here (e.g. adding to a 'hiddenFor' array)
-             // Not requested explicitly but good to acknowledge.
-             // Since user said "crud on chat bubbles", deleting usually implies removing it.
-             // I'll stick to 'everyone' delete for simplicity unless complex requirements appear.
-             res.status(501).json("Delete for me not implemented yet");
+             // Delete for me
+             await Message.findByIdAndUpdate(req.params.id, {
+                 $addToSet: { deletedFor: req.user.id }
+             });
+             res.status(200).json("Message deleted for you");
         }
     } catch (err) {
         res.status(500).json(err);
