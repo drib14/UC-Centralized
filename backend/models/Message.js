@@ -6,7 +6,7 @@ const messageSchema = new mongoose.Schema({
     content: { type: String }, // Text content or file description
     type: {
         type: String,
-        enum: ['text', 'image', 'video', 'audio', 'file'],
+        enum: ['text', 'image', 'video', 'audio', 'file', 'system'],
         default: 'text'
     },
     fileUrl: { type: String, default: "" }, // Cloudinary URL

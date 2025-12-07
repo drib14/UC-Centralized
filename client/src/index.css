@@ -5,11 +5,12 @@ html, body, #root {
 }
 
 body {
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+  font-family: 'Poppins', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
     'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
     sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  background-color: #f4f6f9;
 }
 
 #wrapper {
@@ -23,49 +24,169 @@ code {
     monospace;
 }
 
-/* Typing Indicator Animation */
+/* --- GLOBAL SCROLLBAR --- */
+::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+}
+::-webkit-scrollbar-track {
+    background: transparent;
+}
+::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    border-radius: 10px;
+}
+::-webkit-scrollbar-thumb:hover {
+    background: #94a3b8;
+}
+
+/* --- ANIMATED MODALS --- */
+/* Override Bootstrap Modal Fade */
+.modal.fade .modal-dialog {
+    transform: scale(0.9);
+    opacity: 0;
+    transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275), opacity 0.3s ease-out;
+}
+.modal.show .modal-dialog {
+    transform: scale(1);
+    opacity: 1;
+}
+.modal-content {
+    border: none;
+    border-radius: 16px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+    overflow: hidden;
+}
+.modal-backdrop.show {
+    opacity: 0.3;
+    backdrop-filter: blur(2px);
+}
+
+/* --- BUTTON HOVERS & FUTURISTIC UI --- */
+.btn {
+    border-radius: 8px;
+    transition: all 0.2s ease-in-out;
+    position: relative;
+    overflow: hidden;
+}
+.btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+}
+.btn:active {
+    transform: translateY(0);
+}
+
+/* Gradient Buttons */
+.btn-primary {
+    background: linear-gradient(135deg, #003399 0%, #0056b3 100%);
+    border: none;
+}
+.btn-primary:hover {
+    background: linear-gradient(135deg, #0044cc 0%, #0066ff 100%);
+    box-shadow: 0 4px 15px rgba(0, 51, 153, 0.4);
+}
+
+.btn-warning {
+    background: linear-gradient(135deg, #FFCC00 0%, #ffdb4d 100%);
+    border: none;
+    color: #000;
+}
+.btn-warning:hover {
+    box-shadow: 0 4px 15px rgba(255, 204, 0, 0.4);
+}
+
+/* --- CHAT THEMES & VARIABLES --- */
+:root {
+    --chat-bg: #ffffff;
+    --chat-bubble-me: #003399;
+    --chat-text-me: #ffffff;
+    --chat-bubble-them: #f1f5f9;
+    --chat-text-them: #1e293b;
+    --chat-accent: #003399;
+}
+
+/* Theme Classes applied to ChatWindow container */
+.chat-theme-default {
+    --chat-bg: #ffffff;
+    --chat-bubble-me: #003399;
+    --chat-text-me: #ffffff;
+    --chat-bubble-them: #f1f5f9;
+    --chat-text-them: #1e293b;
+}
+
+.chat-theme-ocean {
+    --chat-bg: #e0f7fa;
+    --chat-bubble-me: #006064;
+    --chat-text-me: #ffffff;
+    --chat-bubble-them: #ffffff;
+    --chat-text-them: #006064;
+}
+
+.chat-theme-sunset {
+    --chat-bg: #fff3e0;
+    --chat-bubble-me: #e65100;
+    --chat-text-me: #ffffff;
+    --chat-bubble-them: #ffffff;
+    --chat-text-them: #bf360c;
+}
+
+.chat-theme-midnight {
+    --chat-bg: #1a202c;
+    --chat-bubble-me: #3182ce;
+    --chat-text-me: #ffffff;
+    --chat-bubble-them: #2d3748;
+    --chat-text-them: #e2e8f0;
+    color: #fff;
+}
+
+/* --- ANIMATIONS --- */
+.animate-fade-in {
+    animation: fadeIn 0.3s ease-out forwards;
+}
+.animate-slide-up {
+    animation: slideUp 0.3s ease-out forwards;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+@keyframes slideUp {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* Typing Indicator */
 .typing-dots {
   display: flex;
   align-items: center;
   gap: 3px;
   height: 10px;
 }
-
 .typing-dots span {
   width: 5px;
   height: 5px;
-  background-color: #6c757d;
+  background-color: currentColor;
   border-radius: 50%;
   animation: bounce 1.4s infinite ease-in-out both;
 }
-
-.typing-dots span:nth-child(1) {
-  animation-delay: -0.32s;
-}
-
-.typing-dots span:nth-child(2) {
-  animation-delay: -0.16s;
-}
+.typing-dots span:nth-child(1) { animation-delay: -0.32s; }
+.typing-dots span:nth-child(2) { animation-delay: -0.16s; }
 
 @keyframes bounce {
-  0%, 80%, 100% {
-    transform: scale(0);
-  } 40% {
-    transform: scale(1);
-  }
+  0%, 80%, 100% { transform: scale(0); } 40% { transform: scale(1); }
 }
 
 /* Pulse Animation for Recording */
 @keyframes pulse {
-    0% { opacity: 1; }
-    50% { opacity: 0.5; }
-    100% { opacity: 1; }
+    0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(220, 53, 69, 0.7); }
+    70% { transform: scale(1.1); box-shadow: 0 0 0 10px rgba(220, 53, 69, 0); }
+    100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(220, 53, 69, 0); }
 }
-
-.animate-pulse {
+.animate-pulse-red {
     animation: pulse 1.5s infinite;
 }
 
-.cursor-pointer {
-    cursor: pointer;
-}
+.cursor-pointer { cursor: pointer; }

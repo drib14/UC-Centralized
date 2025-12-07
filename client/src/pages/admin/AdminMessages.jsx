@@ -1,8 +1,8 @@
 import React from 'react';
 import ChatLayout from '../../components/chat/ChatLayout';
 
-const StudentMessages = () => {
+const AdminMessages = () => {
     return <ChatLayout />;
 };
 
-export default StudentMessages;
+export default AdminMessages;

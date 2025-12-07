@@ -1,89 +1,63 @@
 import React, { useState, useEffect } from 'react';
-import { FaSearch, FaPlus, FaVolumeMute, FaSpinner } from 'react-icons/fa';
-import { FaUserCircle } from 'react-icons/fa';
+import { FaMagnifyingGlass, FaPlus, FaUser, FaBoxArchive } from 'react-icons/fa6';
+import api from '../../utils/api';
+import { Modal, Button } from 'react-bootstrap';
 
-const ChatSidebar = ({
-    conversations,
-    selectedConversation,
-    onSelectConversation,
-    onNewChat,
-    searchTerm,
-    setSearchTerm,
-    onSearchUser,
-    searchResults,
-    showNewChatModal,
-    setShowNewChatModal,
-    newChatSearchTerm,
-    setNewChatSearchTerm,
-    currentUser
-}) => {
-    const [isSearching, setIsSearching] = useState(false);
+const ChatSidebar = ({ conversations, selectedConversation, onSelectConversation, onNewChat, currentUser }) => {
+    const [searchTerm, setSearchTerm] = useState("");
+    const [showNewChat, setShowNewChat] = useState(false);
+    const [userResults, setUserResults] = useState([]);
+    const [showArchived, setShowArchived] = useState(false);
 
-    // Debounce search
-    useEffect(() => {
-        const timer = setTimeout(() => {
-            if (newChatSearchTerm.trim()) {
-                setIsSearching(true);
-                onSearchUser(newChatSearchTerm).finally(() => setIsSearching(false));
-            } else {
-                 onSearchUser(""); // Clear results
-            }
-        }, 500);
+    // Filter conversations
+    const filteredConversations = conversations.filter(c => {
+        const isArchived = c.archivedBy?.includes(currentUser._id);
+        if (showArchived && !isArchived) return false;
+        if (!showArchived && isArchived) return false;
 
-        return () => clearTimeout(timer);
-    }, [newChatSearchTerm]); // removed onSearchUser dependency to avoid loop if parent function not memoized
-
-    const getOtherUser = (conversation) => {
-        return conversation.participants.find(p => p._id !== currentUser._id) || {};
-    };
-
-    const getDisplayName = (user) => {
-        if (!user) return "Unknown User";
-        return user.firstName && user.lastName ? `${user.firstName} ${user.lastName}` : (user.name || "User");
-    };
-
-    const formatTime = (dateString) => {
-        if (!dateString) return '';
-        const date = new Date(dateString);
-        const now = new Date();
-        const diff = now - date;
-        const days = Math.floor(diff / (1000 * 60 * 60 * 24));
-
-        if (days === 0) return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-        if (days < 7) return date.toLocaleDateString([], { weekday: 'short' });
-        return date.toLocaleDateString([], { month: 'short', day: 'numeric' });
-    };
-
-    const safeConversations = Array.isArray(conversations) ? conversations : [];
-
-    const filteredConversations = safeConversations.filter(conv => {
-        const other = getOtherUser(conv);
-        const name = getDisplayName(other).toLowerCase();
-        return name.includes(searchTerm.toLowerCase());
+        const otherUser = c.otherUser || c.participants.find(p => p._id !== currentUser._id);
+        const name = otherUser ? (otherUser.firstName + ' ' + otherUser.lastName) : 'Unknown';
+        return name.toLowerCase().includes(searchTerm.toLowerCase());
     });
 
+    const handleSearchUsers = async (q) => {
+        if (!q) { setUserResults([]); return; }
+        try {
+            const res = await api.get(`/messages/search/users?q=${q}`);
+            setUserResults(res.data);
+        } catch (err) { console.error(err); }
+    };
+
+    const getDisplayName = (conv) => {
+        const other = conv.otherUser || conv.participants.find(p => p._id !== currentUser._id);
+        if (!other) return "Unknown User";
+        // Check for nickname
+        if (conv.nicknames && conv.nicknames[other._id]) return conv.nicknames[other._id];
+        return `${other.firstName} ${other.lastName}`;
+    };
+
     return (
-        <div className="d-flex flex-column h-100 bg-white border-end">
+        <div className="d-flex flex-column h-100">
             {/* Header */}
-            <div className="p-3 border-bottom d-flex justify-content-between align-items-center bg-light">
+            <div className="p-3 border-bottom bg-light d-flex justify-content-between align-items-center">
                 <h5 className="mb-0 fw-bold text-primary">Messages</h5>
-                <button
-                    className="btn btn-primary rounded-circle shadow-sm d-flex align-items-center justify-content-center p-0"
-                    style={{ width: '40px', height: '40px' }}
-                    onClick={() => setShowNewChatModal(true)}
-                    title="New Message"
-                >
-                    <FaPlus />
-                </button>
+                <div className="d-flex gap-2">
+                    <button className={`btn btn-sm ${showArchived ? 'btn-secondary' : 'btn-outline-secondary'}`} onClick={() => setShowArchived(!showArchived)} title="Archived">
+                        <FaBoxArchive />
+                    </button>
+                    <button className="btn btn-sm btn-primary rounded-circle" onClick={() => setShowNewChat(true)}>
+                        <FaPlus />
+                    </button>
+                </div>
             </div>
 
-            {/* Search Bar */}
-            <div className="p-3 bg-light">
-                <div className="input-group">
-                    <span className="input-group-text bg-white border-end-0"><FaSearch className="text-muted"/></span>
+            {/* Search */}
+            <div className="p-3 bg-white">
+                <div className="input-group bg-light rounded-pill px-3 py-2 border">
+                    <span className="input-group-text bg-transparent border-0 text-muted"><FaMagnifyingGlass /></span>
                     <input
                         type="text"
-                        className="form-control border-start-0"
+                        className="form-control bg-transparent border-0 shadow-none"
                         placeholder="Search conversations..."
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
@@ -91,63 +65,60 @@ const ChatSidebar = ({
                 </div>
             </div>
 
-            {/* Conversation List */}
-            <div className="flex-grow-1 overflow-auto">
+            {/* List */}
+            <div className="flex-grow-1 overflow-auto custom-scrollbar">
                 {filteredConversations.length === 0 ? (
                     <div className="text-center text-muted mt-5">
-                        <p>No conversations found.</p>
+                        <small>{showArchived ? "No archived chats" : "No conversations found"}</small>
                     </div>
                 ) : (
                     <div className="list-group list-group-flush">
                         {filteredConversations.map(conv => {
-                            const otherUser = getOtherUser(conv);
-                            const isSelected = selectedConversation && selectedConversation._id === conv._id;
-                            const isMuted = conv.mutedBy && conv.mutedBy.includes(currentUser._id);
+                            const other = conv.otherUser || conv.participants.find(p => p._id !== currentUser._id);
+                            const isActive = selectedConversation?._id === conv._id;
+                            const isUnread = conv.unreadCount > 0;
 
                             return (
                                 <div
                                     key={conv._id}
-                                    className={`list-group-item list-group-item-action p-3 border-bottom ${isSelected ? 'bg-light border-start border-primary border-4' : ''}`}
+                                    className={`list-group-item list-group-item-action p-3 border-0 d-flex align-items-center gap-3 cursor-pointer transition-all ${isActive ? 'bg-primary-subtle border-start border-4 border-primary' : ''}`}
                                     onClick={() => onSelectConversation(conv)}
-                                    style={{ cursor: 'pointer', borderLeft: isSelected ? '4px solid #0d6efd' : 'none' }}
+                                    style={{ transition: 'background-color 0.2s' }}
                                 >
-                                    <div className="d-flex align-items-center">
-                                        <div className="position-relative">
-                                            {otherUser.profilePicture ? (
-                                                <img
-                                                    src={otherUser.profilePicture}
-                                                    alt="Profile"
-                                                    className="rounded-circle"
-                                                    style={{ width: '50px', height: '50px', objectFit: 'cover' }}
-                                                />
-                                            ) : (
-                                                <FaUserCircle className="text-secondary" style={{ width: '50px', height: '50px' }} />
-                                            )}
-                                            {/* Online status indicator could go here */}
-                                        </div>
-                                        <div className="ms-3 flex-grow-1 overflow-hidden">
-                                            <div className="d-flex justify-content-between align-items-baseline">
-                                                <h6 className="mb-0 text-truncate fw-bold">{getDisplayName(otherUser)}</h6>
-                                                <small className="text-muted ms-2">{formatTime(conv.lastMessage?.createdAt || conv.createdAt)}</small>
-                                            </div>
-                                            <div className="d-flex justify-content-between align-items-center mt-1">
-                                                <p className="mb-0 text-muted text-truncate small" style={{ maxWidth: '85%' }}>
-                                                    {conv.lastMessage
-                                                        ? (conv.lastMessage.sender === currentUser._id ? 'You: ' : '') +
-                                                          (conv.lastMessage.type === 'text' ? conv.lastMessage.content : `Sent a ${conv.lastMessage.type}`)
-                                                        : 'Start chatting!'}
-                                                </p>
-                                                <div className="d-flex align-items-center">
-                                                    {isMuted && <FaVolumeMute className="text-muted me-1 small" />}
-                                                    {conv.unreadCount > 0 && (
-                                                        <span className="badge rounded-pill bg-danger">
-                                                            {conv.unreadCount}
-                                                        </span>
-                                                    )}
-                                                </div>
-                                            </div>
-                                        </div>
+                                    <div className="position-relative">
+                                        <img
+                                            src={other?.profilePicture || "https://via.placeholder.com/40"}
+                                            alt="Avatar"
+                                            className="rounded-circle object-fit-cover shadow-sm"
+                                            width="50" height="50"
+                                        />
+                                        {other?.isOnline && (
+                                            <span className="position-absolute bottom-0 end-0 p-1 bg-success border border-white rounded-circle"></span>
+                                        )}
                                     </div>
+                                    <div className="flex-grow-1 min-w-0">
+                                        <div className="d-flex justify-content-between align-items-center mb-1">
+                                            <h6 className={`mb-0 text-truncate ${isUnread ? 'fw-bold text-dark' : 'text-secondary'}`}>
+                                                {getDisplayName(conv)}
+                                            </h6>
+                                            {conv.lastMessage && (
+                                                <small className="text-muted" style={{ fontSize: '0.75rem' }}>
+                                                    {new Date(conv.lastMessage.createdAt).toLocaleDateString()}
+                                                </small>
+                                            )}
+                                        </div>
+                                        <p className={`mb-0 text-truncate small ${isUnread ? 'fw-semibold text-dark' : 'text-muted'}`}>
+                                            {conv.lastMessage?.type === 'image' && '📷 Image'}
+                                            {conv.lastMessage?.type === 'video' && '🎥 Video'}
+                                            {conv.lastMessage?.type === 'audio' && '🎤 Audio'}
+                                            {conv.lastMessage?.type === 'file' && '📎 File'}
+                                            {conv.lastMessage?.type === 'system' && 'System Message'}
+                                            {conv.lastMessage?.type === 'text' && conv.lastMessage.content}
+                                        </p>
+                                    </div>
+                                    {isUnread && (
+                                        <div className="badge bg-danger rounded-pill">{conv.unreadCount}</div>
+                                    )}
                                 </div>
                             );
                         })}
@@ -155,70 +126,38 @@ const ChatSidebar = ({
                 )}
             </div>
 
-            {/* New Chat Modal (Simple Custom Modal) */}
-            {showNewChatModal && (
-                <div className="modal show d-block modal-animate" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }} tabIndex="-1">
-                    <div className="modal-dialog modal-dialog-centered modal-animate-content">
-                        <div className="modal-content">
-                            <div className="modal-header">
-                                <h5 className="modal-title">New Message</h5>
-                                <button type="button" className="btn-close" onClick={() => setShowNewChatModal(false)}></button>
-                            </div>
-                            <div className="modal-body">
-                                <div className="input-group mb-3">
-                                    <input
-                                        type="text"
-                                        className="form-control"
-                                        placeholder="Search for a student (Name)..."
-                                        value={newChatSearchTerm}
-                                        onChange={(e) => setNewChatSearchTerm(e.target.value)}
-                                        autoFocus
-                                    />
-                                    <span className="input-group-text">
-                                        {isSearching ? <FaSpinner className="spinner-border spinner-border-sm" /> : <FaSearch />}
-                                    </span>
-                                </div>
-                                <div className="list-group overflow-auto" style={{ maxHeight: '300px' }}>
-                                    {(Array.isArray(searchResults) ? searchResults : []).map(user => (
-                                        <button
-                                            key={user._id}
-                                            className="list-group-item list-group-item-action d-flex align-items-center"
-                                            onClick={() => onNewChat(user)}
-                                        >
-                                            {user.profilePicture ? (
-                                                <img
-                                                    src={user.profilePicture}
-                                                    alt="Profile"
-                                                    className="rounded-circle me-3"
-                                                    style={{ width: '40px', height: '40px', objectFit: 'cover' }}
-                                                />
-                                            ) : (
-                                                <FaUserCircle className="text-secondary me-3" style={{ width: '40px', height: '40px' }} />
-                                            )}
-                                            <div>
-                                                <div className="fw-bold">{getDisplayName(user)}</div>
-                                                <div className="small text-muted">{user.department || 'Student'}</div>
-                                            </div>
-                                        </button>
-                                    ))}
-
-                                    {!isSearching && newChatSearchTerm && searchResults && searchResults.length === 0 && (
-                                        <div className="text-center text-muted p-3">
-                                            No students found matching "{newChatSearchTerm}"
-                                        </div>
-                                    )}
-
-                                    {!newChatSearchTerm && (
-                                        <div className="text-center text-muted p-3">
-                                            <p className="small mb-0">Type a name to search for other students to message.</p>
-                                        </div>
-                                    )}
-                                </div>
-                            </div>
-                        </div>
+            {/* New Chat Modal */}
+            <Modal show={showNewChat} onHide={() => setShowNewChat(false)} centered>
+                <Modal.Header closeButton className="border-0">
+                    <Modal.Title className="fw-bold">New Message</Modal.Title>
+                </Modal.Header>
+                <Modal.Body>
+                    <div className="input-group mb-3">
+                        <span className="input-group-text bg-white"><FaMagnifyingGlass /></span>
+                        <input
+                            type="text"
+                            className="form-control"
+                            placeholder="Search for students..."
+                            onChange={(e) => handleSearchUsers(e.target.value)}
+                        />
                     </div>
-                </div>
-            )}
+                    <div className="list-group overflow-auto" style={{ maxHeight: '300px' }}>
+                        {userResults.map(u => (
+                            <button
+                                key={u._id}
+                                className="list-group-item list-group-item-action d-flex align-items-center gap-2"
+                                onClick={() => { onNewChat(u); setShowNewChat(false); }}
+                            >
+                                <img src={u.profilePicture || "https://via.placeholder.com/30"} className="rounded-circle" width="30" height="30" alt=""/>
+                                <div>
+                                    <div className="fw-bold">{u.firstName} {u.lastName}</div>
+                                    <small className="text-muted">{u.role}</small>
+                                </div>
+                            </button>
+                        ))}
+                    </div>
+                </Modal.Body>
+            </Modal>
         </div>
     );
 };

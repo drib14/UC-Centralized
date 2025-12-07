@@ -35,6 +35,7 @@ import AdminAnnouncements from './pages/admin/AdminAnnouncements';
 import AdminUsers from './pages/admin/AdminUsers';
 import AdminOrders from './pages/admin/AdminOrders';
 import AdminPOS from './pages/admin/AdminPOS';
+import AdminMessages from './pages/admin/AdminMessages';
 import Notifications from './pages/Notifications';
 
 const ProtectedRoute = ({ children, allowedRoles }) => {
@@ -109,6 +110,7 @@ function App() {
                                     <Route path="announcements" element={<AdminAnnouncements />} />
                                     <Route path="orders" element={<AdminOrders />} />
                                     <Route path="pos" element={<AdminPOS />} />
+                                    <Route path="messages" element={<AdminMessages />} />
                                     <Route path="notifications" element={<Notifications />} />
                                     <Route path="profile" element={<StudentProfile />} />
                                 </Route>

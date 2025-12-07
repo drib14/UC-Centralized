@@ -1,277 +1,155 @@
-import React, { useState, useRef, useEffect } from 'react';
-import {
-    FaArrowLeft, FaTrash, FaVolumeMute, FaVolumeUp,
-    FaPaperPlane, FaPaperclip, FaMicrophone, FaStop, FaImage, FaFile
-} from 'react-icons/fa';
-import { FaUserCircle } from 'react-icons/fa';
+import React, { useRef, useEffect, useState } from 'react';
+import { FaPhone, FaVideo, FaEllipsisVertical, FaCircleInfo, FaArrowLeft } from 'react-icons/fa6';
+import MessageInput from './MessageInput';
+import AudioMessage from './AudioMessage';
+import ChatSettingsModal from './ChatSettingsModal';
 
-const ChatWindow = ({
-    conversation,
-    messages,
-    currentUser,
-    onSendMessage,
-    onDeleteConversation,
-    onMuteConversation,
-    onBack,
-    isMuted
-}) => {
-    const [newMessage, setNewMessage] = useState("");
-    const [isRecording, setIsRecording] = useState(false);
-    const [mediaRecorder, setMediaRecorder] = useState(null);
-    const [audioChunks, setAudioChunks] = useState([]);
-    const [showDeleteModal, setShowDeleteModal] = useState(false);
-    const messagesEndRef = useRef(null);
-    const fileInputRef = useRef(null);
+const ChatWindow = ({ conversation, messages, currentUser, onSendMessage, onBack, onSettingsChange }) => {
+    const bottomRef = useRef(null);
+    const [showSettings, setShowSettings] = useState(false);
 
-    const getOtherUser = () => {
-        if (!conversation) return {};
-        return conversation.participants.find(p => p._id !== currentUser._id) || {};
-    };
-
-    const otherUser = getOtherUser();
-    const displayName = otherUser.firstName && otherUser.lastName
-        ? `${otherUser.firstName} ${otherUser.lastName}`
-        : (otherUser.name || "User");
-
-    const scrollToBottom = () => {
-        messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-    };
-
+    // Auto-scroll
     useEffect(() => {
-        scrollToBottom();
+        bottomRef.current?.scrollIntoView({ behavior: "smooth" });
     }, [messages]);
 
-    const handleSend = () => {
-        if (newMessage.trim()) {
-            onSendMessage(newMessage, 'text');
-            setNewMessage("");
-        }
+    const otherUser = conversation.otherUser || conversation.participants.find(p => p._id !== currentUser._id);
+    const themeClass = `chat-theme-${conversation.theme || 'default'}`;
+
+    // Helper to get display name (nickname support)
+    const getDisplayName = (user) => {
+        if (conversation.nicknames && conversation.nicknames[user._id]) return conversation.nicknames[user._id];
+        return user.firstName; // First name only in bubbles usually
     };
 
-    const handleKeyPress = (e) => {
-        if (e.key === 'Enter' && !e.shiftKey) {
-            e.preventDefault();
-            handleSend();
-        }
-    };
-
-    const handleFileSelect = (e) => {
-        const file = e.target.files[0];
-        if (file) {
-            onSendMessage("", 'file', file); // Type determined by backend/utils usually, but we pass generic 'file' intent
-        }
-    };
-
-    // Voice Recording Logic
-    const startRecording = async () => {
-        try {
-            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-            const recorder = new MediaRecorder(stream);
-            setMediaRecorder(recorder);
-
-            const chunks = [];
-            recorder.ondataavailable = (e) => chunks.push(e.data);
-            recorder.onstop = () => {
-                const blob = new Blob(chunks, { type: 'audio/mp3' }); // or webm
-                const file = new File([blob], "voice_message.mp3", { type: 'audio/mp3' });
-                onSendMessage("", 'audio', file);
-                setAudioChunks([]);
-            };
-
-            recorder.start();
-            setIsRecording(true);
-        } catch (err) {
-            console.error("Error accessing microphone:", err);
-            alert("Could not access microphone.");
-        }
-    };
-
-    const stopRecording = () => {
-        if (mediaRecorder) {
-            mediaRecorder.stop();
-            setIsRecording(false);
-            mediaRecorder.stream.getTracks().forEach(track => track.stop()); // Stop stream
-        }
-    };
-
-    const renderMessageContent = (msg) => {
-        switch (msg.type) {
-            case 'image':
-                return <img src={msg.fileUrl} alt="Shared" className="img-fluid rounded" style={{ maxWidth: '300px' }} />;
-            case 'video':
-                return <video src={msg.fileUrl} controls className="img-fluid rounded" style={{ maxWidth: '300px' }} />;
-            case 'audio':
-                return <audio src={msg.fileUrl} controls className="w-100" style={{ minWidth: '200px' }} />;
-            case 'file':
-                return (
-                    <a href={msg.fileUrl} target="_blank" rel="noopener noreferrer" className="d-flex align-items-center text-decoration-none p-2 border rounded bg-light">
-                        <FaFile className="me-2 text-primary" />
-                        <span className="text-dark text-break">View File</span>
-                    </a>
-                );
-            default:
-                return <span style={{ whiteSpace: 'pre-wrap' }}>{msg.content}</span>;
-        }
+    const getHeaderName = () => {
+         if (conversation.nicknames && otherUser && conversation.nicknames[otherUser._id]) return conversation.nicknames[otherUser._id];
+         return otherUser ? `${otherUser.firstName} ${otherUser.lastName}` : "Unknown";
     };
 
     return (
-        <div className="d-flex flex-column h-100 bg-white">
+        <div className={`d-flex flex-column h-100 ${themeClass}`} style={{ backgroundColor: 'var(--chat-bg)', transition: 'background-color 0.3s' }}>
             {/* Header */}
-            <div className="p-3 border-bottom d-flex justify-content-between align-items-center bg-light shadow-sm" style={{ zIndex: 10 }}>
-                <div className="d-flex align-items-center">
-                    <button className="btn btn-link text-dark p-0 me-3 d-md-none" onClick={onBack}>
+            <div className="p-3 border-bottom bg-white shadow-sm d-flex justify-content-between align-items-center z-1">
+                <div className="d-flex align-items-center gap-3">
+                    <button className="btn btn-light rounded-circle d-md-none" onClick={onBack}>
                         <FaArrowLeft />
                     </button>
-                    {otherUser.profilePicture ? (
+                    <div className="position-relative">
                         <img
-                            src={otherUser.profilePicture}
-                            alt="Profile"
-                            className="rounded-circle me-3"
-                            style={{ width: '40px', height: '40px', objectFit: 'cover' }}
+                            src={otherUser?.profilePicture || "https://via.placeholder.com/40"}
+                            alt="Avatar"
+                            className="rounded-circle object-fit-cover border"
+                            width="45" height="45"
                         />
-                    ) : (
-                        <FaUserCircle className="text-secondary me-3" style={{ width: '40px', height: '40px' }} />
-                    )}
+                        {otherUser?.isOnline && (
+                             <span className="position-absolute bottom-0 end-0 p-1 bg-success border border-white rounded-circle"></span>
+                        )}
+                    </div>
                     <div>
-                        <h6 className="mb-0 fw-bold">{displayName}</h6>
-                        <small className="text-muted">{otherUser.department}</small>
+                        <h6 className="mb-0 fw-bold">{getHeaderName()}</h6>
+                        <small className="text-muted">
+                            {otherUser?.isOnline ? "Active now" : (otherUser?.lastSeen ? `Last seen ${new Date(otherUser.lastSeen).toLocaleTimeString()}` : "Offline")}
+                        </small>
                     </div>
                 </div>
-                <div className="d-flex align-items-center">
-                    <button
-                        className="btn btn-link text-secondary me-3"
-                        onClick={() => onMuteConversation(conversation._id)}
-                        title={isMuted ? "Unmute" : "Mute"}
-                    >
-                        {isMuted ? <FaVolumeMute className="fs-5 text-danger" /> : <FaVolumeUp className="fs-5" />}
-                    </button>
-                    <button
-                        className="btn btn-link text-danger"
-                        onClick={() => setShowDeleteModal(true)}
-                        title="Delete Conversation"
-                    >
-                        <FaTrash className="fs-5" />
+                <div className="d-flex gap-2">
+                    {/* Placeholder for Calls - "Visual Only" as per thought process, but user asked for "Voice Record" not calls specifically. Keeping it simple. */}
+                    {/* <button className="btn btn-light rounded-circle text-primary"><FaPhone /></button> */}
+                    {/* <button className="btn btn-light rounded-circle text-primary"><FaVideo /></button> */}
+                    <button className="btn btn-light rounded-circle" onClick={() => setShowSettings(true)}>
+                        <FaCircleInfo className="text-secondary"/>
                     </button>
                 </div>
             </div>
 
             {/* Messages Area */}
-            <div className="flex-grow-1 p-3 overflow-auto" style={{ backgroundColor: '#f5f7fb' }}>
-                {messages.length === 0 ? (
-                    <div className="text-center text-muted mt-5">
-                        <p>No messages yet. Say hello!</p>
-                    </div>
-                ) : (
-                    messages.map((msg, index) => {
-                        const isMine = msg.sender._id === currentUser._id;
+            <div className="flex-grow-1 overflow-auto p-4 custom-scrollbar d-flex flex-column gap-3">
+                {messages.map((msg, idx) => {
+                    const isMe = msg.sender._id === currentUser._id;
+                    const isSystem = msg.type === 'system';
+
+                    if (isSystem) {
                         return (
-                            <div key={msg._id || index} className={`d-flex mb-3 ${isMine ? 'justify-content-end' : 'justify-content-start'}`}>
-                                {!isMine && (
-                                    <div className="me-2 align-self-end">
-                                        {msg.sender.profilePicture ? (
-                                            <img
-                                                src={msg.sender.profilePicture}
-                                                className="rounded-circle"
-                                                style={{ width: '30px', height: '30px' }}
-                                                alt="S"
-                                            />
-                                        ) : (
-                                            <FaUserCircle className="text-secondary" style={{ width: '30px', height: '30px' }} />
-                                        )}
-                                    </div>
-                                )}
-                                <div
-                                    className={`p-3 rounded-3 shadow-sm ${isMine ? 'bg-primary text-white' : 'bg-white text-dark'}`}
-                                    style={{
-                                        maxWidth: '75%',
-                                        borderBottomRightRadius: isMine ? '0' : '1rem',
-                                        borderBottomLeftRadius: !isMine ? '0' : '1rem'
-                                    }}
-                                >
-                                    {renderMessageContent(msg)}
-                                    <div className={`text-end small mt-1 ${isMine ? 'text-white-50' : 'text-muted'}`} style={{ fontSize: '0.75rem' }}>
-                                        {new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                                    </div>
-                                </div>
+                            <div key={idx} className="text-center my-2">
+                                <small className="text-muted bg-light px-3 py-1 rounded-pill border">{msg.content}</small>
                             </div>
                         );
-                    })
-                )}
-                <div ref={messagesEndRef} />
+                    }
+
+                    return (
+                        <div key={idx} className={`d-flex ${isMe ? 'justify-content-end' : 'justify-content-start'} animate-slide-up`}>
+                            {!isMe && (
+                                <img
+                                    src={msg.sender.profilePicture || "https://via.placeholder.com/30"}
+                                    className="rounded-circle me-2 align-self-end mb-1"
+                                    width="30" height="30" alt=""
+                                />
+                            )}
+                            <div style={{ maxWidth: '70%' }}>
+                                {!isMe && <small className="text-muted ms-1" style={{fontSize: '0.75rem'}}>{getDisplayName(msg.sender)}</small>}
+                                <div
+                                    className={`p-3 shadow-sm position-relative ${isMe ? 'rounded-top-left-3 rounded-bottom-3' : 'rounded-top-right-3 rounded-bottom-3'}`}
+                                    style={{
+                                        backgroundColor: isMe ? 'var(--chat-bubble-me)' : 'var(--chat-bubble-them)',
+                                        color: isMe ? 'var(--chat-text-me)' : 'var(--chat-text-them)',
+                                        borderRadius: '18px',
+                                        borderBottomRightRadius: isMe ? '4px' : '18px',
+                                        borderBottomLeftRadius: !isMe ? '4px' : '18px'
+                                    }}
+                                >
+                                    {/* Content based on type */}
+                                    {msg.type === 'text' && <p className="mb-0" style={{ whiteSpace: 'pre-wrap' }}>{msg.content}</p>}
+
+                                    {msg.type === 'image' && (
+                                        <img src={msg.fileUrl} alt="Sent image" className="img-fluid rounded" style={{ maxHeight: '300px' }}
+                                             onClick={() => window.open(msg.fileUrl, '_blank')}
+                                        />
+                                    )}
+
+                                    {msg.type === 'video' && (
+                                        <video src={msg.fileUrl} controls className="img-fluid rounded" style={{ maxHeight: '300px' }} />
+                                    )}
+
+                                    {msg.type === 'audio' && <AudioMessage src={msg.fileUrl} />}
+
+                                    {msg.type === 'file' && (
+                                        <a href={msg.fileUrl} target="_blank" rel="noopener noreferrer" className="text-decoration-none d-flex align-items-center gap-2 text-reset bg-white bg-opacity-25 p-2 rounded">
+                                            <FaCircleInfo /> <span>Download File</span>
+                                        </a>
+                                    )}
+                                </div>
+                                <div className={`text-end mt-1 ${isMe ? 'me-1' : 'ms-1'}`}>
+                                    <small className="text-muted" style={{ fontSize: '0.65rem' }}>
+                                        {new Date(msg.createdAt).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+                                    </small>
+                                </div>
+                            </div>
+                        </div>
+                    );
+                })}
+                <div ref={bottomRef} />
             </div>
 
             {/* Input Area */}
-            <div className="p-3 border-top bg-light">
-                <div className="d-flex align-items-center">
-                    <button className="btn btn-light text-secondary me-2 rounded-circle" onClick={() => fileInputRef.current.click()}>
-                        <FaPaperclip />
-                    </button>
-                    <input
-                        type="file"
-                        ref={fileInputRef}
-                        className="d-none"
-                        onChange={handleFileSelect}
-                        accept="image/*,video/*,audio/*,.pdf,.doc,.docx"
-                    />
-
-                    <input
-                        type="text"
-                        className="form-control rounded-pill me-2 border-0 shadow-sm px-3"
-                        placeholder="Type a message..."
-                        value={newMessage}
-                        onChange={(e) => setNewMessage(e.target.value)}
-                        onKeyDown={handleKeyPress}
-                    />
-
-                    {newMessage.trim() ? (
-                         <button className="btn btn-primary rounded-circle p-2 shadow-sm" onClick={handleSend}>
-                            <FaPaperPlane />
-                        </button>
-                    ) : (
-                        <button
-                            className={`btn rounded-circle p-2 shadow-sm ${isRecording ? 'btn-danger' : 'btn-light text-secondary'}`}
-                            onMouseDown={startRecording}
-                            onMouseUp={stopRecording}
-                            onTouchStart={startRecording}
-                            onTouchEnd={stopRecording}
-                            title="Hold to record"
-                        >
-                            {isRecording ? <FaStop /> : <FaMicrophone />}
-                        </button>
-                    )}
-                </div>
-                {isRecording && <small className="text-danger ms-5">Recording...</small>}
-            </div>
-
-            {/* Delete Confirmation Modal */}
-            {showDeleteModal && (
-                <div className="modal show d-block" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }} tabIndex="-1">
-                    <div className="modal-dialog modal-dialog-centered">
-                        <div className="modal-content">
-                            <div className="modal-header">
-                                <h5 className="modal-title">Delete Conversation</h5>
-                                <button type="button" className="btn-close" onClick={() => setShowDeleteModal(false)}></button>
-                            </div>
-                            <div className="modal-body">
-                                <p>Are you sure you want to permanently delete this conversation? This action cannot be undone for all participants.</p>
-                            </div>
-                            <div className="modal-footer">
-                                <button type="button" className="btn btn-secondary" onClick={() => setShowDeleteModal(false)}>Cancel</button>
-                                <button
-                                    type="button"
-                                    className="btn btn-danger"
-                                    onClick={() => {
-                                        onDeleteConversation(conversation._id);
-                                        setShowDeleteModal(false);
-                                    }}
-                                >
-                                    Delete Permanently
-                                </button>
-                            </div>
-                        </div>
-                    </div>
+            {conversation.mutedBy?.includes(currentUser._id) && (
+                <div className="bg-warning-subtle text-warning-emphasis text-center py-1 small">
+                    You have muted notifications for this conversation.
                 </div>
             )}
+            <MessageInput onSendMessage={onSendMessage} />
+
+            {/* Settings Modal */}
+            <ChatSettingsModal
+                show={showSettings}
+                onHide={() => setShowSettings(false)}
+                conversation={conversation}
+                currentUser={currentUser}
+                onChange={() => {
+                    onSettingsChange();
+                    // maybe close modal if deleted?
+                }}
+            />
         </div>
     );
 };

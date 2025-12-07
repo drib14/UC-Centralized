@@ -5,19 +5,50 @@ const User = require('../models/User');
 const { verifyToken } = require('../middleware/auth');
 const parser = require('../config/cloudinary');
 
+// --- HELPER: Create System Message ---
+const createSystemMessage = async (conversationId, content, io) => {
+    try {
+        const msg = new Message({
+            conversationId,
+            content,
+            type: 'system',
+            readBy: [] // System messages are initially unread? Or maybe just informational.
+        });
+        const savedMsg = await msg.save();
+        await Conversation.findByIdAndUpdate(conversationId, { lastMessage: savedMsg._id });
+
+        io.to(conversationId.toString()).emit("receive_message", savedMsg);
+
+        // Notify lists
+        const conv = await Conversation.findById(conversationId);
+        if(conv) {
+             conv.participants.forEach(p => {
+                io.to(p.toString()).emit("conversation_updated", {
+                    conversationId,
+                    lastMessage: savedMsg
+                });
+            });
+        }
+        return savedMsg;
+    } catch (e) {
+        console.error("System message error:", e);
+    }
+};
+
 // --- STATIC ROUTES (Must come before dynamic /:id routes) ---
 
-// UNREAD COUNT (Specific route)
+// UNREAD COUNT
 router.get('/unread-count', verifyToken, async (req, res) => {
     try {
+        // Count messages in conversations the user is part of, where user is NOT sender and NOT in readBy
+        // Complex query: find conversations first
+        const userConvs = await Conversation.find({ participants: req.user.id, archivedBy: { $ne: req.user.id } }).distinct('_id');
+
         const count = await Message.countDocuments({
+            conversationId: { $in: userConvs },
             sender: { $ne: req.user.id },
             readBy: { $ne: req.user.id },
-            // Ensure message belongs to a conversation user is in
-            // Ideally we filter messages in conversations the user participates in.
-            // But checking 'readBy' for non-sender is usually sufficient if strict access control isn't 100% required here,
-            // however, to be correct:
-            conversationId: { $in: await Conversation.find({ participants: req.user.id }).distinct('_id') }
+            type: { $ne: 'system' } // Optional: don't count system messages as unread?
         });
         res.status(200).json({ count });
     } catch (err) {
@@ -28,10 +59,20 @@ router.get('/unread-count', verifyToken, async (req, res) => {
 // GET CONVERSATIONS
 router.get('/conversations', verifyToken, async (req, res) => {
     try {
-        const conversations = await Conversation.find({
+        const archived = req.query.archived === 'true';
+
+        const query = {
             participants: { $in: [req.user.id] }
-        })
-        .populate('participants', 'firstName lastName profilePicture name role')
+        };
+
+        if (archived) {
+            query.archivedBy = req.user.id;
+        } else {
+            query.archivedBy = { $ne: req.user.id };
+        }
+
+        const conversations = await Conversation.find(query)
+        .populate('participants', 'firstName lastName profilePicture name role isOnline lastSeen')
         .populate('lastMessage')
         .sort({ updatedAt: -1 });
 
@@ -44,7 +85,7 @@ router.get('/conversations', verifyToken, async (req, res) => {
             });
             const convObj = conv.toObject();
             convObj.unreadCount = unreadCount;
-            // Helper to get the other user
+            // Helper to get the other user (for 1-on-1)
             convObj.otherUser = convObj.participants.find(p => p._id.toString() !== req.user.id);
             return convObj;
         }));
@@ -61,23 +102,18 @@ router.get('/search/users', verifyToken, async (req, res) => {
         const query = req.query.q || '';
         if (!query) return res.status(200).json([]);
 
-        // Search students only? Request said "student to student"
-        // And exclude self
-
-        // Split query to handle full name search "First Last"
         const parts = query.trim().split(/\s+/);
         let searchConditions = [
             { firstName: { $regex: query, $options: 'i' } },
             { lastName: { $regex: query, $options: 'i' } },
-            { name: { $regex: query, $options: 'i' } }, // Legacy support
+            { name: { $regex: query, $options: 'i' } },
             { email: { $regex: query, $options: 'i' } },
             { studentId: { $regex: query, $options: 'i' } }
         ];
 
-        // If query has spaces, try to match First + Last
         if (parts.length > 1) {
             const firstPart = parts[0];
-            const lastPart = parts.slice(1).join(' '); // Join the rest as last name
+            const lastPart = parts.slice(1).join(' ');
             searchConditions.push({
                 $and: [
                     { firstName: { $regex: firstPart, $options: 'i' } },
@@ -86,9 +122,9 @@ router.get('/search/users', verifyToken, async (req, res) => {
             });
         }
 
-        // Broaden search to include generic 'student' role logic if needed
         const users = await User.find({
-            role: { $in: ['student', 'admin', 'developer'] }, // Broadened to include other potential roles in case of data inconsistencies, but filter out pure admins if needed. Actually user said "Student to student", but often test users have weird roles. Let's keep it safe but broader.
+            // Allow searching any user for simplicity, or restrict if strictly needed.
+            // Requirement says "student-student, student-admin, admin-admin".
             _id: { $ne: req.user.id },
             $or: searchConditions
         }).select('firstName lastName profilePicture name department role');
@@ -110,13 +146,16 @@ router.post('/', verifyToken, parser.single('file'), async (req, res) => {
 
         // If no conversationId, find or create one
         if (!chatId && recipientId) {
-            // Check if conversation exists
             const existingConversation = await Conversation.findOne({
                 participants: { $all: [senderId, recipientId] }
             });
 
             if (existingConversation) {
                 chatId = existingConversation._id;
+                // Unarchive if archived by sender
+                if(existingConversation.archivedBy.includes(senderId)){
+                    await Conversation.findByIdAndUpdate(chatId, { $pull: { archivedBy: senderId } });
+                }
             } else {
                 const newConversation = new Conversation({
                     participants: [senderId, recipientId]
@@ -128,56 +167,54 @@ router.post('/', verifyToken, parser.single('file'), async (req, res) => {
 
         if (!chatId) return res.status(400).json({ message: "Recipient or Conversation ID required" });
 
-        // Prepare message data
         let messageData = {
             conversationId: chatId,
             sender: senderId,
             content: content || "",
             type: type || 'text',
-            readBy: [senderId] // Sender has read their own message
+            readBy: [senderId]
         };
 
-        // Handle File Upload
         if (req.file) {
             messageData.fileUrl = req.file.path;
-            // Determine type based on mimetype if not explicitly sent (though frontend should send it)
-            if (!messageData.type || messageData.type === 'text') {
+             // Determine type based on mimetype
+             if (!req.body.type || req.body.type === 'text') { // Only auto-detect if not forced
                 if (req.file.mimetype.startsWith('image')) messageData.type = 'image';
                 else if (req.file.mimetype.startsWith('video')) messageData.type = 'video';
                 else if (req.file.mimetype.startsWith('audio')) messageData.type = 'audio';
                 else messageData.type = 'file';
-            }
+             }
         }
 
         const newMessage = new Message(messageData);
         const savedMessage = await newMessage.save();
 
-        // Update Conversation with last message
         await Conversation.findByIdAndUpdate(chatId, {
-            lastMessage: savedMessage._id
+            lastMessage: savedMessage._id,
+            $pull: { archivedBy: { $in: [senderId] } } // Ensure active for sender, maybe recipient too? Usually yes.
+            // If we want to unarchive for recipient too:
+            // $pull: { archivedBy: { $in: [senderId, recipientId] } } -- logic needs all participants
         });
 
-        // Socket.io Emission
+        // Also unarchive for all participants (new message bumps to top)
+        const conv = await Conversation.findById(chatId);
+        if(conv && conv.archivedBy.length > 0) {
+             conv.archivedBy = []; // Clear all archives
+             await conv.save();
+        }
+
         const io = req.app.get('io');
-        // We need to emit to the recipient.
-        // Assuming we have a room for the conversation or individual user rooms.
-        // If we use conversation room:
         io.to(chatId.toString()).emit("receive_message", savedMessage);
 
-        // Also emit to participants' personal rooms for "new message" notification (sidebar update)
-        // Find participants to notify
-        const conversation = await Conversation.findById(chatId);
-        conversation.participants.forEach(participantId => {
-            // Do not emit to sender if they are just receiving the ack, but here we want to update their sidebar too
+        // Notify participants
+        conv.participants.forEach(participantId => {
             io.to(participantId.toString()).emit("conversation_updated", {
                 conversationId: chatId,
                 lastMessage: savedMessage
             });
         });
 
-        // Populate sender for the response
         await savedMessage.populate('sender', 'firstName lastName profilePicture name');
-
         res.status(200).json(savedMessage);
 
     } catch (err) {
@@ -186,10 +223,9 @@ router.post('/', verifyToken, parser.single('file'), async (req, res) => {
     }
 });
 
-// GET MESSAGES (Dynamic ID)
+// GET MESSAGES
 router.get('/:conversationId', verifyToken, async (req, res) => {
     try {
-        // Verify participation
         const conversation = await Conversation.findOne({
             _id: req.params.conversationId,
             participants: { $in: [req.user.id] }
@@ -207,55 +243,122 @@ router.get('/:conversationId', verifyToken, async (req, res) => {
     }
 });
 
-// DELETE CONVERSATION
-router.delete('/:conversationId', verifyToken, async (req, res) => {
+// CHANGE THEME
+router.put('/:conversationId/theme', verifyToken, async (req, res) => {
     try {
-        const conversation = await Conversation.findOneAndDelete({
-            _id: req.params.conversationId,
-            participants: { $in: [req.user.id] } // Only participant can delete
-        });
+        const { theme } = req.body;
+        const conv = await Conversation.findOne({ _id: req.params.conversationId, participants: req.user.id });
+        if(!conv) return res.status(404).json("Not found");
 
-        if (!conversation) return res.status(404).json("Conversation not found");
+        conv.theme = theme;
+        await conv.save();
 
-        await Message.deleteMany({ conversationId: req.params.conversationId });
+        // Create system message
+        const user = await User.findById(req.user.id);
+        const userName = user.firstName; // Or nickname logic if implemented, but strict name is better for system logs
+        await createSystemMessage(conv._id, `${userName} changed the theme to ${theme}`, req.app.get('io'));
 
-        // Notify other participants
-        const io = req.app.get('io');
-        conversation.participants.forEach(p => {
-             io.to(p.toString()).emit("conversation_deleted", req.params.conversationId);
-        });
+        // Emit 'settings_updated' event specifically? Or rely on 'receive_message' for refresh?
+        // Let's emit a specific event for live UI update without refresh
+        req.app.get('io').to(conv._id.toString()).emit("theme_updated", { conversationId: conv._id, theme });
 
-        res.status(200).json("Conversation deleted");
+        res.status(200).json(conv);
     } catch (err) {
         res.status(500).json(err);
     }
 });
 
-// MUTE CONVERSATION
+// CHANGE NICKNAME
+router.put('/:conversationId/nickname', verifyToken, async (req, res) => {
+    try {
+        const { userId, nickname } = req.body; // userId of the person whose nickname is changing
+        const conv = await Conversation.findOne({ _id: req.params.conversationId, participants: req.user.id });
+        if(!conv) return res.status(404).json("Not found");
+
+        const targetUser = await User.findById(userId);
+        if(!targetUser) return res.status(404).json("User not found");
+
+        // Mongoose Map update
+        if (!nickname || nickname.trim() === "") {
+             conv.nicknames.delete(userId);
+        } else {
+             conv.nicknames.set(userId, nickname);
+        }
+        await conv.save();
+
+        const actor = await User.findById(req.user.id);
+        const actionText = (!nickname || nickname.trim() === "")
+            ? `${actor.firstName} removed the nickname for ${targetUser.firstName}`
+            : `${actor.firstName} set the nickname for ${targetUser.firstName} to ${nickname}`;
+
+        await createSystemMessage(conv._id, actionText, req.app.get('io'));
+        req.app.get('io').to(conv._id.toString()).emit("nicknames_updated", { conversationId: conv._id, nicknames: conv.nicknames });
+
+        res.status(200).json(conv);
+    } catch (err) {
+        console.error(err);
+        res.status(500).json(err);
+    }
+});
+
+// ARCHIVE / UNARCHIVE
+router.put('/:conversationId/archive', verifyToken, async (req, res) => {
+    try {
+        const conv = await Conversation.findOne({ _id: req.params.conversationId, participants: req.user.id });
+        if(!conv) return res.status(404).json("Not found");
+
+        const isArchived = conv.archivedBy.includes(req.user.id);
+        if (isArchived) {
+            conv.archivedBy.pull(req.user.id);
+        } else {
+            conv.archivedBy.push(req.user.id);
+        }
+        await conv.save();
+
+        res.status(200).json({ archived: !isArchived });
+    } catch (err) {
+        res.status(500).json(err);
+    }
+});
+
+// MUTE / UNMUTE
 router.put('/:conversationId/mute', verifyToken, async (req, res) => {
     try {
-        const conversation = await Conversation.findOne({
+        const conv = await Conversation.findOne({ _id: req.params.conversationId, participants: req.user.id });
+        if(!conv) return res.status(404).json("Not found");
+
+        const isMuted = conv.mutedBy.includes(req.user.id);
+        if (isMuted) {
+            conv.mutedBy.pull(req.user.id);
+        } else {
+            conv.mutedBy.push(req.user.id);
+        }
+        await conv.save();
+
+        res.status(200).json({ muted: !isMuted });
+    } catch (err) {
+        res.status(500).json(err);
+    }
+});
+
+// DELETE CONVERSATION
+router.delete('/:conversationId', verifyToken, async (req, res) => {
+    try {
+        const conversation = await Conversation.findOneAndDelete({
             _id: req.params.conversationId,
             participants: { $in: [req.user.id] }
         });
 
         if (!conversation) return res.status(404).json("Conversation not found");
 
-        const isMuted = conversation.mutedBy.includes(req.user.id);
+        await Message.deleteMany({ conversationId: req.params.conversationId });
 
-        if (isMuted) {
-            // Unmute
-            await Conversation.findByIdAndUpdate(req.params.conversationId, {
-                $pull: { mutedBy: req.user.id }
-            });
-        } else {
-            // Mute
-            await Conversation.findByIdAndUpdate(req.params.conversationId, {
-                $addToSet: { mutedBy: req.user.id }
-            });
-        }
+        const io = req.app.get('io');
+        conversation.participants.forEach(p => {
+             io.to(p.toString()).emit("conversation_deleted", req.params.conversationId);
+        });
 
-        res.status(200).json({ muted: !isMuted });
+        res.status(200).json("Conversation deleted");
     } catch (err) {
         res.status(500).json(err);
     }
