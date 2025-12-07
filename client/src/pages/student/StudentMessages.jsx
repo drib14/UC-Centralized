@@ -325,12 +325,12 @@ const StudentMessages = () => {
     if (loading) return <div className="d-flex justify-content-center align-items-center vh-100"><div className="spinner-border text-primary"></div></div>;
 
     return (
-        <div className="container-fluid p-0 d-flex" style={{ height: 'calc(100vh - 60px)' }}> {/* Adjust height for navbar/sidebar offset if needed */}
-
-            {/* Sidebar Column */}
-            <div className={`${isMobile && selectedConversation ? 'd-none' : 'd-block'} col-md-4 col-lg-3 h-100 p-0`}>
-                <ChatSidebar
-                    conversations={conversations}
+        <div className="container-fluid p-0" style={{ height: 'calc(100vh - 60px)' }}>
+            <div className="row g-0 h-100">
+                {/* Sidebar Column */}
+                <div className={`${isMobile && selectedConversation ? 'd-none' : 'd-block'} col-12 col-md-4 col-lg-3 h-100 border-end`}>
+                    <ChatSidebar
+                        conversations={conversations}
                     selectedConversation={selectedConversation}
                     onSelectConversation={handleSelectConversation}
                     onNewChat={handleNewChat}
@@ -343,13 +343,13 @@ const StudentMessages = () => {
                     newChatSearchTerm={newChatSearch}
                     setNewChatSearchTerm={setNewChatSearch}
                     currentUser={user}
-                />
-            </div>
+                    />
+                </div>
 
-            {/* Chat Window Column */}
-            <div className={`${isMobile && !selectedConversation ? 'd-none' : 'd-block'} col-md-8 col-lg-9 h-100 p-0 border-start`}>
-                {selectedConversation ? (
-                    <ChatWindow
+                {/* Chat Window Column */}
+                <div className={`${isMobile && !selectedConversation ? 'd-none' : 'd-block'} col-12 col-md-8 col-lg-9 h-100`}>
+                    {selectedConversation ? (
+                        <ChatWindow
                         conversation={selectedConversation}
                         messages={messages}
                         currentUser={user}
@@ -358,14 +358,15 @@ const StudentMessages = () => {
                         onMuteConversation={handleMuteConversation}
                         onBack={() => setSelectedConversation(null)}
                         isMuted={selectedConversation.mutedBy?.includes(user._id)}
-                    />
-                ) : (
-                    <div className="d-flex flex-column align-items-center justify-content-center h-100 bg-light text-muted">
-                        <div className="display-1">👋</div>
-                        <h3>Welcome to Messages</h3>
-                        <p>Select a conversation or start a new one.</p>
-                    </div>
-                )}
+                        />
+                    ) : (
+                        <div className="d-flex flex-column align-items-center justify-content-center h-100 bg-light text-muted p-4 text-center">
+                            <div className="display-1 mb-3">👋</div>
+                            <h3 className="fw-bold">Welcome to Messages</h3>
+                            <p className="lead">Select a conversation or start a new one to connect with other students.</p>
+                        </div>
+                    )}
+                </div>
             </div>
         </div>
     );

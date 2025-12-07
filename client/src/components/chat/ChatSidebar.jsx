@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { FaSearch, FaPlus, FaVolumeMute } from 'react-icons/fa';
+import React, { useState, useEffect } from 'react';
+import { FaSearch, FaPlus, FaVolumeMute, FaSpinner } from 'react-icons/fa';
 import { FaUserCircle } from 'react-icons/fa';
 
 const ChatSidebar = ({
@@ -17,6 +17,21 @@ const ChatSidebar = ({
     setNewChatSearchTerm,
     currentUser
 }) => {
+    const [isSearching, setIsSearching] = useState(false);
+
+    // Debounce search
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            if (newChatSearchTerm.trim()) {
+                setIsSearching(true);
+                onSearchUser(newChatSearchTerm).finally(() => setIsSearching(false));
+            } else {
+                 onSearchUser(""); // Clear results
+            }
+        }, 500);
+
+        return () => clearTimeout(timer);
+    }, [newChatSearchTerm]); // removed onSearchUser dependency to avoid loop if parent function not memoized
 
     const getOtherUser = (conversation) => {
         return conversation.participants.find(p => p._id !== currentUser._id) || {};
@@ -149,15 +164,14 @@ const ChatSidebar = ({
                                     <input
                                         type="text"
                                         className="form-control"
-                                        placeholder="Search for a student..."
+                                        placeholder="Search for a student (Name)..."
                                         value={newChatSearchTerm}
-                                        onChange={(e) => {
-                                            setNewChatSearchTerm(e.target.value);
-                                            onSearchUser(e.target.value);
-                                        }}
+                                        onChange={(e) => setNewChatSearchTerm(e.target.value)}
                                         autoFocus
                                     />
-                                    <span className="input-group-text"><FaSearch /></span>
+                                    <span className="input-group-text">
+                                        {isSearching ? <FaSpinner className="spinner-border spinner-border-sm" /> : <FaSearch />}
+                                    </span>
                                 </div>
                                 <div className="list-group overflow-auto" style={{ maxHeight: '300px' }}>
                                     {(Array.isArray(searchResults) ? searchResults : []).map(user => (
@@ -182,8 +196,17 @@ const ChatSidebar = ({
                                             </div>
                                         </button>
                                     ))}
-                                    {newChatSearchTerm && searchResults.length === 0 && (
-                                        <div className="text-center text-muted p-3">No users found</div>
+
+                                    {!isSearching && newChatSearchTerm && searchResults && searchResults.length === 0 && (
+                                        <div className="text-center text-muted p-3">
+                                            No students found matching "{newChatSearchTerm}"
+                                        </div>
+                                    )}
+
+                                    {!newChatSearchTerm && (
+                                        <div className="text-center text-muted p-3">
+                                            <p className="small mb-0">Type a name to search for other students to message.</p>
+                                        </div>
                                     )}
                                 </div>
                             </div>
