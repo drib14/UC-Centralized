@@ -39,7 +39,9 @@ const ChatSidebar = ({
         return date.toLocaleDateString([], { month: 'short', day: 'numeric' });
     };
 
-    const filteredConversations = conversations.filter(conv => {
+    const safeConversations = Array.isArray(conversations) ? conversations : [];
+
+    const filteredConversations = safeConversations.filter(conv => {
         const other = getOtherUser(conv);
         const name = getDisplayName(other).toLowerCase();
         return name.includes(searchTerm.toLowerCase());

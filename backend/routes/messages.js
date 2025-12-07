@@ -5,7 +5,83 @@ const User = require('../models/User');
 const { verifyToken } = require('../middleware/auth');
 const parser = require('../config/cloudinary');
 
-// SEND MESSAGE
+// --- STATIC ROUTES (Must come before dynamic /:id routes) ---
+
+// UNREAD COUNT (Specific route)
+router.get('/unread-count', verifyToken, async (req, res) => {
+    try {
+        const count = await Message.countDocuments({
+            sender: { $ne: req.user.id },
+            readBy: { $ne: req.user.id },
+            // Ensure message belongs to a conversation user is in
+            // Ideally we filter messages in conversations the user participates in.
+            // But checking 'readBy' for non-sender is usually sufficient if strict access control isn't 100% required here,
+            // however, to be correct:
+            conversationId: { $in: await Conversation.find({ participants: req.user.id }).distinct('_id') }
+        });
+        res.status(200).json({ count });
+    } catch (err) {
+        res.status(500).json(err);
+    }
+});
+
+// GET CONVERSATIONS
+router.get('/conversations', verifyToken, async (req, res) => {
+    try {
+        const conversations = await Conversation.find({
+            participants: { $in: [req.user.id] }
+        })
+        .populate('participants', 'firstName lastName profilePicture name role')
+        .populate('lastMessage')
+        .sort({ updatedAt: -1 });
+
+        // Add unread count for each conversation
+        const conversationsWithUnread = await Promise.all(conversations.map(async (conv) => {
+            const unreadCount = await Message.countDocuments({
+                conversationId: conv._id,
+                sender: { $ne: req.user.id },
+                readBy: { $ne: req.user.id }
+            });
+            const convObj = conv.toObject();
+            convObj.unreadCount = unreadCount;
+            // Helper to get the other user
+            convObj.otherUser = convObj.participants.find(p => p._id.toString() !== req.user.id);
+            return convObj;
+        }));
+
+        res.status(200).json(conversationsWithUnread);
+    } catch (err) {
+        res.status(500).json(err);
+    }
+});
+
+// SEARCH USERS
+router.get('/search/users', verifyToken, async (req, res) => {
+    try {
+        const query = req.query.q || '';
+        if (!query) return res.status(200).json([]);
+
+        // Search students only? Request said "student to student"
+        // And exclude self
+        const users = await User.find({
+            role: 'student',
+            _id: { $ne: req.user.id },
+            $or: [
+                { firstName: { $regex: query, $options: 'i' } },
+                { lastName: { $regex: query, $options: 'i' } },
+                { name: { $regex: query, $options: 'i' } }
+            ]
+        }).select('firstName lastName profilePicture name department');
+
+        res.status(200).json(users);
+    } catch (err) {
+        res.status(500).json(err);
+    }
+});
+
+// --- DYNAMIC ROUTES ---
+
+// SEND MESSAGE (POST /)
 router.post('/', verifyToken, parser.single('file'), async (req, res) => {
     try {
         const { recipientId, content, conversationId, type } = req.body;
@@ -90,37 +166,7 @@ router.post('/', verifyToken, parser.single('file'), async (req, res) => {
     }
 });
 
-// GET CONVERSATIONS
-router.get('/conversations', verifyToken, async (req, res) => {
-    try {
-        const conversations = await Conversation.find({
-            participants: { $in: [req.user.id] }
-        })
-        .populate('participants', 'firstName lastName profilePicture name role')
-        .populate('lastMessage')
-        .sort({ updatedAt: -1 });
-
-        // Add unread count for each conversation
-        const conversationsWithUnread = await Promise.all(conversations.map(async (conv) => {
-            const unreadCount = await Message.countDocuments({
-                conversationId: conv._id,
-                sender: { $ne: req.user.id },
-                readBy: { $ne: req.user.id }
-            });
-            const convObj = conv.toObject();
-            convObj.unreadCount = unreadCount;
-            // Helper to get the other user
-            convObj.otherUser = convObj.participants.find(p => p._id.toString() !== req.user.id);
-            return convObj;
-        }));
-
-        res.status(200).json(conversationsWithUnread);
-    } catch (err) {
-        res.status(500).json(err);
-    }
-});
-
-// GET MESSAGES
+// GET MESSAGES (Dynamic ID)
 router.get('/:conversationId', verifyToken, async (req, res) => {
     try {
         // Verify participation
@@ -208,30 +254,6 @@ router.put('/:conversationId/read', verifyToken, async (req, res) => {
         );
 
         res.status(200).json("Messages read");
-    } catch (err) {
-        res.status(500).json(err);
-    }
-});
-
-// SEARCH USERS
-router.get('/search/users', verifyToken, async (req, res) => {
-    try {
-        const query = req.query.q || '';
-        if (!query) return res.status(200).json([]);
-
-        // Search students only? Request said "student to student"
-        // And exclude self
-        const users = await User.find({
-            role: 'student',
-            _id: { $ne: req.user.id },
-            $or: [
-                { firstName: { $regex: query, $options: 'i' } },
-                { lastName: { $regex: query, $options: 'i' } },
-                { name: { $regex: query, $options: 'i' } }
-            ]
-        }).select('firstName lastName profilePicture name department');
-
-        res.status(200).json(users);
     } catch (err) {
         res.status(500).json(err);
     }

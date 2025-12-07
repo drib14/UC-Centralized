@@ -36,10 +36,11 @@ const StudentMessages = () => {
     const fetchConversations = async () => {
         try {
             const res = await api.get('/messages/conversations');
-            setConversations(res.data);
+            setConversations(Array.isArray(res.data) ? res.data : []);
             setLoading(false);
         } catch (err) {
             console.error(err);
+            setConversations([]);
             setLoading(false);
         }
     };
