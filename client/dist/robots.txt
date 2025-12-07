@@ -1,4 +1,0 @@
-User-agent: *
-Allow: /
-
-Sitemap: https://uc-central.vercel.app/sitemap.xml

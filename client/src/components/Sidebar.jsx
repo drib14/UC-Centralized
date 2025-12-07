@@ -89,10 +89,6 @@ const Sidebar = () => {
                         <NavLink to="/admin/announcements" className={navLinkClass} onClick={handleMobileClick}><FaBullhorn className={iconClass} /> <span>Announcements</span></NavLink>
                         <NavLink to="/admin/orders" className={navLinkClass} onClick={handleMobileClick}><FaClipboardList className={iconClass} /> <span>Orders</span></NavLink>
                         <NavLink to="/admin/pos" className={navLinkClass} onClick={handleMobileClick}><FaCashRegister className={iconClass} /> <span>POS</span></NavLink>
-                        <NavLink to="/admin/messages" className={navLinkClass} onClick={handleMobileClick}>
-                            <FaEnvelope className={iconClass} /> <span>Messages</span>
-                            {!collapsed && unreadMessageCount > 0 && <span className="badge bg-danger ms-auto">{unreadMessageCount}</span>}
-                        </NavLink>
                         <NavLink to="/admin/notifications" className={navLinkClass} onClick={handleMobileClick}>
                              <FaBell className={iconClass} /> <span>Notifications</span>
                              {!collapsed && unreadCount > 0 && <span className="badge bg-danger ms-auto">{unreadCount}</span>}

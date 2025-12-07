@@ -34,7 +34,6 @@ import AdminAnnouncements from './pages/admin/AdminAnnouncements';
 import AdminUsers from './pages/admin/AdminUsers';
 import AdminOrders from './pages/admin/AdminOrders';
 import AdminPOS from './pages/admin/AdminPOS';
-import AdminMessages from './pages/admin/AdminMessages';
 import Notifications from './pages/Notifications';
 
 const ProtectedRoute = ({ children, allowedRoles }) => {

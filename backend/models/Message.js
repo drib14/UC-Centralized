@@ -1,10 +1,16 @@
 const mongoose = require('mongoose');
 
 const messageSchema = new mongoose.Schema({
-    // Minimal schema to prevent crashes if code references it
-    content: String,
+    conversationId: { type: mongoose.Schema.Types.ObjectId, ref: 'Conversation' },
     sender: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
-    conversationId: { type: mongoose.Schema.Types.ObjectId, ref: 'Conversation' }
+    content: { type: String }, // Text content or file description
+    type: {
+        type: String,
+        enum: ['text', 'image', 'video', 'audio', 'file'],
+        default: 'text'
+    },
+    fileUrl: { type: String, default: "" }, // Cloudinary URL
+    readBy: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }] // Track who read it
 }, { timestamps: true });
 
 module.exports = mongoose.model('Message', messageSchema);
