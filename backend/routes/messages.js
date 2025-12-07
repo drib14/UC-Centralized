@@ -14,7 +14,7 @@ router.get('/unread-count', verifyToken, async (req, res) => {
             sender: { $ne: req.user.id },
             readBy: { $ne: req.user.id },
             conversationId: { $in: await Conversation.find({ participants: req.user.id }).distinct('_id') },
-            deletedFor: { $ne: req.user.id } // Exclude deleted
+            deletedFor: { $ne: req.user.id }
         });
         res.status(200).json({ count });
     } catch (err) {
@@ -155,6 +155,8 @@ router.post('/', verifyToken, parser.single('file'), async (req, res) => {
             sender: senderId,
             content: content || "",
             type: type || 'text',
+            fileUrl: req.body.fileUrl || "", // Allow forwarding
+            fileName: req.body.fileName || "",
             readBy: [senderId] // Sender has read their own message
         };
 
@@ -359,7 +361,7 @@ router.put('/:id', verifyToken, async (req, res) => {
 // DELETE MESSAGE
 router.delete('/:id', verifyToken, async (req, res) => {
     try {
-        const mode = req.query.mode || 'everyone'; // 'me' or 'everyone'
+        const mode = req.query.mode || 'everyone';
         const message = await Message.findById(req.params.id);
 
         if (!message) return res.status(404).json("Message not found");

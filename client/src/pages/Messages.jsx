@@ -5,6 +5,7 @@ import ChatLayout from '../components/chat/ChatLayout';
 import ImageModal from '../components/modals/ImageModal';
 import VideoModal from '../components/modals/VideoModal';
 import DeleteMessageModal from '../components/modals/DeleteMessageModal';
+import ForwardMessageModal from '../components/modals/ForwardMessageModal';
 import { toast } from 'react-toastify';
 import api from '../utils/api';
 
@@ -26,8 +27,9 @@ const Messages = () => {
     const [viewImage, setViewImage] = useState(null);
     const [viewVideo, setViewVideo] = useState(null);
 
-    // Delete Modal State
+    // Delete/Forward Modal State
     const [deleteModal, setDeleteModal] = useState({ show: false, messageId: null, isOwn: false });
+    const [forwardModal, setForwardModal] = useState({ show: false, message: null });
 
     // Mobile Responsive State
     const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
@@ -107,13 +109,42 @@ const Messages = () => {
     const confirmDeleteForEveryone = async () => {
         try {
             await api.deleteMessage(deleteModal.messageId, 'everyone');
-            // Optimistic update
             setMessages(prev => prev.filter(m => m._id !== deleteModal.messageId));
             setDeleteModal({ show: false, messageId: null, isOwn: false });
             toast.success("Deleted for everyone");
         } catch (err) {
             console.error(err);
             toast.error("Failed to delete");
+        }
+    };
+
+    const handleRequestForward = (message) => {
+        setForwardModal({ show: true, message });
+    };
+
+    const handleConfirmForward = async (recipientId) => {
+        const msg = forwardModal.message;
+        if (!msg) return;
+
+        const formData = new FormData();
+        formData.append("recipientId", recipientId);
+        if (msg.content) formData.append("content", msg.content);
+        if (msg.type !== 'text') {
+             formData.append("type", msg.type);
+             formData.append("fileUrl", msg.fileUrl);
+             if (msg.fileName) formData.append("fileName", msg.fileName);
+        } else {
+             formData.append("type", 'text');
+        }
+
+        try {
+            // Send as new message
+            await api.request('/messages', 'POST', formData, true);
+            setForwardModal({ show: false, message: null });
+            toast.success("Message forwarded");
+        } catch (err) {
+            console.error(err);
+            toast.error("Failed to forward message");
         }
     };
 
@@ -456,7 +487,8 @@ const Messages = () => {
                 onViewImage={handleViewImage}
                 onViewVideo={handleViewVideo}
                 onEditMessage={handleEditMessage}
-                onRequestDelete={handleRequestDelete} // Changed prop name
+                onRequestDelete={handleRequestDelete}
+                onRequestForward={handleRequestForward}
             />
             <ImageModal show={!!viewImage} onClose={() => setViewImage(null)} imageUrl={viewImage} />
             <VideoModal show={!!viewVideo} onClose={() => setViewVideo(null)} videoUrl={viewVideo} />
@@ -466,6 +498,11 @@ const Messages = () => {
                 onDeleteForMe={confirmDeleteForMe}
                 onDeleteForEveryone={confirmDeleteForEveryone}
                 isOwnMessage={deleteModal.isOwn}
+            />
+            <ForwardMessageModal
+                show={forwardModal.show}
+                onClose={() => setForwardModal({ ...forwardModal, show: false })}
+                onForward={handleConfirmForward}
             />
         </>
     );
