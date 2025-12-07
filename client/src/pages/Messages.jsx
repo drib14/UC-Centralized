@@ -59,7 +59,7 @@ const Messages = () => {
 
     const fetchMessages = async (convId) => {
         try {
-            const res = await api.get(`/messages/${convId}`);
+            const res = await api.get(`/messages/conversations/${convId}`);
             setMessages(res);
             await markAsRead(convId);
         } catch (err) {
@@ -69,7 +69,7 @@ const Messages = () => {
 
     const markAsRead = async (convId) => {
         try {
-            await api.put(`/messages/${convId}/read`);
+            await api.put(`/messages/conversations/${convId}/read`);
             setConversations(prev => prev.map(c =>
                 c._id === convId ? { ...c, unreadCount: 0 } : c
             ));
@@ -344,7 +344,7 @@ const Messages = () => {
 
     const handleDeleteConversation = async (convId) => {
         try {
-            await api.delete(`/messages/${convId}`);
+            await api.delete(`/messages/conversations/${convId}`);
             setConversations(prev => prev.filter(c => c._id !== convId));
             setSelectedConversation(null);
             toast.success("Conversation deleted permanently.");
@@ -356,7 +356,7 @@ const Messages = () => {
 
     const handleMuteConversation = async (convId) => {
         try {
-            const res = await api.put(`/messages/${convId}/mute`);
+            const res = await api.put(`/messages/conversations/${convId}/mute`);
             const isMuted = res.muted;
 
             setConversations(prev => prev.map(c => {
