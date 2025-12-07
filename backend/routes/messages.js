@@ -7,20 +7,17 @@ const parser = require('../config/cloudinary');
 
 // --- STATIC ROUTES (Must come before dynamic /:id routes) ---
 
-// UNREAD COUNT (Specific route)
+// UNREAD COUNT
 router.get('/unread-count', verifyToken, async (req, res) => {
     try {
         const count = await Message.countDocuments({
             sender: { $ne: req.user.id },
             readBy: { $ne: req.user.id },
-            // Ensure message belongs to a conversation user is in
-            // Ideally we filter messages in conversations the user participates in.
-            // But checking 'readBy' for non-sender is usually sufficient if strict access control isn't 100% required here,
-            // however, to be correct:
             conversationId: { $in: await Conversation.find({ participants: req.user.id }).distinct('_id') }
         });
         res.status(200).json({ count });
     } catch (err) {
+        console.error("Unread count error:", err);
         res.status(500).json(err);
     }
 });
@@ -31,11 +28,10 @@ router.get('/conversations', verifyToken, async (req, res) => {
         const conversations = await Conversation.find({
             participants: { $in: [req.user.id] }
         })
-        .populate('participants', 'firstName lastName profilePicture name role isOnline lastSeen')
+        .populate('participants', 'firstName lastName profileImage name role isOnline lastSeen')
         .populate('lastMessage')
         .sort({ updatedAt: -1 });
 
-        // Add unread count for each conversation
         const conversationsWithUnread = await Promise.all(conversations.map(async (conv) => {
             const unreadCount = await Message.countDocuments({
                 conversationId: conv._id,
@@ -44,13 +40,18 @@ router.get('/conversations', verifyToken, async (req, res) => {
             });
             const convObj = conv.toObject();
             convObj.unreadCount = unreadCount;
-            // Helper to get the other user
+            // Map profileImage to profilePicture for frontend consistency
+            convObj.participants = convObj.participants.map(p => ({
+                ...p,
+                profilePicture: p.profileImage || p.profilePicture
+            }));
             convObj.otherUser = convObj.participants.find(p => p._id.toString() !== req.user.id);
             return convObj;
         }));
 
         res.status(200).json(conversationsWithUnread);
     } catch (err) {
+        console.error("Get conversations error:", err);
         res.status(500).json(err);
     }
 });
@@ -59,7 +60,8 @@ router.get('/conversations', verifyToken, async (req, res) => {
 router.get('/search/users', verifyToken, async (req, res) => {
     try {
         const query = req.query.q || '';
-        console.log(`Searching users with query: ${query}`);
+        console.log(`[Search] User: ${req.user.id}, Query: "${query}"`);
+
         if (!query) return res.status(200).json([]);
 
         // Split query to handle full name search "First Last"
@@ -84,15 +86,37 @@ router.get('/search/users', verifyToken, async (req, res) => {
             });
         }
 
-        const users = await User.find({
-            // Expanded to include admins in search
-            role: { $in: ['student', 'admin', 'developer'] },
+        // DEBUG: First find ALL matching text, ignoring role
+        const allMatches = await User.find({
             _id: { $ne: req.user.id },
             $or: searchConditions
-        }).select('firstName lastName profilePicture name department role isOnline lastSeen');
+        }).select('firstName lastName profileImage name department role isOnline lastSeen');
 
-        console.log(`Found ${users.length} users`);
-        res.status(200).json(users);
+        console.log(`[Search] Found ${allMatches.length} matches (ignoring role filter)`);
+
+        // If we want to enforce roles, do it here.
+        // For now, I'll return ALL matches to debug why "no users found".
+        // The previous filter was: role: { $in: ['student', 'admin', 'developer'] }
+        // Let's verify if the matched users have these roles.
+
+        const validRoles = ['student', 'admin', 'developer'];
+        const filteredMatches = allMatches.filter(u => {
+            // If role is missing/undefined, maybe include them? Or strictly 'student'?
+            // The schema default is 'student'.
+            const userRole = u.role || 'student';
+            return validRoles.includes(userRole);
+        });
+
+        console.log(`[Search] Returning ${filteredMatches.length} users after role filter`);
+
+        // Map profileImage -> profilePicture
+        const mappedUsers = filteredMatches.map(u => {
+            const userObj = u.toObject();
+            userObj.profilePicture = userObj.profileImage || userObj.profilePicture;
+            return userObj;
+        });
+
+        res.status(200).json(mappedUsers);
     } catch (err) {
         console.error("Search error:", err);
         res.status(500).json(err);
@@ -107,6 +131,8 @@ router.post('/', verifyToken, parser.single('file'), async (req, res) => {
         const { recipientId, content, conversationId, type } = req.body;
         const senderId = req.user.id;
         let chatId = conversationId;
+
+        console.log(`[SendMessage] Sender: ${senderId}, Recipient: ${recipientId}, ChatId: ${conversationId}, Type: ${type}`);
 
         // If no conversationId, find or create one
         if (!chatId && recipientId) {
@@ -140,7 +166,6 @@ router.post('/', verifyToken, parser.single('file'), async (req, res) => {
         // Handle File Upload
         if (req.file) {
             messageData.fileUrl = req.file.path;
-            // Determine type based on mimetype if not explicitly sent (though frontend should send it)
             if (!messageData.type || messageData.type === 'text') {
                 if (req.file.mimetype.startsWith('image')) messageData.type = 'image';
                 else if (req.file.mimetype.startsWith('video')) messageData.type = 'video';
@@ -154,34 +179,38 @@ router.post('/', verifyToken, parser.single('file'), async (req, res) => {
 
         // Update Conversation with last message
         await Conversation.findByIdAndUpdate(chatId, {
-            lastMessage: savedMessage._id
+            lastMessage: savedMessage._id,
+            updatedAt: Date.now()
         });
 
         // Socket.io Emission
         const io = req.app.get('io');
-        // We need to emit to the recipient.
-        // Assuming we have a room for the conversation or individual user rooms.
-        // If we use conversation room:
-        io.to(chatId.toString()).emit("receive_message", savedMessage);
 
-        // Also emit to participants' personal rooms for "new message" notification (sidebar update)
-        // Find participants to notify
+        // Populate sender for the response
+        await savedMessage.populate('sender', 'firstName lastName profileImage name role');
+
+        // Create response object with profilePicture mapping
+        const responseMessage = savedMessage.toObject();
+        if(responseMessage.sender) {
+             responseMessage.sender.profilePicture = responseMessage.sender.profileImage || responseMessage.sender.profilePicture;
+        }
+
+        // Emit to conversation room
+        io.to(chatId.toString()).emit("receive_message", responseMessage);
+
+        // Notify participants (for sidebar update)
         const conversation = await Conversation.findById(chatId);
         conversation.participants.forEach(participantId => {
-            // Do not emit to sender if they are just receiving the ack, but here we want to update their sidebar too
             io.to(participantId.toString()).emit("conversation_updated", {
                 conversationId: chatId,
-                lastMessage: savedMessage
+                lastMessage: responseMessage
             });
         });
 
-        // Populate sender for the response
-        await savedMessage.populate('sender', 'firstName lastName profilePicture name role');
-
-        res.status(200).json(savedMessage);
+        res.status(200).json(responseMessage);
 
     } catch (err) {
-        console.error(err);
+        console.error("Send message error:", err);
         res.status(500).json(err);
     }
 });
@@ -199,9 +228,18 @@ router.get('/:conversationId', verifyToken, async (req, res) => {
 
         const messages = await Message.find({
             conversationId: req.params.conversationId
-        }).populate('sender', 'firstName lastName profilePicture name role');
+        }).populate('sender', 'firstName lastName profileImage name role');
 
-        res.status(200).json(messages);
+        // Map profileImage -> profilePicture
+        const mappedMessages = messages.map(m => {
+            const msgObj = m.toObject();
+            if(msgObj.sender) {
+                msgObj.sender.profilePicture = msgObj.sender.profileImage || msgObj.sender.profilePicture;
+            }
+            return msgObj;
+        });
+
+        res.status(200).json(mappedMessages);
     } catch (err) {
         res.status(500).json(err);
     }
@@ -273,7 +311,7 @@ router.put('/:conversationId/read', verifyToken, async (req, res) => {
             { $addToSet: { readBy: req.user.id } }
         );
 
-        // Notify sender via socket that messages are read (for "seen" indicators)
+        // Notify sender via socket that messages are read
         const conversation = await Conversation.findById(req.params.conversationId);
         if (conversation) {
             const io = req.app.get('io');
