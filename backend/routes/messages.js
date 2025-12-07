@@ -63,14 +63,31 @@ router.get('/search/users', verifyToken, async (req, res) => {
 
         // Search students only? Request said "student to student"
         // And exclude self
+
+        // Split query to handle full name search "First Last"
+        const parts = query.trim().split(/\s+/);
+        let searchConditions = [
+            { firstName: { $regex: query, $options: 'i' } },
+            { lastName: { $regex: query, $options: 'i' } },
+            { name: { $regex: query, $options: 'i' } } // Legacy support
+        ];
+
+        // If query has spaces, try to match First + Last
+        if (parts.length > 1) {
+            const firstPart = parts[0];
+            const lastPart = parts.slice(1).join(' '); // Join the rest as last name
+            searchConditions.push({
+                $and: [
+                    { firstName: { $regex: firstPart, $options: 'i' } },
+                    { lastName: { $regex: lastPart, $options: 'i' } }
+                ]
+            });
+        }
+
         const users = await User.find({
             role: 'student',
             _id: { $ne: req.user.id },
-            $or: [
-                { firstName: { $regex: query, $options: 'i' } },
-                { lastName: { $regex: query, $options: 'i' } },
-                { name: { $regex: query, $options: 'i' } }
-            ]
+            $or: searchConditions
         }).select('firstName lastName profilePicture name department');
 
         res.status(200).json(users);
