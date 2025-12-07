@@ -59,6 +59,7 @@ router.get('/conversations', verifyToken, async (req, res) => {
 router.get('/search/users', verifyToken, async (req, res) => {
     try {
         const query = req.query.q || '';
+        console.log(`Searching users with query: ${query}`);
         if (!query) return res.status(200).json([]);
 
         // Split query to handle full name search "First Last"
@@ -90,8 +91,10 @@ router.get('/search/users', verifyToken, async (req, res) => {
             $or: searchConditions
         }).select('firstName lastName profilePicture name department role isOnline lastSeen');
 
+        console.log(`Found ${users.length} users`);
         res.status(200).json(users);
     } catch (err) {
+        console.error("Search error:", err);
         res.status(500).json(err);
     }
 });

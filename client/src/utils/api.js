@@ -19,10 +19,14 @@ class API {
     static async request(endpoint, method = 'GET', body = null, isMultipart = false) {
         try {
             const headers = {};
-            if (isMultipart) {
-                headers['Content-Type'] = 'multipart/form-data';
+            // DO NOT set Content-Type for multipart if using FormData, let Axios handle it with boundary
+            if (isMultipart && !(body instanceof FormData)) {
+                 // Fallback if not FormData (though likely error in usage)
+                 // But strictly speaking, we shouldn't force it if axios detects object/json
             }
-            // Axios automatically sets Content-Type: application/json for objects/JSON
+
+            // If body is FormData, axios automatically sets correct multipart header with boundary.
+            // If we manually set it, we break it.
 
             const config = {
                 method,
