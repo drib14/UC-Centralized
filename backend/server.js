@@ -54,6 +54,9 @@ const connectDB = async () => {
     }
 };
 
+// Initiate DB connection immediately
+connectDB();
+
 // --- SOCKET.IO LOGIC ---
 const userSocketMap = new Map(); // Map<userId, socketId>
 const socketUserMap = new Map(); // Map<socketId, userId>
@@ -69,12 +72,14 @@ io.on("connection", (socket) => {
         userSocketMap.set(userId, socket.id);
         socketUserMap.set(socket.id, userId);
 
-        // Update User Status
-        try {
-            await User.findByIdAndUpdate(userId, { isOnline: true, lastSeen: new Date() });
-            io.emit('user_status_change', { userId, isOnline: true });
-        } catch (err) {
-            console.error("Error updating online status:", err);
+        // Update User Status (Only if DB connected)
+        if (mongoose.connection.readyState === 1) {
+            try {
+                await User.findByIdAndUpdate(userId, { isOnline: true, lastSeen: new Date() });
+                io.emit('user_status_change', { userId, isOnline: true });
+            } catch (err) {
+                console.error("Error updating online status:", err);
+            }
         }
     });
 
@@ -104,11 +109,14 @@ io.on("connection", (socket) => {
             userSocketMap.delete(userId);
             socketUserMap.delete(socket.id);
 
-            try {
-                await User.findByIdAndUpdate(userId, { isOnline: false, lastSeen: new Date() });
-                io.emit('user_status_change', { userId, isOnline: false, lastSeen: new Date() });
-            } catch (err) {
-                console.error("Error updating offline status:", err);
+            // Update Offline Status (Only if DB connected)
+            if (mongoose.connection.readyState === 1) {
+                try {
+                    await User.findByIdAndUpdate(userId, { isOnline: false, lastSeen: new Date() });
+                    io.emit('user_status_change', { userId, isOnline: false, lastSeen: new Date() });
+                } catch (err) {
+                    console.error("Error updating offline status:", err);
+                }
             }
         }
     });
