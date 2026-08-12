@@ -2,7 +2,7 @@ import React, { useState, useRef } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import API from '../utils/api';
 import { toast } from 'react-toastify';
-import logo from '../assets/uc-central-logo.png';
+import logo from '../assets/uc-central-logo.svg';
 
 const VerifyCode = () => {
     const [code, setCode] = useState(new Array(6).fill(''));

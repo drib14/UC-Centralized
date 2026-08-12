@@ -3,10 +3,11 @@ import { NavLink } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
 import { useSocket } from '../context/SocketContext';
-import logo from '../assets/uc-central-logo.png';
+import logo from '../assets/uc-central-logo.svg';
 import {
     FaTableColumns, FaCalendarDays, FaShirt, FaEnvelope, FaCartShopping, FaUser, FaRightFromBracket,
-    FaUsers, FaBullhorn, FaClipboardList, FaCashRegister, FaChevronLeft, FaChevronRight, FaBook, FaBell
+    FaUsers, FaBullhorn, FaClipboardList, FaCashRegister, FaChevronLeft, FaChevronRight, FaBook, FaBell,
+    FaBuildingColumns
 } from 'react-icons/fa6';
 
 const Sidebar = () => {
@@ -83,6 +84,7 @@ const Sidebar = () => {
                 {isAdmin ? (
                     <>
                         <NavLink to="/admin/dashboard" className={navLinkClass} onClick={handleMobileClick}><FaTableColumns className={iconClass} /> <span>Dashboard</span></NavLink>
+                        <NavLink to="/admin/departments" className={navLinkClass} onClick={handleMobileClick}><FaBuildingColumns className={iconClass} /> <span>Departments</span></NavLink>
                         <NavLink to="/admin/users" className={navLinkClass} onClick={handleMobileClick}><FaUsers className={iconClass} /> <span>Users</span></NavLink>
                         <NavLink to="/admin/events" className={navLinkClass} onClick={handleMobileClick}><FaCalendarDays className={iconClass} /> <span>Events</span></NavLink>
                         <NavLink to="/admin/merch" className={navLinkClass} onClick={handleMobileClick}><FaShirt className={iconClass} /> <span>Merch</span></NavLink>

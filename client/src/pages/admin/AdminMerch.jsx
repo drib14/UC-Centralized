@@ -2,43 +2,72 @@ import React, { useEffect, useState } from 'react';
 import AdminMerchSkeleton from '../../components/skeletons/AdminMerchSkeleton';
 import API from '../../utils/api';
 import { toast } from 'react-toastify';
-import { FaPlus, FaPen, FaTrash } from 'react-icons/fa';
+import SEO from '../../components/SEO';
+import {
+    FaShirt, FaPlus, FaPencil, FaTrash, FaMagnifyingGlass,
+    FaBoxOpen, FaTriangleExclamation, FaCircleCheck, FaCircleXmark, FaTag
+} from 'react-icons/fa6';
 
 const AdminMerch = () => {
     const [merch, setMerch] = useState([]);
     const [loading, setLoading] = useState(true);
-    const [showCreate, setShowCreate] = useState(false);
-    const [showEdit, setShowEdit] = useState(false);
-    const [showDelete, setShowDelete] = useState(false);
+    const [search, setSearch] = useState('');
+    const [categoryFilter, setCategoryFilter] = useState('ALL');
 
-    const initialForm = { name: '', price: '', stock: '', category: 'accessories', description: '', image: null, variants: [] };
+    // Modals
+    const [showCreate, setShowCreate] = useState(false);
+    const [showEditModal, setShowEditModal] = useState(false);
+    const [showDelete, setShowDelete] = useState(false);
+    const [deleteTarget, setDeleteTarget] = useState(null);
+
+    const initialForm = {
+        name: '',
+        price: '',
+        stock: '',
+        category: 'wearable',
+        description: '',
+        image: null,
+        variants: []
+    };
     const [form, setForm] = useState(initialForm);
     const [editData, setEditData] = useState(null);
-    const [deleteId, setDeleteId] = useState(null);
+    const [submitting, setSubmitting] = useState(false);
 
-    // Temp state for adding a variant
-    const [newVariant, setNewVariant] = useState({ size: '', color: '', stock: '' });
+    // Variant Helper
+    const [newVariant, setNewVariant] = useState({ size: 'M', color: 'Black', stock: 10 });
 
-    useEffect(() => { loadMerch(); }, []);
+    useEffect(() => {
+        loadMerch();
+    }, []);
 
     const loadMerch = async () => {
         try {
+            setLoading(true);
             const data = await API.getMerch();
-            setMerch(data);
-        } catch (e) { toast.error("Failed to load merch"); }
-        finally { setLoading(false); }
+            setMerch(Array.isArray(data) ? data : []);
+        } catch (e) {
+            toast.error("Failed to load merchandise items");
+        } finally {
+            setLoading(false);
+        }
     };
 
     const addVariantToForm = (isEdit = false) => {
-        if (!newVariant.size || !newVariant.color || !newVariant.stock) return toast.error("Fill all variant fields");
-        const variant = { ...newVariant };
+        if (!newVariant.size || !newVariant.color || newVariant.stock === '') {
+            return toast.error("Please fill in size, color, and stock for the variant");
+        }
+        const variant = {
+            size: newVariant.size,
+            color: newVariant.color.trim(),
+            stock: parseInt(newVariant.stock, 10) || 0
+        };
 
         if (isEdit) {
             setEditData(prev => ({ ...prev, variants: [...(prev.variants || []), variant] }));
         } else {
-            setForm(prev => ({ ...prev, variants: [...prev.variants, variant] }));
+            setForm(prev => ({ ...prev, variants: [...(prev.variants || []), variant] }));
         }
-        setNewVariant({ size: '', color: '', stock: '' });
+        setNewVariant({ size: 'M', color: 'Black', stock: 10 });
     };
 
     const removeVariant = (index, isEdit = false) => {
@@ -49,192 +78,714 @@ const AdminMerch = () => {
         }
     };
 
-    const handleCreate = async () => {
-        const f = new FormData();
-        Object.keys(form).forEach(k => {
-            if(k === 'variants') {
-                f.append(k, JSON.stringify(form[k]));
-            } else if(form[k]) {
-                f.append(k, form[k]);
-            }
-        });
+    const handleCreate = async (e) => {
+        if (e) e.preventDefault();
+        if (!form.name.trim() || !form.price) {
+            toast.error("Product name and price are required");
+            return;
+        }
 
+        setSubmitting(true);
         try {
-            await API.createMerch(f);
-            toast.success("Merch created");
+            const formData = new FormData();
+            formData.append('name', form.name.trim());
+            formData.append('price', form.price);
+            formData.append('category', form.category);
+            formData.append('description', form.description.trim());
+
+            // Compute total stock from variants if wearable, or base stock
+            let totalStock = form.stock ? parseInt(form.stock, 10) : 0;
+            if (form.category === 'wearable' && form.variants.length > 0) {
+                totalStock = form.variants.reduce((acc, v) => acc + (parseInt(v.stock, 10) || 0), 0);
+            }
+            formData.append('stock', totalStock);
+            formData.append('variants', JSON.stringify(form.variants));
+
+            if (form.image) {
+                formData.append('image', form.image);
+            }
+
+            await API.request('/merch', 'POST', formData);
+            toast.success("Product added to catalog");
             setShowCreate(false);
             setForm(initialForm);
             loadMerch();
-        } catch(e) { toast.error(e.message); }
+        } catch (e) {
+            toast.error(e.message || "Failed to create merchandise");
+        } finally {
+            setSubmitting(false);
+        }
     };
 
-    const handleUpdate = async () => {
-        const f = new FormData();
-        Object.keys(editData).forEach(k => {
-             if (k === 'variants') {
-                 f.append(k, JSON.stringify(editData[k]));
-             } else if (editData[k] && k !== '_id' && k !== '__v') {
-                 if (k === 'image' && !(editData[k] instanceof File)) return;
-                 f.append(k, editData[k]);
-             }
+    const openEditModal = (item) => {
+        setEditData({
+            _id: item._id,
+            name: item.name,
+            price: item.price,
+            stock: item.stock,
+            category: item.category || 'wearable',
+            description: item.description || '',
+            variants: item.variants || [],
+            image: null
         });
+        setShowEditModal(true);
+    };
+
+    const handleUpdate = async (e) => {
+        if (e) e.preventDefault();
+        if (!editData.name.trim() || !editData.price) {
+            toast.error("Product name and price are required");
+            return;
+        }
+
+        setSubmitting(true);
         try {
-            await API.updateMerch(editData._id, f);
-            toast.success("Merch updated");
-            setShowEdit(false);
+            const formData = new FormData();
+            formData.append('name', editData.name.trim());
+            formData.append('price', editData.price);
+            formData.append('category', editData.category);
+            formData.append('description', editData.description.trim());
+
+            let totalStock = editData.stock ? parseInt(editData.stock, 10) : 0;
+            if (editData.category === 'wearable' && editData.variants.length > 0) {
+                totalStock = editData.variants.reduce((acc, v) => acc + (parseInt(v.stock, 10) || 0), 0);
+            }
+            formData.append('stock', totalStock);
+            formData.append('variants', JSON.stringify(editData.variants));
+
+            if (editData.image) {
+                formData.append('image', editData.image);
+            }
+
+            await API.request(`/merch/${editData._id}`, 'PUT', formData);
+            toast.success("Product updated successfully");
+            setShowEditModal(false);
+            setEditData(null);
             loadMerch();
-        } catch(e) { toast.error(e.message); }
+        } catch (e) {
+            toast.error(e.message || "Failed to update product");
+        } finally {
+            setSubmitting(false);
+        }
     };
 
     const handleDelete = async () => {
+        if (!deleteTarget) return;
+        setSubmitting(true);
         try {
-            await API.deleteMerch(deleteId);
-            toast.success("Merch deleted");
+            await API.deleteMerch(deleteTarget._id);
+            toast.success(`Product ${deleteTarget.name} deleted`);
             setShowDelete(false);
-            loadMerch();
-        } catch(e) { toast.error("Failed to delete"); }
+            setDeleteTarget(null);
+            setMerch(merch.filter(m => m._id !== deleteTarget._id));
+        } catch (e) {
+            toast.error("Failed to delete product");
+        } finally {
+            setSubmitting(false);
+        }
     };
 
-    const renderVariantSection = (data, isEdit) => (
-        <div className="mb-3 border p-2 rounded">
-            <label className="form-label fw-bold">Variants (Size/Color)</label>
-            <div className="input-group mb-2">
-                <select className="form-select" value={newVariant.size} onChange={e => setNewVariant({...newVariant, size: e.target.value})}>
-                    <option value="">Size</option><option>XS</option><option>S</option><option>M</option><option>L</option><option>XL</option><option>XXL</option>
-                </select>
-                <input type="text" className="form-control" placeholder="Color" value={newVariant.color} onChange={e => setNewVariant({...newVariant, color: e.target.value})} />
-                <input type="number" className="form-control" placeholder="Qty" value={newVariant.stock} onChange={e => setNewVariant({...newVariant, stock: e.target.value})} />
-                <button className="btn btn-success" onClick={() => addVariantToForm(isEdit)}><FaPlus /></button>
-            </div>
+    const formatCurrency = (amount) => {
+        return new Intl.NumberFormat('en-PH', { style: 'currency', currency: 'PHP' }).format(amount || 0);
+    };
 
-            <div className="table-responsive">
-                <table className="table table-sm table-bordered">
-                    <thead><tr><th>Size</th><th>Color</th><th>Qty</th><th>Action</th></tr></thead>
-                    <tbody>
-                        {(data.variants || []).map((v, i) => (
-                            <tr key={i}>
-                                <td>{v.size}</td><td>{v.color}</td><td>{v.stock}</td>
-                                <td><button className="btn btn-xs btn-danger" onClick={() => removeVariant(i, isEdit)}><FaTrash /></button></td>
-                            </tr>
-                        ))}
-                    </tbody>
-                </table>
-            </div>
-            <small className="text-muted">Total Stock will be calculated automatically based on variants.</small>
-        </div>
-    );
+    const getStockBadge = (stock) => {
+        if (stock <= 0) {
+            return <span className="badge bg-danger bg-opacity-10 text-danger border border-danger px-3 py-1 rounded-pill"><FaCircleXmark className="me-1" /> Out of Stock</span>;
+        } else if (stock < 5) {
+            return <span className="badge bg-warning bg-opacity-10 text-dark border border-warning px-3 py-1 rounded-pill"><FaTriangleExclamation className="me-1 text-warning" /> Low ({stock})</span>;
+        }
+        return <span className="badge bg-success bg-opacity-10 text-success border border-success px-3 py-1 rounded-pill"><FaCircleCheck className="me-1" /> In Stock ({stock})</span>;
+    };
+
+    // Filter Logic
+    const filteredMerch = merch.filter(m => {
+        const matchesSearch =
+            m.name.toLowerCase().includes(search.toLowerCase()) ||
+            (m.description && m.description.toLowerCase().includes(search.toLowerCase()));
+
+        const matchesCat = categoryFilter === 'ALL' || m.category === categoryFilter;
+
+        return matchesSearch && matchesCat;
+    });
+
+    const totalProducts = merch.length;
+    const totalStockCount = merch.reduce((acc, m) => acc + (m.stock || 0), 0);
+    const lowStockCount = merch.filter(m => m.stock > 0 && m.stock < 5).length;
+    const outOfStockCount = merch.filter(m => m.stock <= 0).length;
 
     if (loading) return <AdminMerchSkeleton />;
 
     return (
-        <div className="container-fluid">
-            <div className="d-flex justify-content-between align-items-center mb-4">
-                <h2>Merch Management</h2>
-                <button className="btn btn-primary" onClick={() => setShowCreate(true)}><FaPlus className="me-2" />Add Item</button>
+        <div className="container-fluid py-4">
+            <SEO title="Merchandise Management" description="Manage campus merchandise catalog, variants, and stock levels." />
+
+            {/* Header */}
+            <div className="d-flex flex-column flex-md-row justify-content-between align-items-md-center mb-4 gap-3">
+                <div>
+                    <h2 className="mb-1 fw-bold text-dark d-flex align-items-center">
+                        <FaShirt className="me-2 text-primary" /> Merchandise & Inventory Control
+                    </h2>
+                    <p className="text-muted mb-0">Manage campus apparel, stationery, accessories, sizes, colors, and stock levels.</p>
+                </div>
+                <button
+                    className="btn btn-primary d-flex align-items-center gap-2 rounded-pill px-4 py-2 fw-semibold shadow-sm"
+                    onClick={() => setShowCreate(true)}
+                >
+                    <FaPlus /> Add Product
+                </button>
             </div>
 
-            <div className="row">
-                {merch.map(item => (
-                    <div className="col-md-3 mb-4" key={item._id}>
-                        <div className="card h-100">
-                             <img src={item.image || 'https://via.placeholder.com/200'} className="card-img-top" style={{height:'200px', objectFit:'cover'}} alt={item.name} />
-                             <div className="card-body">
-                                 <h5 className="card-title">{item.name}</h5>
-                                 <p className="text-muted small">₱{item.price} | Stock: {item.stock}</p>
-                                 <span className="badge bg-secondary mb-2">{item.category}</span>
-                                 <div className="d-flex gap-2 mt-2">
-                                     <button className="btn btn-sm btn-outline-primary w-50" onClick={() => { setEditData({...item, image: null, variants: item.variants || []}); setShowEdit(true); }}><FaPen /> Edit</button>
-                                     <button className="btn btn-sm btn-outline-danger w-50" onClick={() => { setDeleteId(item._id); setShowDelete(true); }}><FaTrash /></button>
-                                 </div>
-                             </div>
+            {/* Metric Cards */}
+            <div className="row g-3 mb-4">
+                <div className="col-12 col-sm-6 col-xl-3">
+                    <div className="card border-0 shadow-sm rounded-4 p-3 bg-white">
+                        <div className="d-flex align-items-center justify-content-between">
+                            <div>
+                                <span className="text-muted small fw-bold text-uppercase">Total Catalog</span>
+                                <h3 className="fw-bold text-dark mt-1 mb-0">{totalProducts} Items</h3>
+                            </div>
+                            <div className="p-3 bg-primary bg-opacity-10 text-primary rounded-4">
+                                <FaShirt size={22} />
+                            </div>
                         </div>
                     </div>
-                ))}
+                </div>
+                <div className="col-12 col-sm-6 col-xl-3">
+                    <div className="card border-0 shadow-sm rounded-4 p-3 bg-white">
+                        <div className="d-flex align-items-center justify-content-between">
+                            <div>
+                                <span className="text-muted small fw-bold text-uppercase">Total Units</span>
+                                <h3 className="fw-bold text-success mt-1 mb-0">{totalStockCount} Units</h3>
+                            </div>
+                            <div className="p-3 bg-success bg-opacity-10 text-success rounded-4">
+                                <FaBoxOpen size={22} />
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div className="col-12 col-sm-6 col-xl-3">
+                    <div className="card border-0 shadow-sm rounded-4 p-3 bg-white">
+                        <div className="d-flex align-items-center justify-content-between">
+                            <div>
+                                <span className="text-muted small fw-bold text-uppercase">Low Stock Alert</span>
+                                <h3 className="fw-bold text-warning mt-1 mb-0">{lowStockCount}</h3>
+                            </div>
+                            <div className="p-3 bg-warning bg-opacity-10 text-warning rounded-4">
+                                <FaTriangleExclamation size={22} />
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div className="col-12 col-sm-6 col-xl-3">
+                    <div className="card border-0 shadow-sm rounded-4 p-3 bg-white">
+                        <div className="d-flex align-items-center justify-content-between">
+                            <div>
+                                <span className="text-muted small fw-bold text-uppercase">Out of Stock</span>
+                                <h3 className="fw-bold text-danger mt-1 mb-0">{outOfStockCount}</h3>
+                            </div>
+                            <div className="p-3 bg-danger bg-opacity-10 text-danger rounded-4">
+                                <FaCircleXmark size={22} />
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
 
-            {/* Create Modal */}
+            {/* Toolbar */}
+            <div className="card border-0 shadow-sm rounded-4 mb-4 p-3 bg-white">
+                <div className="row g-3 align-items-center">
+                    <div className="col-md-7">
+                        <div className="input-group">
+                            <span className="input-group-text bg-light border-0"><FaMagnifyingGlass className="text-muted" /></span>
+                            <input
+                                type="text"
+                                className="form-control bg-light border-0"
+                                placeholder="Search products by name or description..."
+                                value={search}
+                                onChange={e => setSearch(e.target.value)}
+                            />
+                        </div>
+                    </div>
+                    <div className="col-md-5">
+                        <div className="d-flex gap-1 overflow-auto">
+                            {['ALL', 'wearable', 'accessories', 'stationery', 'other'].map(cat => (
+                                <button
+                                    key={cat}
+                                    className={`btn btn-sm rounded-pill px-3 fw-semibold text-capitalize ${categoryFilter === cat ? 'btn-primary' : 'btn-light'}`}
+                                    onClick={() => setCategoryFilter(cat)}
+                                >
+                                    {cat === 'ALL' ? 'All Categories' : cat}
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {/* Products Table */}
+            <div className="card border-0 shadow-sm rounded-4 overflow-hidden bg-white">
+                <div className="table-responsive">
+                    <table className="table table-hover align-middle mb-0">
+                        <thead className="table-light">
+                            <tr>
+                                <th className="ps-4">Product</th>
+                                <th>Category</th>
+                                <th>Price</th>
+                                <th>Stock Status</th>
+                                <th>Variants Breakdown</th>
+                                <th className="text-end pe-4">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {filteredMerch.length === 0 ? (
+                                <tr>
+                                    <td colSpan="6" className="text-center py-5 text-muted">
+                                        <FaShirt size={36} className="mb-2 opacity-50" />
+                                        <p className="mb-0">No merchandise found matching your criteria.</p>
+                                    </td>
+                                </tr>
+                            ) : (
+                                filteredMerch.map(item => (
+                                    <tr key={item._id}>
+                                        <td className="ps-4">
+                                            <div className="d-flex align-items-center gap-3">
+                                                <img
+                                                    src={item.image || 'https://via.placeholder.com/80'}
+                                                    alt={item.name}
+                                                    className="rounded-3 object-fit-cover shadow-sm"
+                                                    style={{ width: '48px', height: '48px' }}
+                                                />
+                                                <div>
+                                                    <div className="fw-bold text-dark">{item.name}</div>
+                                                    <small className="text-muted line-clamp-1">{item.description || 'No description'}</small>
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td>
+                                            <span className="badge bg-light text-dark border text-capitalize px-3 py-1 rounded-pill">
+                                                <FaTag className="me-1 text-primary" size={10} /> {item.category || 'General'}
+                                            </span>
+                                        </td>
+                                        <td className="fw-bold text-primary">
+                                            {formatCurrency(item.price)}
+                                        </td>
+                                        <td>
+                                            {getStockBadge(item.stock)}
+                                        </td>
+                                        <td>
+                                            {item.variants && item.variants.length > 0 ? (
+                                                <div className="d-flex flex-wrap gap-1">
+                                                    {item.variants.map((v, i) => (
+                                                        <span key={i} className="badge bg-light text-secondary border small">
+                                                            {v.size}/{v.color} ({v.stock})
+                                                        </span>
+                                                    ))}
+                                                </div>
+                                            ) : (
+                                                <span className="text-muted small">Standard Single Variant</span>
+                                            )}
+                                        </td>
+                                        <td className="text-end pe-4">
+                                            <div className="btn-group">
+                                                <button
+                                                    className="btn btn-sm btn-outline-primary"
+                                                    onClick={() => openEditModal(item)}
+                                                    title="Edit Product"
+                                                >
+                                                    <FaPencil />
+                                                </button>
+                                                <button
+                                                    className="btn btn-sm btn-outline-danger"
+                                                    onClick={() => { setDeleteTarget(item); setShowDelete(true); }}
+                                                    title="Delete Product"
+                                                >
+                                                    <FaTrash />
+                                                </button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                ))
+                            )}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            {/* CREATE PRODUCT MODAL */}
             {showCreate && (
-                <div className="modal fade show d-block" style={{backgroundColor:'rgba(0,0,0,0.5)'}}>
-                    <div className="modal-dialog modal-lg">
-                        <div className="modal-content">
-                            <div className="modal-header bg-primary text-white"><h5 className="modal-title">Add Merch</h5><button className="btn-close btn-close-white" onClick={() => setShowCreate(false)}></button></div>
-                            <div className="modal-body">
-                                <div className="row mb-3">
-                                    <div className="col"><input className="form-control" placeholder="Name" value={form.name} onChange={e => setForm({...form, name: e.target.value})} /></div>
-                                    <div className="col">
-                                        <select className="form-select" value={form.category} onChange={e => setForm({...form, category: e.target.value})}>
-                                            <option value="accessories">Accessories/Lanyards</option>
-                                            <option value="wearable">Wearable (T-Shirts, etc)</option>
-                                        </select>
+                <div className="modal fade show d-block" tabIndex="-1" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>
+                    <div className="modal-dialog modal-lg modal-dialog-centered">
+                        <div className="modal-content border-0 rounded-4 shadow">
+                            <div className="modal-header bg-primary text-white rounded-top-4">
+                                <h5 className="modal-title d-flex align-items-center fw-bold">
+                                    <FaPlus className="me-2" /> Add Merchandise Product
+                                </h5>
+                                <button type="button" className="btn-close btn-close-white" onClick={() => setShowCreate(false)}></button>
+                            </div>
+                            <form onSubmit={handleCreate}>
+                                <div className="modal-body p-4">
+                                    <div className="row">
+                                        <div className="col-md-8 mb-3">
+                                            <label className="form-label fw-semibold">Product Name *</label>
+                                            <input
+                                                type="text"
+                                                className="form-control"
+                                                placeholder="Merchandise name"
+                                                required
+                                                value={form.name}
+                                                onChange={e => setForm({ ...form, name: e.target.value })}
+                                                autoFocus
+                                            />
+                                        </div>
+                                        <div className="col-md-4 mb-3">
+                                            <label className="form-label fw-semibold">Price (PHP) *</label>
+                                            <input
+                                                type="number"
+                                                step="0.01"
+                                                className="form-control"
+                                                placeholder="0.00"
+                                                required
+                                                value={form.price}
+                                                onChange={e => setForm({ ...form, price: e.target.value })}
+                                            />
+                                        </div>
+                                    </div>
+
+                                    <div className="row">
+                                        <div className="col-md-6 mb-3">
+                                            <label className="form-label fw-semibold">Category</label>
+                                            <select
+                                                className="form-select"
+                                                value={form.category}
+                                                onChange={e => setForm({ ...form, category: e.target.value })}
+                                            >
+                                                <option value="wearable">Wearables / Apparel</option>
+                                                <option value="accessories">Accessories</option>
+                                                <option value="stationery">Stationery & Supplies</option>
+                                                <option value="other">Other Campus Items</option>
+                                            </select>
+                                        </div>
+                                        <div className="col-md-6 mb-3">
+                                            <label className="form-label fw-semibold">Base Stock (Non-variant)</label>
+                                            <input
+                                                type="number"
+                                                className="form-control"
+                                                placeholder="0"
+                                                value={form.stock}
+                                                onChange={e => setForm({ ...form, stock: e.target.value })}
+                                            />
+                                        </div>
+                                    </div>
+
+                                    {/* Variant Builder */}
+                                    <div className="card border p-3 rounded-3 mb-3 bg-light">
+                                        <label className="form-label fw-bold text-dark mb-2">Variants (Sizes, Colors & Stock)</label>
+                                        <div className="row g-2 align-items-center mb-2">
+                                            <div className="col-3">
+                                                <select
+                                                    className="form-select form-select-sm"
+                                                    value={newVariant.size}
+                                                    onChange={e => setNewVariant({ ...newVariant, size: e.target.value })}
+                                                >
+                                                    <option value="XS">XS</option>
+                                                    <option value="S">S</option>
+                                                    <option value="M">M</option>
+                                                    <option value="L">L</option>
+                                                    <option value="XL">XL</option>
+                                                    <option value="XXL">XXL</option>
+                                                </select>
+                                            </div>
+                                            <div className="col-4">
+                                                <input
+                                                    type="text"
+                                                    className="form-control form-control-sm"
+                                                    placeholder="Black"
+                                                    value={newVariant.color}
+                                                    onChange={e => setNewVariant({ ...newVariant, color: e.target.value })}
+                                                />
+                                            </div>
+                                            <div className="col-3">
+                                                <input
+                                                    type="number"
+                                                    className="form-control form-control-sm"
+                                                    placeholder="0"
+                                                    value={newVariant.stock}
+                                                    onChange={e => setNewVariant({ ...newVariant, stock: e.target.value })}
+                                                />
+                                            </div>
+                                            <div className="col-2">
+                                                <button
+                                                    type="button"
+                                                    className="btn btn-sm btn-success w-100 fw-semibold"
+                                                    onClick={() => addVariantToForm(false)}
+                                                >
+                                                    <FaPlus /> Add
+                                                </button>
+                                            </div>
+                                        </div>
+
+                                        {form.variants.length > 0 && (
+                                            <div className="table-responsive bg-white rounded-3 p-2 border">
+                                                <table className="table table-sm mb-0 align-middle">
+                                                    <thead>
+                                                        <tr><th>Size</th><th>Color</th><th>Stock</th><th>Action</th></tr>
+                                                    </thead>
+                                                    <tbody>
+                                                        {form.variants.map((v, i) => (
+                                                            <tr key={i}>
+                                                                <td className="fw-bold">{v.size}</td>
+                                                                <td>{v.color}</td>
+                                                                <td className="fw-bold text-success">{v.stock}</td>
+                                                                <td>
+                                                                    <button
+                                                                        type="button"
+                                                                        className="btn btn-sm btn-outline-danger py-0 px-2"
+                                                                        onClick={() => removeVariant(i, false)}
+                                                                    >
+                                                                        <FaTrash size={10} />
+                                                                    </button>
+                                                                </td>
+                                                            </tr>
+                                                        ))}
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    <div className="mb-3">
+                                        <label className="form-label fw-semibold">Product Image</label>
+                                        <input
+                                            type="file"
+                                            className="form-control"
+                                            onChange={e => setForm({ ...form, image: e.target.files[0] })}
+                                        />
+                                    </div>
+
+                                    <div className="mb-3">
+                                        <label className="form-label fw-semibold">Description</label>
+                                        <textarea
+                                            className="form-control"
+                                            rows="2"
+                                            placeholder="Item description"
+                                            value={form.description}
+                                            onChange={e => setForm({ ...form, description: e.target.value })}
+                                        ></textarea>
                                     </div>
                                 </div>
-                                <div className="row mb-3">
-                                    <div className="col"><input type="number" className="form-control" placeholder="Price" value={form.price} onChange={e => setForm({...form, price: e.target.value})} /></div>
-                                    {/* Hide generic stock input if wearable, it is calculated from variants */}
-                                    {form.category !== 'wearable' && (
-                                        <div className="col"><input type="number" className="form-control" placeholder="Stock" value={form.stock} onChange={e => setForm({...form, stock: e.target.value})} /></div>
-                                    )}
+                                <div className="modal-footer bg-light rounded-bottom-4">
+                                    <button type="button" className="btn btn-secondary" onClick={() => setShowCreate(false)}>
+                                        Cancel
+                                    </button>
+                                    <button type="submit" className="btn btn-primary fw-semibold" disabled={submitting}>
+                                        {submitting ? 'Creating...' : 'Save Product'}
+                                    </button>
                                 </div>
-
-                                {form.category === 'wearable' && renderVariantSection(form, false)}
-
-                                <input type="file" className="form-control mb-3" onChange={e => setForm({...form, image: e.target.files[0]})} />
-                                <textarea className="form-control" placeholder="Description" value={form.description} onChange={e => setForm({...form, description: e.target.value})}></textarea>
-                            </div>
-                            <div className="modal-footer"><button className="btn btn-secondary" onClick={() => setShowCreate(false)}>Cancel</button><button className="btn btn-primary" onClick={handleCreate}>Save</button></div>
+                            </form>
                         </div>
                     </div>
                 </div>
             )}
 
-            {/* Edit Modal */}
-            {showEdit && editData && (
-                <div className="modal fade show d-block" style={{backgroundColor:'rgba(0,0,0,0.5)'}}>
-                    <div className="modal-dialog modal-lg">
-                        <div className="modal-content">
-                            <div className="modal-header bg-warning text-dark"><h5 className="modal-title">Edit Merch</h5><button className="btn-close" onClick={() => setShowEdit(false)}></button></div>
-                            <div className="modal-body">
-                                <div className="row mb-3">
-                                    <div className="col"><input className="form-control" placeholder="Name" value={editData.name} onChange={e => setEditData({...editData, name: e.target.value})} /></div>
-                                    <div className="col">
-                                        <select className="form-select" value={editData.category} onChange={e => setEditData({...editData, category: e.target.value})}>
-                                            <option value="accessories">Accessories/Lanyards</option>
-                                            <option value="wearable">Wearable (T-Shirts, etc)</option>
-                                        </select>
+            {/* EDIT PRODUCT MODAL */}
+            {showEditModal && editData && (
+                <div className="modal fade show d-block" tabIndex="-1" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>
+                    <div className="modal-dialog modal-lg modal-dialog-centered">
+                        <div className="modal-content border-0 rounded-4 shadow">
+                            <div className="modal-header bg-warning text-dark rounded-top-4">
+                                <h5 className="modal-title d-flex align-items-center fw-bold">
+                                    <FaPencil className="me-2" /> Edit Product ({editData.name})
+                                </h5>
+                                <button type="button" className="btn-close" onClick={() => setShowEditModal(false)}></button>
+                            </div>
+                            <form onSubmit={handleUpdate}>
+                                <div className="modal-body p-4">
+                                    <div className="row">
+                                        <div className="col-md-8 mb-3">
+                                            <label className="form-label fw-semibold">Product Name *</label>
+                                            <input
+                                                type="text"
+                                                className="form-control"
+                                                placeholder="Merchandise name"
+                                                required
+                                                value={editData.name}
+                                                onChange={e => setEditData({ ...editData, name: e.target.value })}
+                                            />
+                                        </div>
+                                        <div className="col-md-4 mb-3">
+                                            <label className="form-label fw-semibold">Price (PHP) *</label>
+                                            <input
+                                                type="number"
+                                                step="0.01"
+                                                className="form-control"
+                                                placeholder="0.00"
+                                                required
+                                                value={editData.price}
+                                                onChange={e => setEditData({ ...editData, price: e.target.value })}
+                                            />
+                                        </div>
+                                    </div>
+
+                                    <div className="row">
+                                        <div className="col-md-6 mb-3">
+                                            <label className="form-label fw-semibold">Category</label>
+                                            <select
+                                                className="form-select"
+                                                value={editData.category}
+                                                onChange={e => setEditData({ ...editData, category: e.target.value })}
+                                            >
+                                                <option value="wearable">Wearables / Apparel</option>
+                                                <option value="accessories">Accessories</option>
+                                                <option value="stationery">Stationery & Supplies</option>
+                                                <option value="other">Other Campus Items</option>
+                                            </select>
+                                        </div>
+                                        <div className="col-md-6 mb-3">
+                                            <label className="form-label fw-semibold">Base Stock (Non-variant)</label>
+                                            <input
+                                                type="number"
+                                                className="form-control"
+                                                placeholder="0"
+                                                value={editData.stock}
+                                                onChange={e => setEditData({ ...editData, stock: e.target.value })}
+                                            />
+                                        </div>
+                                    </div>
+
+                                    {/* Variant Builder */}
+                                    <div className="card border p-3 rounded-3 mb-3 bg-light">
+                                        <label className="form-label fw-bold text-dark mb-2">Variants (Sizes, Colors & Stock)</label>
+                                        <div className="row g-2 align-items-center mb-2">
+                                            <div className="col-3">
+                                                <select
+                                                    className="form-select form-select-sm"
+                                                    value={newVariant.size}
+                                                    onChange={e => setNewVariant({ ...newVariant, size: e.target.value })}
+                                                >
+                                                    <option value="XS">XS</option>
+                                                    <option value="S">S</option>
+                                                    <option value="M">M</option>
+                                                    <option value="L">L</option>
+                                                    <option value="XL">XL</option>
+                                                    <option value="XXL">XXL</option>
+                                                </select>
+                                            </div>
+                                            <div className="col-4">
+                                                <input
+                                                    type="text"
+                                                    className="form-control form-control-sm"
+                                                    placeholder="Black"
+                                                    value={newVariant.color}
+                                                    onChange={e => setNewVariant({ ...newVariant, color: e.target.value })}
+                                                />
+                                            </div>
+                                            <div className="col-3">
+                                                <input
+                                                    type="number"
+                                                    className="form-control form-control-sm"
+                                                    placeholder="0"
+                                                    value={newVariant.stock}
+                                                    onChange={e => setNewVariant({ ...newVariant, stock: e.target.value })}
+                                                />
+                                            </div>
+                                            <div className="col-2">
+                                                <button
+                                                    type="button"
+                                                    className="btn btn-sm btn-success w-100 fw-semibold"
+                                                    onClick={() => addVariantToForm(true)}
+                                                >
+                                                    <FaPlus /> Add
+                                                </button>
+                                            </div>
+                                        </div>
+
+                                        {editData.variants && editData.variants.length > 0 && (
+                                            <div className="table-responsive bg-white rounded-3 p-2 border">
+                                                <table className="table table-sm mb-0 align-middle">
+                                                    <thead>
+                                                        <tr><th>Size</th><th>Color</th><th>Stock</th><th>Action</th></tr>
+                                                    </thead>
+                                                    <tbody>
+                                                        {editData.variants.map((v, i) => (
+                                                            <tr key={i}>
+                                                                <td className="fw-bold">{v.size}</td>
+                                                                <td>{v.color}</td>
+                                                                <td className="fw-bold text-success">{v.stock}</td>
+                                                                <td>
+                                                                    <button
+                                                                        type="button"
+                                                                        className="btn btn-sm btn-outline-danger py-0 px-2"
+                                                                        onClick={() => removeVariant(i, true)}
+                                                                    >
+                                                                        <FaTrash size={10} />
+                                                                    </button>
+                                                                </td>
+                                                            </tr>
+                                                        ))}
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    <div className="mb-3">
+                                        <label className="form-label fw-semibold">Change Image (Optional)</label>
+                                        <input
+                                            type="file"
+                                            className="form-control"
+                                            onChange={e => setEditData({ ...editData, image: e.target.files[0] })}
+                                        />
+                                    </div>
+
+                                    <div className="mb-3">
+                                        <label className="form-label fw-semibold">Description</label>
+                                        <textarea
+                                            className="form-control"
+                                            rows="2"
+                                            placeholder="Item description"
+                                            value={editData.description}
+                                            onChange={e => setEditData({ ...editData, description: e.target.value })}
+                                        ></textarea>
                                     </div>
                                 </div>
-                                <div className="row mb-3">
-                                    <div className="col"><input type="number" className="form-control" placeholder="Price" value={editData.price} onChange={e => setEditData({...editData, price: e.target.value})} /></div>
-                                    {editData.category !== 'wearable' && (
-                                        <div className="col"><input type="number" className="form-control" placeholder="Stock" value={editData.stock} onChange={e => setEditData({...editData, stock: e.target.value})} /></div>
-                                    )}
+                                <div className="modal-footer bg-light rounded-bottom-4">
+                                    <button type="button" className="btn btn-secondary" onClick={() => setShowEditModal(false)}>
+                                        Cancel
+                                    </button>
+                                    <button type="submit" className="btn btn-warning fw-semibold" disabled={submitting}>
+                                        {submitting ? 'Updating...' : 'Update Product'}
+                                    </button>
                                 </div>
-
-                                {editData.category === 'wearable' && renderVariantSection(editData, true)}
-
-                                <label>Change Image (Optional)</label>
-                                <input type="file" className="form-control mb-3" onChange={e => setEditData({...editData, image: e.target.files[0]})} />
-                                <textarea className="form-control" placeholder="Description" value={editData.description} onChange={e => setEditData({...editData, description: e.target.value})}></textarea>
-                            </div>
-                            <div className="modal-footer"><button className="btn btn-secondary" onClick={() => setShowEdit(false)}>Cancel</button><button className="btn btn-primary" onClick={handleUpdate}>Update</button></div>
+                            </form>
                         </div>
                     </div>
                 </div>
             )}
 
-            {/* Delete Modal */}
-             {showDelete && (
-                <div className="modal fade show d-block" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>
-                    <div className="modal-dialog">
-                        <div className="modal-content">
-                            <div className="modal-header bg-danger text-white">
-                                <h5 className="modal-title">Confirm Delete</h5>
-                                <button className="btn-close btn-close-white" onClick={() => setShowDelete(false)}></button>
+            {/* DELETE MODAL */}
+            {showDelete && deleteTarget && (
+                <div className="modal fade show d-block" tabIndex="-1" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>
+                    <div className="modal-dialog modal-dialog-centered">
+                        <div className="modal-content border-0 rounded-4 shadow">
+                            <div className="modal-header bg-danger text-white rounded-top-4">
+                                <h5 className="modal-title d-flex align-items-center fw-bold">
+                                    <FaTrash className="me-2" /> Confirm Delete Product
+                                </h5>
+                                <button type="button" className="btn-close btn-close-white" onClick={() => setShowDelete(false)}></button>
                             </div>
-                            <div className="modal-body"><p>Delete this item?</p></div>
-                            <div className="modal-footer">
-                                <button className="btn btn-secondary" onClick={() => setShowDelete(false)}>Cancel</button>
-                                <button className="btn btn-danger" onClick={handleDelete}>Delete</button>
+                            <div className="modal-body p-4">
+                                <p className="mb-0">
+                                    Are you sure you want to permanently delete merchandise item <strong>{deleteTarget.name}</strong>?
+                                </p>
+                            </div>
+                            <div className="modal-footer bg-light rounded-bottom-4">
+                                <button type="button" className="btn btn-secondary" onClick={() => setShowDelete(false)}>
+                                    Cancel
+                                </button>
+                                <button type="button" className="btn btn-danger" onClick={handleDelete} disabled={submitting}>
+                                    {submitting ? 'Deleting...' : 'Delete Product'}
+                                </button>
                             </div>
                         </div>
                     </div>
@@ -243,4 +794,5 @@ const AdminMerch = () => {
         </div>
     );
 };
+
 export default AdminMerch;

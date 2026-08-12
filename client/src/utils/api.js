@@ -50,8 +50,8 @@ class API {
     }
 
     // Auth
-    static login(studentId, password) {
-        return this.request('/auth/login', 'POST', { studentId, password });
+    static login(identifier, password) {
+        return this.request('/auth/login', 'POST', { studentId: identifier, identifier, password });
     }
 
     static register(data) {
@@ -137,6 +137,27 @@ class API {
     // Admin Stats
     static getAdminStats() {
         return this.request('/stats/dashboard');
+    }
+
+    // Departments
+    static getDepartments() {
+        return this.request('/departments');
+    }
+
+    static getAllDepartments() {
+        return this.request('/departments/all');
+    }
+
+    static createDepartment(data) {
+        return this.request('/departments', 'POST', data);
+    }
+
+    static updateDepartment(id, data) {
+        return this.request(`/departments/${id}`, 'PUT', data);
+    }
+
+    static deleteDepartment(id) {
+        return this.request(`/departments/${id}`, 'DELETE');
     }
 
     // Users

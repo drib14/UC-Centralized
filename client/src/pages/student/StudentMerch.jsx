@@ -3,13 +3,19 @@ import StudentMerchSkeleton from '../../components/skeletons/StudentMerchSkeleto
 import API from '../../utils/api';
 import { useCart } from '../../context/CartContext';
 import { toast } from 'react-toastify';
-import { FaTshirt, FaTag } from 'react-icons/fa';
+import { Link } from 'react-router-dom';
 import SEO from '../../components/SEO';
+import {
+    FaShirt, FaTag, FaMagnifyingGlass, FaCartShopping,
+    FaPlus, FaCircleCheck, FaCircleXmark
+} from 'react-icons/fa6';
 
 const StudentMerch = () => {
     const [merch, setMerch] = useState([]);
     const [loading, setLoading] = useState(true);
-    const { addItem } = useCart();
+    const [search, setSearch] = useState('');
+    const [categoryFilter, setCategoryFilter] = useState('ALL');
+    const { addItem, cart } = useCart();
     const [selections, setSelections] = useState({});
 
     useEffect(() => {
@@ -18,10 +24,11 @@ const StudentMerch = () => {
 
     const fetchMerch = async () => {
         try {
+            setLoading(true);
             const data = await API.getMerch();
-            setMerch(data);
+            setMerch(Array.isArray(data) ? data : []);
         } catch (error) {
-            toast.error("Failed to load merch");
+            toast.error("Failed to load merchandise catalog");
         } finally {
             setLoading(false);
         }
@@ -30,7 +37,6 @@ const StudentMerch = () => {
     const handleSelectionChange = (itemId, field, value) => {
         setSelections(prev => {
             const newItemState = { ...prev[itemId], [field]: value };
-            // If changing size, reset color
             if (field === 'size') newItemState.color = '';
             return { ...prev, [itemId]: newItemState };
         });
@@ -39,19 +45,23 @@ const StudentMerch = () => {
     const handleAddToCart = (item) => {
         if (item.category === 'wearable' && item.variants && item.variants.length > 0) {
             const sel = selections[item._id] || {};
-            if (!sel.size || !sel.color) return toast.error("Please select size and color");
+            if (!sel.size || !sel.color) {
+                return toast.error("Please select a size and color");
+            }
 
             const variant = item.variants.find(v => v.size === sel.size && v.color === sel.color);
-            if (!variant || variant.stock <= 0) return toast.error("Selected item out of stock");
+            if (!variant || variant.stock <= 0) {
+                return toast.error("Selected item variant is out of stock");
+            }
 
             const success = addItem(item, variant);
-            if (success) toast.success(`Added ${item.name} (${sel.size}, ${sel.color}) to cart!`);
+            if (success) toast.success(`Added ${item.name} (${sel.size}, ${sel.color}) to cart`);
             else toast.error("Could not add to cart (Stock limit reached)");
         } else {
             if (item.stock <= 0) return toast.error("Item is out of stock");
             const success = addItem(item, null);
-            if (success) toast.success("Added to cart");
-            else toast.error("Could not add to cart");
+            if (success) toast.success(`Added ${item.name} to cart`);
+            else toast.error("Could not add to cart (Stock limit reached)");
         }
     };
 
@@ -69,67 +79,156 @@ const StudentMerch = () => {
         return v ? v.stock : 0;
     };
 
+    const formatCurrency = (amount) => {
+        return new Intl.NumberFormat('en-PH', { style: 'currency', currency: 'PHP' }).format(amount || 0);
+    };
+
+    const filteredMerch = merch.filter(m => {
+        const matchesSearch =
+            m.name.toLowerCase().includes(search.toLowerCase()) ||
+            (m.description && m.description.toLowerCase().includes(search.toLowerCase()));
+
+        const matchesCat = categoryFilter === 'ALL' || m.category === categoryFilter;
+
+        return matchesSearch && matchesCat;
+    });
+
+    const totalCartCount = cart.reduce((sum, item) => sum + (item.quantity || 1), 0);
+
     if (loading) return <StudentMerchSkeleton />;
 
     return (
-        <div className="container-fluid">
-            <SEO title="Merchandise" description="Browse and purchase university merchandise." />
-            <h2 className="mb-4 text-success">
-                <FaTshirt className="me-2" />Merch Store
-            </h2>
+        <div className="container-fluid py-4">
+            <SEO title="Campus Merchandise" description="Browse and order official University of Cebu apparel, accessories, and supplies." />
 
-            <div className="row">
-                {merch.length === 0 ? (
-                    <div className="col-12 text-center mt-5"><p className="text-muted">No items available.</p></div>
+            {/* Header */}
+            <div className="d-flex flex-column flex-md-row justify-content-between align-items-md-center mb-4 gap-3">
+                <div>
+                    <h2 className="mb-1 fw-bold text-dark d-flex align-items-center">
+                        <FaShirt className="me-2 text-primary" /> Campus Merchandise Store
+                    </h2>
+                    <p className="text-muted mb-0">Official University of Cebu apparel, department polo shirts, lanyards, and supplies.</p>
+                </div>
+                <Link to="/student/cart" className="btn btn-primary d-flex align-items-center gap-2 rounded-pill px-4 py-2 fw-semibold shadow-sm">
+                    <FaCartShopping /> Cart ({totalCartCount})
+                </Link>
+            </div>
+
+            {/* Filter & Search Bar */}
+            <div className="card border-0 shadow-sm rounded-4 mb-4 p-3 bg-white">
+                <div className="row g-3 align-items-center">
+                    <div className="col-md-6">
+                        <div className="input-group">
+                            <span className="input-group-text bg-light border-0"><FaMagnifyingGlass className="text-muted" /></span>
+                            <input
+                                type="text"
+                                className="form-control bg-light border-0"
+                                placeholder="Search merchandise by name or keyword..."
+                                value={search}
+                                onChange={e => setSearch(e.target.value)}
+                            />
+                        </div>
+                    </div>
+                    <div className="col-md-6">
+                        <div className="d-flex gap-1 overflow-auto">
+                            {['ALL', 'wearable', 'accessories', 'stationery', 'other'].map(cat => (
+                                <button
+                                    key={cat}
+                                    className={`btn btn-sm rounded-pill px-3 fw-semibold text-capitalize ${categoryFilter === cat ? 'btn-primary' : 'btn-light'}`}
+                                    onClick={() => setCategoryFilter(cat)}
+                                >
+                                    {cat === 'ALL' ? 'All Items' : cat}
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {/* Merchandise Grid */}
+            <div className="row g-4">
+                {filteredMerch.length === 0 ? (
+                    <div className="col-12 text-center py-5">
+                        <div className="card border-0 shadow-sm rounded-4 p-5 text-muted bg-white">
+                            <FaShirt size={48} className="mb-3 opacity-25" />
+                            <h5>No merchandise found</h5>
+                            <p className="mb-0">Try changing your search terms or category filter.</p>
+                        </div>
+                    </div>
                 ) : (
-                    merch.map(item => (
-                        <div className="col-md-3 mb-4" key={item._id}>
-                            <div className="card h-100 border-0 shadow-sm">
-                                <img src={item.image || 'https://via.placeholder.com/300'} className="card-img-top" alt={item.name} style={{ height: '250px', objectFit: 'cover' }} />
-                                <div className="card-body d-flex flex-column">
-                                    <h5 className="card-title">{item.name}</h5>
-                                    <p className="card-text text-muted small mb-2">{item.description}</p>
+                    filteredMerch.map(item => (
+                        <div className="col-12 col-sm-6 col-lg-4 col-xl-3" key={item._id}>
+                            <div className="card border-0 shadow-sm rounded-4 h-100 bg-white hover-shadow overflow-hidden d-flex flex-column">
+                                <div className="position-relative" style={{ height: '220px', backgroundColor: '#f1f5f9' }}>
+                                    <img
+                                        src={item.image || 'https://via.placeholder.com/300'}
+                                        className="w-100 h-100 object-fit-cover"
+                                        alt={item.name}
+                                    />
+                                    <span className="position-absolute top-0 start-0 m-3 badge bg-white text-dark shadow-sm rounded-pill px-3 py-1 text-capitalize fw-semibold">
+                                        <FaTag className="me-1 text-primary" size={10} /> {item.category || 'General'}
+                                    </span>
+                                </div>
+                                <div className="card-body p-4 d-flex flex-column flex-grow-1">
+                                    <div className="d-flex justify-content-between align-items-start mb-2">
+                                        <h5 className="card-title fw-bold text-dark mb-0 line-clamp-1">{item.name}</h5>
+                                    </div>
+                                    <h4 className="fw-bold text-primary mb-2">{formatCurrency(item.price)}</h4>
+                                    <p className="card-text text-muted small mb-3 line-clamp-2">{item.description || 'Official UC campus item'}</p>
 
-                                    {item.category === 'wearable' && item.variants && (
+                                    {/* Variant Selectors for Wearables */}
+                                    {item.category === 'wearable' && item.variants && item.variants.length > 0 && (
                                         <div className="mb-3">
-                                            <div className="d-flex gap-2 mb-2">
-                                                <select className="form-select form-select-sm"
-                                                        value={selections[item._id]?.size || ''}
-                                                        onChange={e => handleSelectionChange(item._id, 'size', e.target.value)}>
+                                            <div className="d-flex gap-2 mb-1">
+                                                <select
+                                                    className="form-select form-select-sm"
+                                                    value={selections[item._id]?.size || ''}
+                                                    onChange={e => handleSelectionChange(item._id, 'size', e.target.value)}
+                                                >
                                                     <option value="">Size</option>
-                                                    {[...new Set(item.variants.map(v => v.size))].map(s => <option key={s} value={s}>{s}</option>)}
+                                                    {[...new Set(item.variants.map(v => v.size))].map(s => (
+                                                        <option key={s} value={s}>{s}</option>
+                                                    ))}
                                                 </select>
-                                                <select className="form-select form-select-sm"
-                                                        value={selections[item._id]?.color || ''}
-                                                        onChange={e => handleSelectionChange(item._id, 'color', e.target.value)}>
+                                                <select
+                                                    className="form-select form-select-sm"
+                                                    value={selections[item._id]?.color || ''}
+                                                    onChange={e => handleSelectionChange(item._id, 'color', e.target.value)}
+                                                >
                                                     <option value="">Color</option>
-                                                    {getAvailableColors(item).map(c => <option key={c} value={c}>{c}</option>)}
+                                                    {getAvailableColors(item).map(c => (
+                                                        <option key={c} value={c}>{c}</option>
+                                                    ))}
                                                 </select>
                                             </div>
                                             {selections[item._id]?.size && selections[item._id]?.color && (
-                                                <small className="text-muted d-block">Available: {getVariantStock(item)}</small>
+                                                <small className="text-muted d-block" style={{ fontSize: '0.75rem' }}>
+                                                    Available: {getVariantStock(item)} units
+                                                </small>
                                             )}
                                         </div>
                                     )}
 
-                                    <div className="mt-auto">
-                                        <h5 className="text-success fw-bold mb-3">₱{item.price.toFixed(2)}</h5>
-                                        {item.category !== 'wearable' && (
-                                            <div className="d-flex justify-content-between align-items-center mb-3">
-                                                <span className={`badge ${item.stock > 0 ? 'bg-success' : 'bg-danger'}`}>
-                                                    {item.stock > 0 ? `${item.stock} in stock` : 'Out of Stock'}
+                                    {item.category !== 'wearable' && (
+                                        <div className="mb-3">
+                                            {item.stock > 0 ? (
+                                                <span className="badge bg-success bg-opacity-10 text-success border border-success px-2 py-1 rounded-pill small">
+                                                    <FaCircleCheck className="me-1" /> {item.stock} in stock
                                                 </span>
-                                            </div>
-                                        )}
+                                            ) : (
+                                                <span className="badge bg-danger bg-opacity-10 text-danger border border-danger px-2 py-1 rounded-pill small">
+                                                    <FaCircleXmark className="me-1" /> Out of stock
+                                                </span>
+                                            )}
+                                        </div>
+                                    )}
 
-                                        <button
-                                            className="btn btn-outline-success w-100"
-                                            disabled={item.category === 'wearable' ? (!selections[item._id]?.size || !selections[item._id]?.color || getVariantStock(item) <= 0) : item.stock <= 0}
-                                            onClick={() => handleAddToCart(item)}
-                                        >
-                                            <FaTag className="me-2" />Add to Cart
-                                        </button>
-                                    </div>
+                                    <button
+                                        className="btn btn-primary rounded-pill mt-auto w-100 fw-semibold d-flex align-items-center justify-content-center gap-2 shadow-sm"
+                                        onClick={() => handleAddToCart(item)}
+                                    >
+                                        <FaPlus size={12} /> Add to Cart
+                                    </button>
                                 </div>
                             </div>
                         </div>

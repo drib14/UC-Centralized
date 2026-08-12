@@ -37,8 +37,7 @@ export const SocketProvider = ({ children }) => {
             fetchCounts();
 
             // Setup Socket
-            // Use environment variable or relative path proxy
-            const socketUrl = process.env.NODE_ENV === 'production' ? '/' : 'http://localhost:5000';
+            const socketUrl = import.meta.env.VITE_SOCKET_URL || (import.meta.env.PROD ? '/' : 'http://localhost:5000');
             const newSocket = io(socketUrl, {
                 transports: ['websocket', 'polling'], // Allow fallback
                 reconnection: true,

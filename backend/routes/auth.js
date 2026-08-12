@@ -8,52 +8,79 @@ const parser = require('../config/cloudinary');
 // REGISTER
 router.post('/register', async (req, res) => {
     try {
-        // Check if user exists
-        const existingUser = await User.findOne({ studentId: req.body.studentId });
-        if (existingUser) return res.status(400).json({ message: "User already exists" });
+        const { studentId, email, password, firstName, lastName, department, program, year } = req.body;
+
+        if (!studentId || !email || !password || !firstName || !lastName) {
+            return res.status(400).json({ message: "All required fields must be provided." });
+        }
+
+        if (!/^\d+$/.test(String(studentId).trim())) {
+            return res.status(400).json({ message: "Student ID must contain numbers only." });
+        }
+
+        // Check if user exists (by studentId or email)
+        const existingUser = await User.findOne({
+            $or: [{ studentId: String(studentId).trim() }, { email: String(email).trim().toLowerCase() }]
+        });
+        if (existingUser) return res.status(400).json({ message: "User with this Student ID or Email already exists." });
 
         // Password strength check
         const passRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]).{8,}$/;
-        if (!passRegex.test(req.body.password)) {
+        if (!passRegex.test(password)) {
             return res.status(400).json({
                 message: "Password is not strong enough. It must be at least 8 characters long and include an uppercase letter, a lowercase letter, a number, and a special character."
             });
         }
 
-        // Generate new password
+        // Generate hashed password
         const salt = await bcrypt.genSalt(10);
-        const hashedPassword = await bcrypt.hash(req.body.password, salt);
+        const hashedPassword = await bcrypt.hash(password, salt);
 
-        // Create new user
+        // Create new user - STRICTLY ENFORCE student role for public registration
         const newUser = new User({
-            studentId: req.body.studentId,
-            email: req.body.email,
+            studentId: String(studentId).trim(),
+            email: String(email).trim().toLowerCase(),
             password: hashedPassword,
-            firstName: req.body.firstName,
-            lastName: req.body.lastName,
-            department: req.body.department,
-            program: req.body.program,
-            year: req.body.year,
-            role: req.body.role || 'student'
+            firstName: String(firstName).trim(),
+            lastName: String(lastName).trim(),
+            department: department ? String(department).trim() : 'CCS',
+            program: program ? String(program).trim() : '',
+            year: year ? String(year).trim() : '',
+            role: 'student' // Strictly student. Admins cannot be created via public registration.
         });
 
-        // Save user and respond
+        // Save user and respond without password
         const user = await newUser.save();
-        res.status(200).json(user);
+        const { password: userPassword, ...userData } = user._doc;
+        res.status(201).json(userData);
     } catch (err) {
-        console.log(err);
-        res.status(500).json(err);
+        console.error("Register Error:", err);
+        res.status(500).json({ message: "Registration failed. Please try again later." });
     }
 });
 
 // LOGIN
 router.post('/login', async (req, res) => {
     try {
-        const user = await User.findOne({ studentId: req.body.studentId });
-        if (!user) return res.status(404).json("User not found");
+        const identifier = (req.body.studentId || req.body.identifier || req.body.email || req.body.idNumber || '').toString().trim();
+        const { password } = req.body;
 
-        const validPassword = await bcrypt.compare(req.body.password, user.password);
-        if (!validPassword) return res.status(400).json("Wrong password");
+        if (!identifier || !password) {
+            return res.status(400).json({ message: "ID Number / Email and password are required." });
+        }
+
+        // Find user by ID Number (studentId) or Email for versatile login across any role
+        const user = await User.findOne({
+            $or: [
+                { studentId: identifier },
+                { email: identifier.toLowerCase() }
+            ]
+        });
+
+        if (!user) return res.status(404).json({ message: "User not found" });
+
+        const validPassword = await bcrypt.compare(password, user.password);
+        if (!validPassword) return res.status(400).json({ message: "Wrong password" });
 
         const accessToken = jwt.sign(
             { id: user._id, role: user.role },
@@ -61,21 +88,23 @@ router.post('/login', async (req, res) => {
             { expiresIn: "5d" }
         );
 
-        const { password, ...others } = user._doc;
+        const { password: userPassword, ...others } = user._doc;
         res.status(200).json({ ...others, accessToken });
     } catch (err) {
-        res.status(500).json(err);
+        console.error("Login Error:", err);
+        res.status(500).json({ message: "Login failed. Please try again later." });
     }
 });
 
 // GET CURRENT USER
 router.get('/me', verifyToken, async (req, res) => {
     try {
-        const user = await User.findById(req.user.id).select('-password');
-        if (!user) return res.status(404).json("User not found");
+        const user = await User.findById(req.user.id).select('-password -resetCode -resetPasswordToken');
+        if (!user) return res.status(404).json({ message: "User not found" });
         res.status(200).json(user);
     } catch (err) {
-        res.status(500).json(err);
+        console.error("Get /me Error:", err);
+        res.status(500).json({ message: "Failed to fetch user details" });
     }
 });
 
@@ -86,20 +115,33 @@ router.post('/generate-api-key', verifyToken, async (req, res) => {
         await User.findByIdAndUpdate(req.user.id, { apiKey: key });
         res.status(200).json({ apiKey: key });
     } catch (err) {
-        res.status(500).json(err);
+        console.error("Generate API Key Error:", err);
+        res.status(500).json({ message: "Failed to generate API Key" });
     }
 });
 
 // UPDATE PROFILE
 router.put('/profile', verifyToken, parser.single('image'), async (req, res) => {
     try {
-        const updateData = { ...req.body };
+        // Strictly whitelist allowed update fields to prevent privilege escalation or security bypass
+        const allowedFields = ['firstName', 'lastName', 'department', 'program', 'year', 'notificationPreferences'];
+        const updateData = {};
 
-        if (updateData.password) {
+        for (const field of allowedFields) {
+            if (req.body[field] !== undefined) {
+                updateData[field] = req.body[field];
+            }
+        }
+
+        if (req.body.password) {
+            const passRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]).{8,}$/;
+            if (!passRegex.test(req.body.password)) {
+                return res.status(400).json({
+                    message: "New password must be at least 8 characters long and include an uppercase letter, a lowercase letter, a number, and a special character."
+                });
+            }
             const salt = await bcrypt.genSalt(10);
-            updateData.password = await bcrypt.hash(updateData.password, salt);
-        } else {
-            delete updateData.password;
+            updateData.password = await bcrypt.hash(req.body.password, salt);
         }
 
         if (req.file) {
@@ -110,11 +152,14 @@ router.put('/profile', verifyToken, parser.single('image'), async (req, res) => 
             req.user.id,
             { $set: updateData },
             { new: true }
-        );
-        const { password, ...others } = updatedUser._doc;
-        res.status(200).json(others);
+        ).select('-password -resetCode -resetPasswordToken');
+
+        if (!updatedUser) return res.status(404).json({ message: "User not found" });
+
+        res.status(200).json(updatedUser);
     } catch (err) {
-        res.status(500).json(err);
+        console.error("Update Profile Error:", err);
+        res.status(500).json({ message: "Failed to update profile" });
     }
 });
 
@@ -124,15 +169,26 @@ const crypto = require('crypto');
 // FORGOT PASSWORD
 router.post('/forgot-password', async (req, res) => {
     try {
-        const { studentId, email } = req.body;
-        const user = await User.findOne({ studentId });
+        const identifier = (req.body.studentId || req.body.identifier || req.body.idNumber || '').toString().trim();
+        const inputEmail = (req.body.email || '').toString().trim().toLowerCase();
+
+        if (!identifier || !inputEmail) {
+            return res.status(400).json({ message: "ID number and registered email are required." });
+        }
+
+        const user = await User.findOne({
+            $or: [
+                { studentId: identifier },
+                { email: identifier.toLowerCase() }
+            ]
+        });
 
         if (!user) {
             return res.status(404).json({ message: "ID number doesn't exist" });
         }
 
-        if (user.email !== email) {
-            return res.status(400).json({ message: "Email doesn't exist" });
+        if (user.email.toLowerCase() !== inputEmail) {
+            return res.status(400).json({ message: "Email doesn't match the record for this account." });
         }
 
         if (user.resetLockoutUntil && user.resetLockoutUntil > new Date()) {
@@ -179,8 +235,19 @@ router.post('/forgot-password', async (req, res) => {
 // VERIFY CODE
 router.post('/verify-code', async (req, res) => {
     try {
-        const { studentId, code } = req.body;
-        const user = await User.findOne({ studentId });
+        const identifier = (req.body.studentId || req.body.identifier || req.body.idNumber || '').toString().trim();
+        const { code } = req.body;
+
+        if (!identifier || !code) {
+            return res.status(400).json({ message: 'ID number and verification code are required.' });
+        }
+
+        const user = await User.findOne({
+            $or: [
+                { studentId: identifier },
+                { email: identifier.toLowerCase() }
+            ]
+        });
 
         if (!user || !user.resetCode) {
             return res.status(400).json({ message: 'Invalid request.' });

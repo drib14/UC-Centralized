@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { toast } from 'react-toastify';
-import logo from '../assets/uc-central-logo.png';
+import logo from '../assets/uc-central-logo.svg';
 import { FaIdCard, FaLock, FaEye, FaEyeSlash } from 'react-icons/fa6';
 import SEO from '../components/SEO';
 
@@ -42,14 +42,14 @@ const Login = () => {
 
                 <form onSubmit={handleSubmit}>
                     <div className="mb-3">
-                        <label htmlFor="studentId" className="form-label">Student ID</label>
+                        <label htmlFor="studentId" className="form-label">ID Number / Email</label>
                         <div className="input-group">
                             <span className="input-group-text"><FaIdCard /></span>
                             <input
-                                type="number"
+                                type="text"
                                 className="form-control"
                                 id="studentId"
-                                placeholder="e.g., 12345678 (Numbers Only)"
+                                placeholder="Enter ID or email"
                                 required
                                 value={studentId}
                                 onChange={(e) => setStudentId(e.target.value)}
@@ -64,7 +64,7 @@ const Login = () => {
                                 type={showPassword ? 'text' : 'password'}
                                 className="form-control"
                                 id="password"
-                                placeholder="********"
+                                placeholder="••••••••"
                                 required
                                 value={password}
                                 onChange={(e) => setPassword(e.target.value)}

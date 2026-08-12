@@ -5,36 +5,44 @@ const verifyToken = async (req, res, next) => {
     const authHeader = req.headers.authorization;
     const apiKey = req.headers['x-api-key'];
 
-    if (authHeader) {
+    if (authHeader && authHeader.startsWith('Bearer ')) {
         const token = authHeader.split(' ')[1];
+        if (!token) return res.status(401).json({ message: "Authentication token missing." });
+
+        if (!process.env.ACCESS_TOKEN_SECRET) {
+            console.error("ACCESS_TOKEN_SECRET is not configured.");
+            return res.status(500).json({ message: "Internal server error." });
+        }
+
         jwt.verify(token, process.env.ACCESS_TOKEN_SECRET, (err, user) => {
-            if (err) return res.status(403).json("Token is not valid!");
+            if (err) return res.status(403).json({ message: "Token is invalid or expired." });
             req.user = user;
             next();
         });
     } else if (apiKey) {
         try {
-            const user = await User.findOne({ apiKey: apiKey });
+            const user = await User.findOne({ apiKey: String(apiKey).trim() });
             if (user) {
-                req.user = { id: user._id, role: user.role };
+                req.user = { id: user._id.toString(), role: user.role };
                 next();
             } else {
-                return res.status(401).json("Invalid API Key!");
+                return res.status(401).json({ message: "Invalid API Key." });
             }
         } catch (err) {
-            return res.status(500).json(err);
+            console.error("Auth Middleware Error:", err);
+            return res.status(500).json({ message: "Authentication verification failed." });
         }
     } else {
-        return res.status(401).json("You are not authenticated!");
+        return res.status(401).json({ message: "You are not authenticated." });
     }
 };
 
 const verifyAdmin = (req, res, next) => {
     verifyToken(req, res, () => {
-        if (req.user.role === 'admin') {
+        if (req.user && req.user.role === 'admin') {
             next();
         } else {
-            res.status(403).json("You are not allowed to do that!");
+            res.status(403).json({ message: "Access denied. Administrator privileges required." });
         }
     });
 };

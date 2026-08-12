@@ -32,8 +32,8 @@ export const AuthProvider = ({ children }) => {
         syncSession();
     }, []);
 
-    const login = async (studentId, password) => {
-        const data = await API.login(studentId, password);
+    const login = async (identifier, password) => {
+        const data = await API.login(identifier, password);
         const { accessToken, ...userData } = data;
         localStorage.setItem('accessToken', accessToken);
         setUser(userData);

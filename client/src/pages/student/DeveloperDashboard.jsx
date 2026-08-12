@@ -154,15 +154,15 @@ const DeveloperDashboard = () => {
                             <div className="modal-body">
                                 <div className="mb-3">
                                     <label className="form-label">App Name</label>
-                                    <input className="form-control" value={form.name} onChange={e => setForm({...form, name: e.target.value})} />
+                                    <input type="text" className="form-control" placeholder="My Campus Portal" value={form.name} onChange={e => setForm({...form, name: e.target.value})} />
                                 </div>
                                 <div className="mb-3">
                                     <label className="form-label">Description</label>
-                                    <textarea className="form-control" value={form.description} onChange={e => setForm({...form, description: e.target.value})} />
+                                    <textarea className="form-control" placeholder="Application description" value={form.description} onChange={e => setForm({...form, description: e.target.value})} />
                                 </div>
                                 <div className="mb-3">
                                     <label className="form-label">Redirect URIs (Comma separated)</label>
-                                    <input className="form-control" placeholder="https://myapp.com/callback" value={form.redirectUris} onChange={e => setForm({...form, redirectUris: e.target.value})} />
+                                    <input type="text" className="form-control" placeholder="https://myapp.com/callback" value={form.redirectUris} onChange={e => setForm({...form, redirectUris: e.target.value})} />
                                 </div>
                             </div>
                             <div className="modal-footer">

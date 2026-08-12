@@ -33,6 +33,7 @@ import AdminEvents from './pages/admin/AdminEvents';
 import AdminMerch from './pages/admin/AdminMerch';
 import AdminAnnouncements from './pages/admin/AdminAnnouncements';
 import AdminUsers from './pages/admin/AdminUsers';
+import AdminDepartments from './pages/admin/AdminDepartments';
 import AdminOrders from './pages/admin/AdminOrders';
 import AdminPOS from './pages/admin/AdminPOS';
 import Notifications from './pages/Notifications';
@@ -59,12 +60,12 @@ function App() {
     useEffect(() => {
         const timer = setTimeout(() => {
             setShowSplash(false);
-        }, 5000);
+        }, 7000);
         return () => clearTimeout(timer);
     }, []);
 
     if (showSplash) {
-        return <SplashScreen />;
+        return <SplashScreen onComplete={() => setShowSplash(false)} />;
     }
 
     return (
@@ -103,6 +104,7 @@ function App() {
                                 <Route path="/admin" element={<ProtectedRoute allowedRoles={['admin']}><Layout /></ProtectedRoute>}>
                                     <Route index element={<Navigate to="dashboard" replace />} />
                                     <Route path="dashboard" element={<AdminDashboard />} />
+                                    <Route path="departments" element={<AdminDepartments />} />
                                     <Route path="users" element={<AdminUsers />} />
                                     <Route path="events" element={<AdminEvents />} />
                                     <Route path="merch" element={<AdminMerch />} />

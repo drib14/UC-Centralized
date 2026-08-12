@@ -1,6 +1,6 @@
 import React from 'react';
 import { useAuth } from '../context/AuthContext';
-import logo from '../assets/uc-central-logo.png';
+import logo from '../assets/uc-central-logo.svg';
 
 const Navbar = () => {
     const { user } = useAuth();

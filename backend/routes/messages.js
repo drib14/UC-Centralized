@@ -5,21 +5,29 @@ const User = require('../models/User');
 const { verifyToken } = require('../middleware/auth');
 const parser = require('../config/cloudinary');
 
+const mongoose = require('mongoose');
+
+// Helper to safely escape regex special characters
+function escapeRegex(text) {
+    return text.replace(/[-[\]{}()*+?.,\\^$|#\s]/g, '\\$&');
+}
+
 // --- STATIC & SPECIFIC ROUTES (Must come before dynamic /:id) ---
 
 // UNREAD COUNT
 router.get('/unread-count', verifyToken, async (req, res) => {
     try {
+        const userConversations = await Conversation.find({ participants: req.user.id }).distinct('_id');
         const count = await Message.countDocuments({
             sender: { $ne: req.user.id },
             readBy: { $ne: req.user.id },
-            conversationId: { $in: await Conversation.find({ participants: req.user.id }).distinct('_id') },
+            conversationId: { $in: userConversations },
             deletedFor: { $ne: req.user.id }
         });
         res.status(200).json({ count });
     } catch (err) {
         console.error("Unread count error:", err);
-        res.status(500).json(err);
+        res.status(500).json({ message: "Failed to get unread count" });
     }
 });
 
@@ -42,30 +50,34 @@ router.get('/conversations', verifyToken, async (req, res) => {
             });
             const convObj = conv.toObject();
             convObj.unreadCount = unreadCount;
-            convObj.participants = convObj.participants.map(p => ({
+            convObj.participants = (convObj.participants || []).map(p => ({
                 ...p,
                 profilePicture: p.profileImage || p.profilePicture
             }));
-            convObj.otherUser = convObj.participants.find(p => p._id.toString() !== req.user.id);
+            convObj.otherUser = (convObj.participants || []).find(p => p._id && p._id.toString() !== req.user.id);
             return convObj;
         }));
 
         res.status(200).json(conversationsWithUnread);
     } catch (err) {
         console.error("Get conversations error:", err);
-        res.status(500).json(err);
+        res.status(500).json({ message: "Failed to get conversations" });
     }
 });
 
 // GET MESSAGES (Dynamic ID - Namespaced)
 router.get('/conversations/:conversationId', verifyToken, async (req, res) => {
     try {
+        if (!mongoose.Types.ObjectId.isValid(req.params.conversationId)) {
+            return res.status(400).json({ message: "Invalid conversation ID" });
+        }
+
         const conversation = await Conversation.findOne({
             _id: req.params.conversationId,
             participants: { $in: [req.user.id] }
         });
 
-        if (!conversation) return res.status(403).json("Access denied or not found");
+        if (!conversation) return res.status(403).json({ message: "Access denied or conversation not found" });
 
         const messages = await Message.find({
             conversationId: req.params.conversationId,
@@ -82,44 +94,56 @@ router.get('/conversations/:conversationId', verifyToken, async (req, res) => {
 
         res.status(200).json(mappedMessages);
     } catch (err) {
-        res.status(500).json(err);
+        console.error("Get Messages Error:", err);
+        res.status(500).json({ message: "Failed to fetch messages" });
     }
 });
 
 // DELETE CONVERSATION
 router.delete('/conversations/:conversationId', verifyToken, async (req, res) => {
     try {
+        if (!mongoose.Types.ObjectId.isValid(req.params.conversationId)) {
+            return res.status(400).json({ message: "Invalid conversation ID" });
+        }
+
         const conversation = await Conversation.findOneAndDelete({
             _id: req.params.conversationId,
             participants: { $in: [req.user.id] }
         });
 
-        if (!conversation) return res.status(404).json("Conversation not found");
+        if (!conversation) return res.status(404).json({ message: "Conversation not found or access denied" });
 
         await Message.deleteMany({ conversationId: req.params.conversationId });
 
         const io = req.app.get('io');
-        conversation.participants.forEach(p => {
-             io.to(p.toString()).emit("conversation_deleted", req.params.conversationId);
-        });
+        if (io) {
+            conversation.participants.forEach(p => {
+                io.to(p.toString()).emit("conversation_deleted", req.params.conversationId);
+            });
+        }
 
-        res.status(200).json("Conversation deleted");
+        res.status(200).json({ message: "Conversation deleted" });
     } catch (err) {
-        res.status(500).json(err);
+        console.error("Delete Conversation Error:", err);
+        res.status(500).json({ message: "Failed to delete conversation" });
     }
 });
 
 // MUTE CONVERSATION
 router.put('/conversations/:conversationId/mute', verifyToken, async (req, res) => {
     try {
+        if (!mongoose.Types.ObjectId.isValid(req.params.conversationId)) {
+            return res.status(400).json({ message: "Invalid conversation ID" });
+        }
+
         const conversation = await Conversation.findOne({
             _id: req.params.conversationId,
             participants: { $in: [req.user.id] }
         });
 
-        if (!conversation) return res.status(404).json("Conversation not found");
+        if (!conversation) return res.status(404).json({ message: "Conversation not found or access denied" });
 
-        const isMuted = conversation.mutedBy.includes(req.user.id);
+        const isMuted = (conversation.mutedBy || []).some(id => id.toString() === req.user.id);
 
         if (isMuted) {
             await Conversation.findByIdAndUpdate(req.params.conversationId, {
@@ -133,13 +157,18 @@ router.put('/conversations/:conversationId/mute', verifyToken, async (req, res) 
 
         res.status(200).json({ muted: !isMuted });
     } catch (err) {
-        res.status(500).json(err);
+        console.error("Mute Conversation Error:", err);
+        res.status(500).json({ message: "Failed to mute conversation" });
     }
 });
 
 // MARK READ
 router.put('/conversations/:conversationId/read', verifyToken, async (req, res) => {
     try {
+        if (!mongoose.Types.ObjectId.isValid(req.params.conversationId)) {
+            return res.status(400).json({ message: "Invalid conversation ID" });
+        }
+
         await Message.updateMany(
             {
                 conversationId: req.params.conversationId,
@@ -152,18 +181,21 @@ router.put('/conversations/:conversationId/read', verifyToken, async (req, res) 
         const conversation = await Conversation.findById(req.params.conversationId);
         if (conversation) {
             const io = req.app.get('io');
-            const otherParticipants = conversation.participants.filter(p => p.toString() !== req.user.id);
-            otherParticipants.forEach(p => {
-                 io.to(p.toString()).emit("messages_read", {
-                     conversationId: req.params.conversationId,
-                     readBy: req.user.id
-                 });
-            });
+            if (io) {
+                const otherParticipants = (conversation.participants || []).filter(p => p.toString() !== req.user.id);
+                otherParticipants.forEach(p => {
+                    io.to(p.toString()).emit("messages_read", {
+                        conversationId: req.params.conversationId,
+                        readBy: req.user.id
+                    });
+                });
+            }
         }
 
-        res.status(200).json("Messages read");
+        res.status(200).json({ message: "Messages marked as read" });
     } catch (err) {
-        res.status(500).json(err);
+        console.error("Mark Read Error:", err);
+        res.status(500).json({ message: "Failed to mark messages as read" });
     }
 });
 
@@ -171,20 +203,23 @@ router.put('/conversations/:conversationId/read', verifyToken, async (req, res) 
 router.get('/search/users', verifyToken, async (req, res) => {
     try {
         const query = req.query.q || '';
-        if (!query) return res.status(200).json([]);
+        if (!query || query.trim() === '') return res.status(200).json([]);
 
-        const parts = query.trim().split(/\s+/);
+        const cleanQuery = query.trim();
+        const escapedQuery = escapeRegex(cleanQuery);
+        const parts = cleanQuery.split(/\s+/).filter(Boolean);
+
         let searchConditions = [
-            { firstName: { $regex: query, $options: 'i' } },
-            { lastName: { $regex: query, $options: 'i' } },
-            { name: { $regex: query, $options: 'i' } },
-            { email: { $regex: query, $options: 'i' } },
-            { studentId: { $regex: query, $options: 'i' } }
+            { firstName: { $regex: escapedQuery, $options: 'i' } },
+            { lastName: { $regex: escapedQuery, $options: 'i' } },
+            { name: { $regex: escapedQuery, $options: 'i' } },
+            { email: { $regex: escapedQuery, $options: 'i' } },
+            { studentId: { $regex: escapedQuery, $options: 'i' } }
         ];
 
         if (parts.length > 1) {
-            const firstPart = parts[0];
-            const lastPart = parts.slice(1).join(' ');
+            const firstPart = escapeRegex(parts[0]);
+            const lastPart = escapeRegex(parts.slice(1).join(' '));
             searchConditions.push({
                 $and: [
                     { firstName: { $regex: firstPart, $options: 'i' } },
@@ -196,7 +231,7 @@ router.get('/search/users', verifyToken, async (req, res) => {
         const allMatches = await User.find({
             _id: { $ne: req.user.id },
             $or: searchConditions
-        }).select('firstName lastName profileImage name department role isOnline lastSeen');
+        }).select('firstName lastName profileImage name department role isOnline lastSeen').limit(30);
 
         const validRoles = ['student', 'admin', 'developer'];
         const filteredMatches = allMatches.filter(u => {
@@ -212,8 +247,8 @@ router.get('/search/users', verifyToken, async (req, res) => {
 
         res.status(200).json(mappedUsers);
     } catch (err) {
-        console.error("Search error:", err);
-        res.status(500).json(err);
+        console.error("Search users error:", err);
+        res.status(500).json({ message: "Failed to search users" });
     }
 });
 

@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import API from '../utils/api';
 import { toast } from 'react-toastify';
-import logo from '../assets/uc-central-logo.png';
+import logo from '../assets/uc-central-logo.svg';
 import { FaIdCard, FaEnvelope } from 'react-icons/fa6';
 
 const ForgotPassword = () => {
@@ -42,14 +42,14 @@ const ForgotPassword = () => {
 
                 <form onSubmit={handleSubmit}>
                     <div className="mb-3">
-                        <label htmlFor="studentId" className="form-label">Student ID</label>
+                        <label htmlFor="studentId" className="form-label">ID Number</label>
                         <div className="input-group">
                              <span className="input-group-text"><FaIdCard /></span>
                             <input
                                 type="text"
                                 className="form-control"
                                 id="studentId"
-                                placeholder="e.g., 12345678"
+                                placeholder="12345678"
                                 value={studentId}
                                 onChange={(e) => setStudentId(e.target.value)}
                                 required
@@ -57,14 +57,14 @@ const ForgotPassword = () => {
                         </div>
                     </div>
                     <div className="mb-3">
-                        <label htmlFor="email" className="form-label">Email address</label>
+                        <label htmlFor="email" className="form-label">Registered Email</label>
                         <div className="input-group">
                              <span className="input-group-text"><FaEnvelope /></span>
                             <input
                                 type="email"
                                 className="form-control"
                                 id="email"
-                                placeholder="Your registered email"
+                                placeholder="name@example.com"
                                 value={email}
                                 onChange={(e) => setEmail(e.target.value)}
                                 required

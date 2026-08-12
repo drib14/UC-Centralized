@@ -34,8 +34,8 @@ router.get('/dashboard', verifyAdmin, async (req, res) => {
             recentOrders
         });
     } catch (err) {
-        console.error(err);
-        res.status(500).json(err);
+        console.error("Dashboard Stats Error:", err);
+        res.status(500).json({ message: "Failed to fetch dashboard statistics" });
     }
 });
 

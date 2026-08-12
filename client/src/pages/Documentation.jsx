@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { FaCode, FaKey, FaBook, FaUser, FaArrowRight, FaShieldAlt, FaServer, FaGlobe } from 'react-icons/fa';
 import SEO from '../components/SEO';
-import logo from '../assets/uc-central-logo.png';
+import logo from '../assets/uc-central-logo.svg';
 import './Documentation.css';
 
 const CodeBlock = ({ title, code, language = 'javascript' }) => (
@@ -204,14 +204,14 @@ app.get('/callback', async (req, res) => {
     if (!code) return res.status(400).send('No code returned');
 
     try {
-        // 1. Exchange Code for Token
+        // 1. Exchange Code for Token (Backend Server-to-Server)
         const tokenResponse = await fetch('https://uc-centralized.vercel.app/api/oauth/token', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 grant_type: 'authorization_code',
-                client_id: import.meta.env.VITE_UC_CLIENT_ID,
-                client_secret: import.meta.env.VITE_UC_CLIENT_SECRET, // KEEP HIDDEN!
+                client_id: process.env.UC_CLIENT_ID,
+                client_secret: process.env.UC_CLIENT_SECRET, // Store securely on your server backend!
                 code: code,
                 redirect_uri: "https://your-app.com/callback" // Must match initiate step
             })

@@ -2,6 +2,8 @@ const router = require('express').Router();
 const Notification = require('../models/Notification');
 const { verifyToken } = require('../middleware/auth');
 
+const mongoose = require('mongoose');
+
 // Get all notifications for user
 router.get('/', verifyToken, async (req, res) => {
     try {
@@ -15,17 +17,27 @@ router.get('/', verifyToken, async (req, res) => {
 
         res.status(200).json({ notifications, unreadCount });
     } catch (err) {
-        res.status(500).json(err);
+        console.error("Get Notifications Error:", err);
+        res.status(500).json({ message: "Failed to fetch notifications" });
     }
 });
 
 // Mark as read
 router.put('/:id/read', verifyToken, async (req, res) => {
     try {
-        await Notification.findByIdAndUpdate(req.params.id, { read: true });
-        res.status(200).json("Notification marked as read");
+        if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+            return res.status(400).json({ message: "Invalid notification ID" });
+        }
+        const updated = await Notification.findOneAndUpdate(
+            { _id: req.params.id, recipient: req.user.id },
+            { read: true },
+            { new: true }
+        );
+        if (!updated) return res.status(404).json({ message: "Notification not found" });
+        res.status(200).json({ message: "Notification marked as read" });
     } catch (err) {
-        res.status(500).json(err);
+        console.error("Mark Read Error:", err);
+        res.status(500).json({ message: "Failed to mark notification as read" });
     }
 });
 
@@ -33,19 +45,25 @@ router.put('/:id/read', verifyToken, async (req, res) => {
 router.put('/read-all', verifyToken, async (req, res) => {
     try {
         await Notification.updateMany({ recipient: req.user.id, read: false }, { read: true });
-        res.status(200).json("All notifications marked as read");
+        res.status(200).json({ message: "All notifications marked as read" });
     } catch (err) {
-        res.status(500).json(err);
+        console.error("Mark All Read Error:", err);
+        res.status(500).json({ message: "Failed to mark notifications as read" });
     }
 });
 
 // Delete one notification
 router.delete('/:id', verifyToken, async (req, res) => {
     try {
-        await Notification.findOneAndDelete({ _id: req.params.id, recipient: req.user.id });
-        res.status(200).json("Notification deleted");
+        if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+            return res.status(400).json({ message: "Invalid notification ID" });
+        }
+        const deleted = await Notification.findOneAndDelete({ _id: req.params.id, recipient: req.user.id });
+        if (!deleted) return res.status(404).json({ message: "Notification not found" });
+        res.status(200).json({ message: "Notification deleted" });
     } catch (err) {
-        res.status(500).json(err);
+        console.error("Delete Notification Error:", err);
+        res.status(500).json({ message: "Failed to delete notification" });
     }
 });
 
@@ -53,9 +71,10 @@ router.delete('/:id', verifyToken, async (req, res) => {
 router.delete('/', verifyToken, async (req, res) => {
     try {
         await Notification.deleteMany({ recipient: req.user.id });
-        res.status(200).json("All notifications deleted");
+        res.status(200).json({ message: "All notifications deleted" });
     } catch (err) {
-        res.status(500).json(err);
+        console.error("Delete All Notifications Error:", err);
+        res.status(500).json({ message: "Failed to delete all notifications" });
     }
 });
 

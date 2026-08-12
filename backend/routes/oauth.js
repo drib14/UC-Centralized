@@ -59,27 +59,34 @@ router.post('/users/register', async (req, res) => {
     }
 });
 
+const mongoose = require('mongoose');
+
 // REGISTER APP
 router.post('/register', verifyToken, async (req, res) => {
     try {
         const { name, redirectUris, description } = req.body;
 
+        if (!name || !redirectUris) {
+            return res.status(400).json({ message: "App name and redirect URIs are required." });
+        }
+
         const clientId = crypto.randomBytes(16).toString('hex');
         const clientSecret = crypto.randomBytes(32).toString('hex');
 
         const newApp = new OAuthApp({
-            name,
+            name: String(name).trim(),
             clientId,
-            clientSecret, // In real world, hash this!
+            clientSecret,
             redirectUris: Array.isArray(redirectUris) ? redirectUris : [redirectUris],
             user: req.user.id,
-            description
+            description: description ? String(description).trim() : ''
         });
 
         const savedApp = await newApp.save();
         res.status(201).json(savedApp);
     } catch (err) {
-        res.status(500).json(err);
+        console.error("Register OAuth App Error:", err);
+        res.status(500).json({ message: "Failed to register OAuth app" });
     }
 });
 
@@ -89,20 +96,24 @@ router.get('/apps', verifyToken, async (req, res) => {
         const apps = await OAuthApp.find({ user: req.user.id });
         res.status(200).json(apps);
     } catch (err) {
-        res.status(500).json(err);
+        console.error("Get OAuth Apps Error:", err);
+        res.status(500).json({ message: "Failed to fetch OAuth apps" });
     }
 });
 
 // UPDATE APP
 router.put('/apps/:id', verifyToken, async (req, res) => {
     try {
+        if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+            return res.status(400).json({ message: "Invalid app ID" });
+        }
         const { name, redirectUris, description } = req.body;
         const app = await OAuthApp.findOne({ _id: req.params.id, user: req.user.id });
 
-        if (!app) return res.status(404).json("App not found");
+        if (!app) return res.status(404).json({ message: "App not found" });
 
-        app.name = name || app.name;
-        app.description = description || app.description;
+        if (name) app.name = String(name).trim();
+        if (description !== undefined) app.description = String(description).trim();
         if (redirectUris) {
             app.redirectUris = Array.isArray(redirectUris) ? redirectUris : [redirectUris];
         }
@@ -110,18 +121,23 @@ router.put('/apps/:id', verifyToken, async (req, res) => {
         const updatedApp = await app.save();
         res.status(200).json(updatedApp);
     } catch (err) {
-        res.status(500).json(err);
+        console.error("Update OAuth App Error:", err);
+        res.status(500).json({ message: "Failed to update OAuth app" });
     }
 });
 
 // DELETE APP
 router.delete('/apps/:id', verifyToken, async (req, res) => {
     try {
+        if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+            return res.status(400).json({ message: "Invalid app ID" });
+        }
         const app = await OAuthApp.findOneAndDelete({ _id: req.params.id, user: req.user.id });
-        if (!app) return res.status(404).json("App not found");
-        res.status(200).json("App deleted");
+        if (!app) return res.status(404).json({ message: "App not found" });
+        res.status(200).json({ message: "App deleted" });
     } catch (err) {
-        res.status(500).json(err);
+        console.error("Delete OAuth App Error:", err);
+        res.status(500).json({ message: "Failed to delete OAuth app" });
     }
 });
 

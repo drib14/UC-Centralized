@@ -1,54 +1,70 @@
 import React, { useEffect, useState } from 'react';
-import StudentEventsSkeleton from '../../components/skeletons/StudentEventsSkeleton';
 import UniversalSkeleton from '../../components/skeletons/UniversalSkeleton';
 import API from '../../utils/api';
 import { useAuth } from '../../context/AuthContext';
 import { toast } from 'react-toastify';
-import { FaCalendar, FaClock, FaMapMarker, FaUsers } from 'react-icons/fa';
 import SEO from '../../components/SEO';
+import {
+    FaCalendarDays, FaClock, FaLocationDot, FaUsers,
+    FaMagnifyingGlass, FaCircleCheck, FaChevronLeft, FaChevronRight
+} from 'react-icons/fa6';
 
 const StudentEvents = () => {
     const { user } = useAuth();
     const [events, setEvents] = useState([]);
     const [filteredEvents, setFilteredEvents] = useState([]);
     const [filter, setFilter] = useState('ALL');
+    const [search, setSearch] = useState('');
     const [loading, setLoading] = useState(true);
     const [selectedEvent, setSelectedEvent] = useState(null);
+    const [showCalendar, setShowCalendar] = useState(false);
 
     // Calendar State
     const [currentDate, setCurrentDate] = useState(new Date());
 
     // Departments
-    const departments = [
-        {id: 'CCS', name: 'College of Computer Studies'},
-        {id: 'CBA', name: 'College of Business Administration'},
-        {id: 'CAS', name: 'College of Arts and Sciences'}
-    ];
+    const [departments, setDepartments] = useState([]);
 
     useEffect(() => {
         fetchEvents();
+        fetchDepartments();
     }, []);
 
-    useEffect(() => {
-        if (filter === 'ALL') {
-            setFilteredEvents(events);
-        } else {
-            setFilteredEvents(events.filter(e => e.department === filter || e.department === 'ALL'));
+    const fetchDepartments = async () => {
+        try {
+            const data = await API.getDepartments();
+            if (Array.isArray(data)) setDepartments(data);
+        } catch (err) {
+            console.error("Failed to load departments", err);
         }
-    }, [filter, events]);
+    };
 
     const fetchEvents = async () => {
         try {
+            setLoading(true);
             const data = await API.getEvents();
-            setEvents(data);
+            setEvents(Array.isArray(data) ? data : []);
         } catch (error) {
-            toast.error("Failed to load events");
+            toast.error("Failed to load campus events");
         } finally {
             setLoading(false);
         }
     };
 
-    if (loading) return <UniversalSkeleton />;
+    useEffect(() => {
+        let res = events;
+        if (filter !== 'ALL') {
+            res = res.filter(e => e.department === filter || e.department === 'ALL');
+        }
+        if (search.trim()) {
+            res = res.filter(e =>
+                e.title.toLowerCase().includes(search.toLowerCase()) ||
+                (e.location && e.location.toLowerCase().includes(search.toLowerCase())) ||
+                (e.description && e.description.toLowerCase().includes(search.toLowerCase()))
+            );
+        }
+        setFilteredEvents(res);
+    }, [filter, search, events]);
 
     const handleRSVP = async () => {
         if (!selectedEvent) return;
@@ -58,29 +74,26 @@ const StudentEvents = () => {
             setSelectedEvent(null);
             fetchEvents();
         } catch (error) {
-            toast.error(error.message || "Failed to RSVP");
+            toast.error(error.message || "Failed to register");
         }
     };
 
     const isRegistered = (event) => event.attendees && event.attendees.includes(user?._id);
 
     const isEnded = (event) => {
-         const now = new Date();
-         // Parse dates properly
-         const eventDate = new Date(event.date);
-         const endDate = event.endDate ? new Date(event.endDate) : eventDate;
+        const now = new Date();
+        const eventDate = new Date(event.date);
+        const endDate = event.endDate ? new Date(event.endDate) : eventDate;
+        const timeStr = event.endTime || (event.endDate ? '23:59' : (event.time || '23:59'));
 
-         // If no endDate provided, use date + time or end of day
-         const timeStr = event.endTime || (event.endDate ? '23:59' : (event.time || '23:59'));
+        if (timeStr) {
+            const [h, m] = timeStr.split(':');
+            endDate.setHours(parseInt(h, 10), parseInt(m, 10));
+        } else {
+            endDate.setHours(23, 59, 59);
+        }
 
-         if (timeStr) {
-             const [h, m] = timeStr.split(':');
-             endDate.setHours(parseInt(h), parseInt(m));
-         } else {
-             endDate.setHours(23, 59, 59);
-         }
-
-         return now > endDate;
+        return now > endDate;
     };
 
     const formatTime = (timeStr) => {
@@ -89,191 +102,264 @@ const StudentEvents = () => {
         const h = parseInt(hour, 10);
         const m = parseInt(minute, 10);
         if (isNaN(h) || isNaN(m)) return timeStr;
-
         const ampm = h >= 12 ? 'PM' : 'AM';
         const formattedHour = h % 12 || 12;
         const formattedMinute = m < 10 ? `0${m}` : m;
-
         return `${formattedHour}:${formattedMinute} ${ampm}`;
     };
 
-    // Calendar Helper
+    // Calendar Helper Functions
+    const getDaysInMonth = (year, month) => new Date(year, month + 1, 0).getDate();
+    const getFirstDayOfMonth = (year, month) => new Date(year, month, 1).getDay();
+
+    const changeMonth = (offset) => {
+        setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() + offset, 1));
+    };
+
     const renderCalendar = () => {
-        const today = new Date();
         const year = currentDate.getFullYear();
         const month = currentDate.getMonth();
-
-        const firstDay = new Date(year, month, 1).getDay();
-        const daysInMonth = new Date(year, month + 1, 0).getDate();
+        const daysInMonth = getDaysInMonth(year, month);
+        const firstDay = getFirstDayOfMonth(year, month);
 
         const days = [];
-        for (let i = 0; i < firstDay; i++) days.push(<div key={`empty-${i}`} className="calendar-day empty"></div>);
+        for (let i = 0; i < firstDay; i++) {
+            days.push(<div key={`empty-${i}`} className="calendar-day empty"></div>);
+        }
 
-        for (let d = 1; d <= daysInMonth; d++) {
-            const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+        const now = new Date();
+        const isCurrentMonth = now.getFullYear() === year && now.getMonth() === month;
 
-            // Find events for this date (checking range)
+        for (let day = 1; day <= daysInMonth; day++) {
+            const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
             const dayEvents = events.filter(e => {
-                const start = new Date(e.date);
-                const end = e.endDate ? new Date(e.endDate) : new Date(e.date);
-                // Normalize current day check
-                const currentCheck = new Date(dateStr);
-                // Reset times for strict date check
-                start.setHours(0,0,0,0);
-                end.setHours(23,59,59,999);
-                currentCheck.setHours(12,0,0,0); // Midday to avoid boundary issues
-                return currentCheck >= start && currentCheck <= end;
+                const eStart = e.date ? e.date.split('T')[0] : '';
+                const eEnd = e.endDate ? e.endDate.split('T')[0] : eStart;
+                return dateStr >= eStart && dateStr <= eEnd;
             });
 
-            const isToday = d === today.getDate() && month === today.getMonth() && year === today.getFullYear();
-            const hasEvent = dayEvents.length > 0;
-
-            // Styling Classes
-            let classes = "calendar-day p-2 border text-center position-relative ";
-            let style = { minHeight: '80px', cursor: 'pointer' };
-            let title = "";
-
-            if (isToday && hasEvent) {
-                // Split Highlight (Gradient)
-                style.background = "linear-gradient(135deg, #0d6efd 50%, #ffc107 50%)";
-                classes += "text-white fw-bold";
-                title = `Today is ${dayEvents[0].title} Day!`;
-            } else if (isToday) {
-                classes += "bg-primary text-white fw-bold";
-                title = "Date Today";
-            } else if (hasEvent) {
-                classes += "bg-warning text-dark fw-bold";
-                // Check if it's culminating (end date)
-                const evt = dayEvents[0];
-                if (evt.endDate === dateStr) {
-                    title = `Culminating of ${evt.title}`;
-                } else {
-                    title = evt.title; // Or "Event Day"
-                }
-            } else {
-                classes += "bg-light";
-            }
+            const isToday = isCurrentMonth && now.getDate() === day;
 
             days.push(
-                <div key={d} className={classes} style={style} title={title}>
-                    <div>{d}</div>
-                    {hasEvent && <small className="d-block text-truncate" style={{fontSize:'0.6rem'}}>{dayEvents[0].title}</small>}
+                <div
+                    key={day}
+                    className={`calendar-day ${isToday ? 'today' : ''} ${dayEvents.length > 0 ? 'has-event' : ''}`}
+                    onClick={() => {
+                        if (dayEvents.length > 0) setSelectedEvent(dayEvents[0]);
+                    }}
+                >
+                    <span className="day-number">{day}</span>
+                    {dayEvents.length > 0 && (
+                        <div className="event-dots">
+                            {dayEvents.map((ev, idx) => (
+                                <span key={idx} className="event-dot" title={ev.title}></span>
+                            ))}
+                        </div>
+                    )}
                 </div>
             );
         }
 
+        const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+
         return (
-            <div className="calendar-container mb-4">
-                <div className="d-flex justify-content-between align-items-center mb-2">
-                    <button className="btn btn-sm btn-outline-secondary" onClick={() => setCurrentDate(new Date(year, month - 1))}>Prev</button>
-                    <h5 className="mb-0">{currentDate.toLocaleString('default', { month: 'long', year: 'numeric' })}</h5>
-                    <button className="btn btn-sm btn-outline-secondary" onClick={() => setCurrentDate(new Date(year, month + 1))}>Next</button>
-                </div>
-                {/* Responsive Grid: overflow-auto for small screens or stack days if needed */}
-                <div className="calendar-scroll-container">
-                    <div className="d-grid calendar-grid" style={{ gap: '5px' }}>
-                        {['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].map(day => (
-                            <div key={day} className="text-center fw-bold small">{day}</div>
-                        ))}
-                        {days}
+            <div className="calendar-wrapper bg-white rounded-4 p-4 shadow-sm border-0 mb-4">
+                <div className="d-flex justify-content-between align-items-center mb-3">
+                    <h5 className="fw-bold mb-0 text-dark">
+                        {monthNames[month]} {year}
+                    </h5>
+                    <div className="btn-group">
+                        <button className="btn btn-sm btn-light border" onClick={() => changeMonth(-1)}><FaChevronLeft size={12} /></button>
+                        <button className="btn btn-sm btn-light border" onClick={() => setCurrentDate(new Date())}>Today</button>
+                        <button className="btn btn-sm btn-light border" onClick={() => changeMonth(1)}><FaChevronRight size={12} /></button>
                     </div>
                 </div>
-                <style jsx="true">{`
+
+                <div className="calendar-grid">
+                    {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(d => (
+                        <div key={d} className="calendar-header-day text-muted fw-bold text-center small py-2">{d}</div>
+                    ))}
+                    {days}
+                </div>
+
+                <style>{`
                     .calendar-grid {
+                        display: grid;
                         grid-template-columns: repeat(7, 1fr);
-                        min-width: 300px; /* Ensure minimum width to prevent squishing */
+                        gap: 6px;
                     }
-                    .calendar-scroll-container {
-                        overflow-x: auto; /* Allow scrolling on very small screens if needed */
+                    .calendar-day {
+                        aspect-ratio: 1;
+                        border-radius: 12px;
+                        background: #f8fafc;
+                        display: flex;
+                        flex-direction: column;
+                        align-items: center;
+                        justify-content: center;
+                        position: relative;
+                        cursor: pointer;
+                        transition: all 0.2s ease;
                     }
-                    @media (max-width: 576px) {
-                        .calendar-day {
-                            min-height: 60px !important;
-                            font-size: 0.75rem;
-                            padding: 2px !important;
-                        }
+                    .calendar-day:hover {
+                        background: #e2e8f0;
+                    }
+                    .calendar-day.empty {
+                        background: transparent;
+                        cursor: default;
+                    }
+                    .calendar-day.today {
+                        background: #0d6efd;
+                        color: #fff;
+                        font-weight: bold;
+                    }
+                    .calendar-day.has-event {
+                        border: 2px solid #0d6efd;
+                    }
+                    .event-dots {
+                        display: flex;
+                        gap: 3px;
+                        position: absolute;
+                        bottom: 6px;
+                    }
+                    .event-dot {
+                        width: 6px;
+                        height: 6px;
+                        border-radius: 50%;
+                        background: #ffc107;
+                    }
+                    .calendar-day.today .event-dot {
+                        background: #fff;
                     }
                 `}</style>
-
-                {/* Calendar Legend */}
-                <div className="mt-3 d-flex gap-3 justify-content-center small flex-wrap">
-                    <div className="d-flex align-items-center">
-                        <div className="bg-primary" style={{width: '15px', height: '15px', marginRight: '5px'}}></div>
-                        <span>Today's Date</span>
-                    </div>
-                    <div className="d-flex align-items-center">
-                        <div className="bg-warning" style={{width: '15px', height: '15px', marginRight: '5px'}}></div>
-                        <span>Event Date</span>
-                    </div>
-                    <div className="d-flex align-items-center">
-                        <div style={{width: '15px', height: '15px', marginRight: '5px', background: 'linear-gradient(135deg, #0d6efd 50%, #ffc107 50%)'}}></div>
-                        <span>Today is Event's Date</span>
-                    </div>
-                </div>
             </div>
         );
     };
 
-    return (
-        <div className="container-fluid">
-            <SEO title="Events" description="View and RSVP to upcoming university events." />
-            <h2 className="mb-4 text-success">
-                <FaCalendar className="me-2" />Events & Activities
-            </h2>
+    if (loading) return <UniversalSkeleton />;
 
-            {/* Calendar Section */}
-            <div className="row mb-4">
-                <div className="col-12">
-                    <div className="card shadow-sm">
-                        <div className="card-body">
-                            {renderCalendar()}
+    return (
+        <div className="container-fluid py-4">
+            <SEO title="Campus Events" description="Discover and register for University of Cebu campus events and activities." />
+
+            {/* Header */}
+            <div className="d-flex flex-column flex-md-row justify-content-between align-items-md-center mb-4 gap-3">
+                <div>
+                    <h2 className="mb-1 fw-bold text-dark d-flex align-items-center">
+                        <FaCalendarDays className="me-2 text-primary" /> Campus Events & Activities
+                    </h2>
+                    <p className="text-muted mb-0">Discover departmental assemblies, academic seminars, sports meets, and university celebrations.</p>
+                </div>
+                <button
+                    className={`btn ${showCalendar ? 'btn-primary' : 'btn-outline-primary'} rounded-pill px-4 shadow-sm fw-semibold`}
+                    onClick={() => setShowCalendar(!showCalendar)}
+                >
+                    <FaCalendarDays className="me-2" /> {showCalendar ? 'Hide Calendar' : 'View Calendar View'}
+                </button>
+            </div>
+
+            {/* Calendar View Toggle */}
+            {showCalendar && renderCalendar()}
+
+            {/* Filter Toolbar */}
+            <div className="card border-0 shadow-sm rounded-4 mb-4 p-3 bg-white">
+                <div className="row g-3 align-items-center">
+                    <div className="col-md-6">
+                        <div className="input-group">
+                            <span className="input-group-text bg-light border-0"><FaMagnifyingGlass className="text-muted" /></span>
+                            <input
+                                type="text"
+                                className="form-control bg-light border-0"
+                                placeholder="Search events by title, venue, or description..."
+                                value={search}
+                                onChange={e => setSearch(e.target.value)}
+                            />
                         </div>
+                    </div>
+                    <div className="col-md-6">
+                        <select
+                            className="form-select bg-light border-0"
+                            value={filter}
+                            onChange={e => setFilter(e.target.value)}
+                        >
+                            <option value="ALL">All Department Scopes (Campus-Wide)</option>
+                            {departments.map(d => (
+                                <option key={d._id || d.code} value={d.code}>{d.code} - {d.name}</option>
+                            ))}
+                        </select>
                     </div>
                 </div>
             </div>
 
-            <div className="row mb-4">
-                <div className="col-md-4">
-                    <select className="form-select" value={filter} onChange={(e) => setFilter(e.target.value)}>
-                        <option value="ALL">All Departments</option>
-                        {departments.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
-                    </select>
-                </div>
-            </div>
-
-            <div className="row">
+            {/* Events Grid */}
+            <div className="row g-4">
                 {filteredEvents.length === 0 ? (
-                    <div className="col-12 text-center mt-5"><p className="text-muted">No events found.</p></div>
+                    <div className="col-12 text-center py-5">
+                        <div className="card border-0 shadow-sm rounded-4 p-5 text-muted bg-white">
+                            <FaCalendarDays size={48} className="mb-3 opacity-25" />
+                            <h5>No events found</h5>
+                            <p className="mb-0">There are no upcoming activities matching your criteria.</p>
+                        </div>
+                    </div>
                 ) : (
                     filteredEvents.map(event => {
                         const registered = isRegistered(event);
                         const ended = isEnded(event);
+                        const deptMatch = departments.find(d => d.code === event.department);
 
                         return (
-                            <div className="col-lg-4 col-md-6 col-12 mb-4" key={event._id}>
-                                <div className="card h-100">
-                                    <img src={event.image || 'https://via.placeholder.com/300'} className="card-img-top" alt={event.title} style={{ height: '200px', objectFit: 'cover' }} />
-                                    <div className="card-body d-flex flex-column">
-                                        <h5 className="card-title d-flex justify-content-between align-items-start">
-                                            {event.title}
-                                            {registered && <span className="badge bg-success ms-2" style={{fontSize: '0.7em'}}>Registered</span>}
-                                            {ended && !registered && <span className="badge bg-secondary ms-2" style={{fontSize: '0.7em'}}>Ended</span>}
-                                        </h5>
-                                        <p className="card-text text-muted small mb-2">
-                                            <FaCalendar /> {event.date} {event.time ? `| ${formatTime(event.time)}` : ''} <br />
-                                            {event.endDate && (
-                                                <>To: {event.endDate} {event.endTime ? `| ${formatTime(event.endTime)}` : ''} <br/></>
+                            <div className="col-lg-4 col-md-6 col-12" key={event._id}>
+                                <div className="card border-0 shadow-sm rounded-4 h-100 bg-white hover-shadow overflow-hidden d-flex flex-column">
+                                    <div className="position-relative" style={{ height: '190px', backgroundColor: '#f1f5f9' }}>
+                                        <img
+                                            src={event.image || 'https://via.placeholder.com/300'}
+                                            className="w-100 h-100 object-fit-cover"
+                                            alt={event.title}
+                                        />
+                                        <span
+                                            className="position-absolute top-0 end-0 m-3 badge px-3 py-1 rounded-pill shadow-sm text-white fw-bold"
+                                            style={{ backgroundColor: event.department === 'ALL' ? '#0d6efd' : (deptMatch?.color || '#003399') }}
+                                        >
+                                            {event.department === 'ALL' ? 'Campus-Wide' : event.department}
+                                        </span>
+                                    </div>
+                                    <div className="card-body p-4 d-flex flex-column flex-grow-1">
+                                        <div className="d-flex justify-content-between align-items-center mb-2">
+                                            <small className="text-muted d-flex align-items-center gap-1">
+                                                <FaClock size={11} /> {event.date} {event.time ? `• ${formatTime(event.time)}` : ''}
+                                            </small>
+                                            {registered && (
+                                                <span className="badge bg-success bg-opacity-10 text-success border border-success rounded-pill px-2 py-1 small">
+                                                    <FaCircleCheck className="me-1" /> Registered
+                                                </span>
                                             )}
-                                            {event.department}
+                                            {ended && !registered && (
+                                                <span className="badge bg-secondary rounded-pill px-2 py-1 small">
+                                                    Ended
+                                                </span>
+                                            )}
+                                        </div>
+
+                                        <h5 className="card-title fw-bold text-dark mb-2">{event.title}</h5>
+
+                                        <div className="text-secondary small mb-3 d-flex align-items-center gap-1">
+                                            <FaLocationDot size={12} className="text-danger" /> {event.location || 'UC Main Campus'}
+                                        </div>
+
+                                        <p className="card-text text-muted small line-clamp-2 mb-3 flex-grow-1">
+                                            {event.description}
                                         </p>
-                                        <p className="card-text small text-primary fw-bold mb-2">
-                                            <FaUsers className="me-1" />
-                                            {event.attendees ? event.attendees.length : 0} Joined
-                                        </p>
-                                        <p className="card-text flex-grow-1">{event.description.substring(0, 80)}...</p>
-                                        <button className="btn btn-outline-success w-100 mt-auto" onClick={() => setSelectedEvent(event)}>
-                                            View Details
-                                        </button>
+
+                                        <div className="d-flex justify-content-between align-items-center pt-3 border-top mt-auto">
+                                            <span className="small text-primary fw-semibold d-flex align-items-center gap-1">
+                                                <FaUsers size={12} /> {event.attendees?.length || 0} Attending
+                                            </span>
+                                            <button
+                                                className="btn btn-sm btn-outline-primary rounded-pill px-3 fw-semibold"
+                                                onClick={() => setSelectedEvent(event)}
+                                            >
+                                                Details & RSVP
+                                            </button>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -282,54 +368,53 @@ const StudentEvents = () => {
                 )}
             </div>
 
-            {/* Modal */}
+            {/* Event Details & RSVP Modal */}
             {selectedEvent && (
                 <div className="modal fade show d-block" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }} tabIndex="-1">
-                    <div className="modal-dialog modal-lg">
-                        <div className="modal-content">
-                            <div className="modal-header bg-success text-white">
-                                <h5 className="modal-title">{selectedEvent.title}</h5>
+                    <div className="modal-dialog modal-lg modal-dialog-centered">
+                        <div className="modal-content border-0 rounded-4 shadow">
+                            <div className="modal-header bg-primary text-white rounded-top-4">
+                                <h5 className="modal-title fw-bold">{selectedEvent.title}</h5>
                                 <button type="button" className="btn-close btn-close-white" onClick={() => setSelectedEvent(null)}></button>
                             </div>
-                            <div className="modal-body">
-                                <img src={selectedEvent.image || 'https://via.placeholder.com/300'} className="img-fluid rounded mb-3 w-100" style={{ maxHeight: '300px', objectFit: 'cover' }} alt="Event" />
-                                <div className="row mb-2">
+                            <div className="modal-body p-4">
+                                <img
+                                    src={selectedEvent.image || 'https://via.placeholder.com/600x300'}
+                                    className="img-fluid rounded-3 mb-4 w-100 object-fit-cover shadow-sm"
+                                    style={{ maxHeight: '280px' }}
+                                    alt="Event"
+                                />
+                                <div className="row g-3 mb-4 bg-light p-3 rounded-3">
                                     <div className="col-md-6">
-                                        <strong><FaCalendar className="me-2" />Start:</strong>
-                                        <span>{selectedEvent.date} {selectedEvent.time ? `@ ${formatTime(selectedEvent.time)}` : ''}</span>
+                                        <div className="text-muted small text-uppercase fw-semibold">Start Schedule</div>
+                                        <div className="fw-bold text-dark">{selectedEvent.date} {selectedEvent.time ? `@ ${formatTime(selectedEvent.time)}` : ''}</div>
                                     </div>
                                     <div className="col-md-6">
-                                        {selectedEvent.endDate && (
-                                            <>
-                                            <strong><FaCalendar className="me-2" />End:</strong>
-                                            <span>{selectedEvent.endDate} {selectedEvent.endTime ? `@ ${formatTime(selectedEvent.endTime)}` : ''}</span>
-                                            </>
-                                        )}
+                                        <div className="text-muted small text-uppercase fw-semibold">Venue Location</div>
+                                        <div className="fw-bold text-dark">{selectedEvent.location || 'UC Main Campus'}</div>
                                     </div>
                                 </div>
-                                <p>
-                                    <strong><FaMapMarker className="me-2" />Venue:</strong>
-                                    <span>{selectedEvent.location || 'TBA'}</span>
-                                </p>
-                                <p className="text-primary fw-bold">
-                                    <FaUsers className="me-2" />
-                                    Total Students Joined: {selectedEvent.attendees ? selectedEvent.attendees.length : 0}
-                                </p>
-                                <hr />
-                                <p>{selectedEvent.description}</p>
+                                <h6 className="fw-bold text-dark mb-2">Event Description</h6>
+                                <p className="text-secondary" style={{ whiteSpace: 'pre-line' }}>{selectedEvent.description}</p>
                             </div>
-                            <div className="modal-footer">
-                                <button type="button" className="btn btn-secondary" onClick={() => setSelectedEvent(null)}>Close</button>
+                            <div className="modal-footer bg-light rounded-bottom-4">
+                                <button type="button" className="btn btn-secondary" onClick={() => setSelectedEvent(null)}>
+                                    Close
+                                </button>
                                 {(() => {
-                                     const registered = isRegistered(selectedEvent);
-                                     const ended = isEnded(selectedEvent);
-                                     if (ended) {
-                                         return <button className="btn btn-secondary" disabled>Event Ended</button>;
-                                     } else if (registered) {
-                                         return <button className="btn btn-secondary" disabled>Already Registered</button>;
-                                     } else {
-                                         return <button className="btn btn-success" onClick={handleRSVP}>Register / RSVP</button>;
-                                     }
+                                    const registered = isRegistered(selectedEvent);
+                                    const ended = isEnded(selectedEvent);
+                                    if (ended) {
+                                        return <button className="btn btn-secondary" disabled>Event Concluded</button>;
+                                    } else if (registered) {
+                                        return <button className="btn btn-success" disabled><FaCircleCheck className="me-1" /> Confirmed</button>;
+                                    } else {
+                                        return (
+                                            <button className="btn btn-primary fw-semibold" onClick={handleRSVP}>
+                                                Register / RSVP for Event
+                                            </button>
+                                        );
+                                    }
                                 })()}
                             </div>
                         </div>

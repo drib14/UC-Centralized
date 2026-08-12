@@ -4,7 +4,7 @@ import API from '../utils/api';
 import { useAuth } from '../context/AuthContext';
 import UniversalSkeleton from '../components/skeletons/UniversalSkeleton';
 import { toast } from 'react-toastify';
-import logo from '../assets/uc-central-logo.png';
+import logo from '../assets/uc-central-logo.svg';
 import SEO from '../components/SEO';
 
 const OAuthConsent = () => {

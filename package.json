@@ -2,6 +2,12 @@
   "name": "uc-central-monorepo",
   "version": "1.0.0",
   "private": true,
+  "scripts": {
+    "start": "node backend/server.js",
+    "cluster": "node backend/cluster.js",
+    "start:cluster": "node backend/cluster.js",
+    "seed": "node backend/seed_user.js"
+  },
   "dependencies": {
     "bcryptjs": "^2.4.3",
     "cloudinary": "^1.41.0",

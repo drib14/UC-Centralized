@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import API from '../utils/api';
 import { toast } from 'react-toastify';
-import logo from '../assets/uc-central-logo.png';
+import logo from '../assets/uc-central-logo.svg';
 import { FaLock, FaEye, FaEyeSlash } from 'react-icons/fa6';
 import PasswordStrength from '../components/PasswordStrength';
 
@@ -60,7 +60,7 @@ const ResetPassword = () => {
                                 type={showPassword ? 'text' : 'password'}
                                 className="form-control"
                                 id="password"
-                                placeholder="********"
+                                placeholder="••••••••"
                                 value={password}
                                 onChange={(e) => setPassword(e.target.value)}
                                 required
@@ -78,7 +78,7 @@ const ResetPassword = () => {
                                 type={showConfirmPassword ? 'text' : 'password'}
                                 className="form-control"
                                 id="confirmPassword"
-                                placeholder="********"
+                                placeholder="••••••••"
                                 value={confirmPassword}
                                 onChange={(e) => setConfirmPassword(e.target.value)}
                                 required

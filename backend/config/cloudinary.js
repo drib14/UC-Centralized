@@ -17,19 +17,47 @@ const storage = new CloudinaryStorage({
         let resource_type = 'image';
         if (file.mimetype.startsWith('audio') || file.mimetype.startsWith('video')) {
             resource_type = 'video';
-        } else if (file.mimetype.startsWith('application')) {
+        } else if (file.mimetype.startsWith('application') || file.mimetype === 'application/pdf') {
             resource_type = 'raw';
         }
+
+        // Clean filename to prevent path traversal or invalid characters
+        const safeOriginalName = (file.originalname || 'upload')
+            .replace(/[^a-zA-Z0-9_-]/g, '_')
+            .substring(0, 50);
 
         return {
             folder: 'uc-central',
             resource_type: resource_type,
-            // allow all formats by not specifying allowed_formats, or be very permissive
-            public_id: `${Date.now()}-${file.originalname.replace(/\.[^/.]+$/, "")}`
+            public_id: `${Date.now()}-${safeOriginalName}`
         };
     }
 });
 
-const parser = multer({ storage: storage });
+const allowedMimeTypes = [
+    'image/jpeg',
+    'image/png',
+    'image/webp',
+    'image/gif',
+    'video/mp4',
+    'video/webm',
+    'audio/mpeg',
+    'audio/wav',
+    'application/pdf'
+];
+
+const parser = multer({
+    storage: storage,
+    limits: {
+        fileSize: 10 * 1024 * 1024 // 10 MB maximum file size limit
+    },
+    fileFilter: (req, file, cb) => {
+        if (allowedMimeTypes.includes(file.mimetype)) {
+            cb(null, true);
+        } else {
+            cb(new Error(`Unsupported file type: ${file.mimetype}. Allowed types: JPEG, PNG, WEBP, GIF, MP4, WEBM, MP3, WAV, PDF`));
+        }
+    }
+});
 
 module.exports = parser;

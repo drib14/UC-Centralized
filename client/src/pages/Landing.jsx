@@ -1,7 +1,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import logo from '../assets/uc-central-logo.png';
+import logo from '../assets/uc-central-logo.svg';
 import { FaCalendarDays, FaShirt, FaBullhorn, FaArrowRight } from 'react-icons/fa6';
 import SEO from '../components/SEO';
 

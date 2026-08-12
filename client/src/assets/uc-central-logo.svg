@@ -1,0 +1,145 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 500 500" width="100%" height="100%">
+  <defs>
+    <!-- Gradients -->
+    <linearGradient id="ucNavyGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#00358e" />
+      <stop offset="50%" stop-color="#002266" />
+      <stop offset="100%" stop-color="#00133d" />
+    </linearGradient>
+
+    <linearGradient id="ucGoldGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FFE259" />
+      <stop offset="40%" stop-color="#FFA751" />
+      <stop offset="70%" stop-color="#FFB800" />
+      <stop offset="100%" stop-color="#D48800" />
+    </linearGradient>
+
+    <linearGradient id="flameGrad" x1="0%" y1="100%" x2="0%" y2="0%">
+      <stop offset="0%" stop-color="#E65100" />
+      <stop offset="35%" stop-color="#FF9800" />
+      <stop offset="70%" stop-color="#FFD54F" />
+      <stop offset="100%" stop-color="#FFF9C4" />
+    </linearGradient>
+
+    <linearGradient id="shieldGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#0a3d91" />
+      <stop offset="100%" stop-color="#001a4d" />
+    </linearGradient>
+
+    <filter id="dropShadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="4" stdDeviation="6" flood-color="#000000" flood-opacity="0.35" />
+    </filter>
+
+    <filter id="glow" x="-30%" y="-30%" width="160%" height="160%">
+      <feGaussianBlur stdDeviation="3" result="blur" />
+      <feComposite in="SourceGraphic" in2="blur" operator="over" />
+    </filter>
+
+    <!-- Text Paths -->
+    <path id="topTextArc" d="M 75 250 A 175 175 0 0 1 425 250" fill="none" />
+    <path id="bottomTextArc" d="M 425 250 A 175 175 0 0 1 75 250" fill="none" />
+  </defs>
+
+  <!-- Outer Shadow & Gold Trim -->
+  <circle cx="250" cy="250" r="238" fill="none" stroke="url(#ucGoldGrad)" stroke-width="4" filter="url(#dropShadow)" />
+  <circle cx="250" cy="250" r="230" fill="url(#ucNavyGrad)" stroke="#FFA751" stroke-width="2" />
+  <circle cx="250" cy="250" r="184" fill="none" stroke="url(#ucGoldGrad)" stroke-width="3" stroke-dasharray="8 4" opacity="0.6" />
+  <circle cx="250" cy="250" r="176" fill="#001845" stroke="#FFA751" stroke-width="2" />
+
+  <!-- Outer Text: UC CENTRAL -->
+  <text font-family="'Inter', 'Montserrat', 'Segoe UI', 'Arial Black', sans-serif" font-weight="900" font-size="28" fill="url(#ucGoldGrad)" letter-spacing="6">
+    <textPath href="#topTextArc" startOffset="50%" text-anchor="middle">
+      ★ UC CENTRAL ★
+    </textPath>
+  </text>
+
+  <!-- Outer Text: UNIVERSITY OF CEBU • 1964 -->
+  <text font-family="'Inter', 'Montserrat', 'Segoe UI', sans-serif" font-weight="800" font-size="16.5" fill="#FFFFFF" letter-spacing="4">
+    <textPath href="#bottomTextArc" startOffset="50%" text-anchor="middle">
+      UNIVERSITY OF CEBU • EST. 1964
+    </textPath>
+  </text>
+
+  <!-- Laurels (Left) -->
+  <g fill="url(#ucGoldGrad)" opacity="0.9" transform="translate(0, 5)">
+    <path d="M 120 235 C 110 220 115 200 130 195 C 130 208 126 222 120 235 Z" />
+    <path d="M 112 265 C 100 252 102 232 118 225 C 120 238 117 253 112 265 Z" />
+    <path d="M 115 295 C 102 285 102 265 116 256 C 120 269 119 283 115 295 Z" />
+    <path d="M 128 325 C 114 316 112 296 124 286 C 130 298 131 312 128 325 Z" />
+    <path d="M 148 350 C 134 344 130 324 140 312 C 148 323 151 338 148 350 Z" />
+    <path d="M 176 372 C 162 368 155 350 164 336 C 173 346 179 360 176 372 Z" />
+  </g>
+
+  <!-- Laurels (Right) -->
+  <g fill="url(#ucGoldGrad)" opacity="0.9" transform="translate(0, 5)">
+    <path d="M 380 235 C 390 220 385 200 370 195 C 370 208 374 222 380 235 Z" />
+    <path d="M 388 265 C 400 252 398 232 382 225 C 380 238 383 253 388 265 Z" />
+    <path d="M 385 295 C 398 285 398 265 384 256 C 380 269 381 283 385 295 Z" />
+    <path d="M 372 325 C 386 316 388 296 376 286 C 370 298 369 312 372 325 Z" />
+    <path d="M 352 350 C 366 344 370 324 360 312 C 352 323 349 338 352 350 Z" />
+    <path d="M 324 372 C 338 368 345 350 336 336 C 327 346 321 360 324 372 Z" />
+  </g>
+
+  <!-- Center Shield -->
+  <g filter="url(#dropShadow)">
+    <!-- Shield Outer Gold -->
+    <path d="M 250 142 Q 320 142 328 200 Q 330 280 250 335 Q 170 280 172 200 Q 180 142 250 142 Z"
+          fill="url(#shieldGrad)" stroke="url(#ucGoldGrad)" stroke-width="6" stroke-linejoin="round" />
+    <!-- Shield Inner Inset Border -->
+    <path d="M 250 152 Q 310 152 318 202 Q 320 270 250 320 Q 180 270 182 202 Q 190 152 250 152 Z"
+          fill="none" stroke="#FFA751" stroke-width="1.8" opacity="0.7" />
+  </g>
+
+  <!-- Centralized Tech Network Hub Grid (Base of Shield) -->
+  <g stroke="url(#ucGoldGrad)" stroke-width="1.5" opacity="0.85">
+    <!-- Orbital / Connectivity Arcs -->
+    <path d="M 215 305 Q 250 288 285 305" fill="none" stroke-dasharray="3 2" />
+    <path d="M 200 292 Q 250 268 300 292" fill="none" stroke-dasharray="4 2" />
+    <!-- Network Lines -->
+    <line x1="250" y1="285" x2="215" y2="305" />
+    <line x1="250" y1="285" x2="285" y2="305" />
+    <line x1="250" y1="285" x2="250" y2="318" />
+    <line x1="220" y1="275" x2="250" y2="285" />
+    <line x1="280" y1="275" x2="250" y2="285" />
+    <!-- Network Node Dots -->
+    <circle cx="250" cy="285" r="4.5" fill="#FFE259" filter="url(#glow)" />
+    <circle cx="215" cy="305" r="3" fill="#FFA751" />
+    <circle cx="285" cy="305" r="3" fill="#FFA751" />
+    <circle cx="250" cy="318" r="3" fill="#FFA751" />
+    <circle cx="220" cy="275" r="2.5" fill="#FFE259" />
+    <circle cx="280" cy="275" r="2.5" fill="#FFE259" />
+  </g>
+
+  <!-- Torch of Wisdom -->
+  <g filter="url(#dropShadow)">
+    <!-- Torch Handle & Bowl -->
+    <path d="M 243 235 L 257 235 L 254 268 L 246 268 Z" fill="url(#ucGoldGrad)" stroke="#B87700" stroke-width="1" />
+    <path d="M 238 235 C 238 235 235 220 250 220 C 265 220 262 235 262 235 Z" fill="url(#ucGoldGrad)" stroke="#B87700" stroke-width="1" />
+    <!-- Torch Ring Accent -->
+    <rect x="242" y="248" width="16" height="3.5" rx="1.5" fill="#FFF" opacity="0.8" />
+
+    <!-- Radiant Flame -->
+    <path d="M 250 162 C 242 178 234 192 242 208 C 245 198 249 194 252 190 C 255 198 261 202 263 210 C 270 196 265 180 250 162 Z"
+          fill="url(#flameGrad)" filter="url(#glow)" />
+    <!-- Inner Hot Flame Core -->
+    <path d="M 250 176 C 246 186 242 195 246 205 C 248 198 251 195 253 192 C 255 197 258 200 259 205 C 263 196 260 187 250 176 Z"
+          fill="#FFFFFF" opacity="0.9" />
+  </g>
+
+  <!-- Stylized Interlocking UC Monogram -->
+  <g filter="url(#dropShadow)">
+    <!-- 'U' Letterform -->
+    <path d="M 216 195 L 216 232 C 216 256 230 268 250 268 C 270 268 284 256 284 232 L 284 195 L 271 195 L 271 232 C 271 247 262 255 250 255 C 238 255 229 247 229 232 L 229 195 Z"
+          fill="url(#ucGoldGrad)" stroke="#8A5500" stroke-width="1.2" />
+
+    <!-- 'C' Letterform Interlocking -->
+    <path d="M 276 208 C 269 198 259 194 246 194 C 226 194 212 210 212 232 C 212 254 226 270 246 270 C 260 270 270 264 277 254 L 266 246 C 262 252 255 257 246 257 C 233 257 225 246 225 232 C 225 218 233 207 246 207 C 254 207 261 211 266 218 Z"
+          fill="url(#ucGoldGrad)" stroke="#8A5500" stroke-width="1.2" opacity="0.95" />
+  </g>
+
+  <!-- Top Ribbon / Accent Crown -->
+  <g filter="url(#dropShadow)">
+    <polygon points="250,118 256,132 271,132 259,141 263,155 250,146 237,155 241,141 229,132 244,132"
+             fill="url(#ucGoldGrad)" stroke="#FFA751" stroke-width="1" />
+  </g>
+</svg>
