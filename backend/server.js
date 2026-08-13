@@ -57,13 +57,23 @@ app.use(express.urlencoded({ extended: true, limit: '2mb' }));
 // 4. NoSQL / Mongo Operator Injection Sanitizer
 app.use(mongoSanitizeMiddleware);
 
+// Normalize CLIENT_URL if provided without protocol or with trailing slashes
+const normalizedClientUrl = (() => {
+    if (!process.env.CLIENT_URL) return null;
+    let url = process.env.CLIENT_URL.trim().replace(/\/+$/, '');
+    if (!url.startsWith('http://') && !url.startsWith('https://')) {
+        url = `https://${url}`;
+    }
+    return url;
+})();
+
 // Allowed Origins for CORS
 const allowedOrigins = [
     "http://localhost:5173",
     "http://127.0.0.1:5173",
     "http://localhost:3000",
     "https://uc-centralized.vercel.app",
-    process.env.CLIENT_URL
+    normalizedClientUrl
 ].filter(Boolean);
 
 const isAllowedOrigin = (origin) => {
