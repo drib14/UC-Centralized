@@ -558,7 +558,7 @@ const MessageBubble = ({
                 </div>
             )}
 
-            <div className={`d-flex flex-column ${isOwn ? 'align-items-end' : 'align-items-start'} chat-bubble-group`} style={{ maxWidth: '80%' }}>
+            <div className={`d-flex flex-column ${isOwn ? 'align-items-end' : 'align-items-start'} chat-bubble-group`} style={{ maxWidth: 'min(90%, 560px)' }}>
                 {/* Sender Name for group / received messages */}
                 {!isOwn && showHeader && (
                     <small className="text-muted ms-1 mb-1 fw-semibold" style={{ fontSize: '0.75rem' }}>{sender?.firstName}</small>

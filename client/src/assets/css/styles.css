@@ -136,9 +136,10 @@ main {
 
 /* Auth Container */
 .auth-container {
-    max-width: 440px;
-    margin: 2.5rem auto;
-    padding: 2.5rem 2rem;
+    width: 100%;
+    max-width: 480px;
+    margin: clamp(1rem, 4vw, 2.5rem) auto;
+    padding: clamp(1.25rem, 4vw, 2.5rem) clamp(1rem, 3.5vw, 2rem);
     background: #ffffff;
     border-radius: 1.25rem;
     box-shadow: 0 10px 30px -5px rgba(0, 43, 127, 0.1), 0 0 1px rgba(0, 0, 0, 0.1);
@@ -373,14 +374,23 @@ footer {
     width: 100%;
     margin-left: 255px;
     transition: margin-left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    padding: 28px 32px;
+    padding: clamp(14px, 2.5vw, 32px);
     background-color: var(--bs-body-bg);
     min-height: 100vh;
+    min-width: 0; /* Prevent flex blowout */
+}
+
+#page-content-wrapper > .container-fluid {
+    max-width: 1600px;
+    margin-left: auto;
+    margin-right: auto;
+    padding-left: 0;
+    padding-right: 0;
 }
 
 @media (max-width: 1200px) {
     #page-content-wrapper {
-        padding: 22px 24px;
+        padding: clamp(12px, 2vw, 24px);
     }
 }
 
@@ -392,12 +402,13 @@ footer {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 12px 24px;
+    padding: 12px 20px;
     background: #ffffff;
     border: 1px solid rgba(0, 43, 127, 0.08);
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
-    margin-bottom: 24px;
+    margin-bottom: 20px;
     border-radius: 0.875rem;
+    gap: 12px;
 }
 
 .sidebar .nav, .sidebar .sidebar-nav {
@@ -428,7 +439,7 @@ footer {
     }
     #page-content-wrapper {
         margin-left: 0 !important;
-        padding: 12px;
+        padding: 12px 10px;
     }
 
     #page-content-wrapper.chat-page-wrapper {
@@ -456,13 +467,19 @@ footer {
 
 /* Chat Layout Responsiveness */
 .chat-layout-container {
-    height: calc(100vh - 40px);
+    height: 100dvh;
+    max-height: 100dvh;
+    overflow: hidden;
 }
 
 .chat-sidebar-container {
     width: 100%;
-    max-width: 350px;
-    min-width: 300px;
+    max-width: 380px;
+    min-width: 280px;
+}
+
+.chat-bubble-group {
+    max-width: min(90%, 560px) !important;
 }
 
 @media (max-width: 768px) {
@@ -477,15 +494,41 @@ footer {
         min-width: 100%;
         border-right: none !important;
     }
-}
 
-@media (max-width: 768px) {
     .chat-layout-container .p-3 {
-        padding: 0.5rem !important;
+        padding: 0.75rem !important;
     }
+
+    .chat-bubble-group {
+        max-width: 92% !important;
+    }
+
+    .bubble-actions {
+        opacity: 0.65 !important;
+    }
+
+    .bubble-actions:active, .bubble-actions:focus-within {
+        opacity: 1 !important;
+    }
+
+    .floating-reaction-bar {
+        scale: 0.92;
+        transform-origin: bottom center;
+    }
+
     .dropdown-menu {
         max-width: 90vw;
         min-width: auto !important;
+    }
+}
+
+@media (max-width: 480px) {
+    .chat-bubble-group {
+        max-width: 96% !important;
+    }
+    .floating-reaction-bar {
+        scale: 0.85;
+        transform-origin: bottom right;
     }
 }
 
@@ -530,6 +573,7 @@ footer {
 .table-responsive {
     -webkit-overflow-scrolling: touch;
     border-radius: 0.75rem;
+    width: 100%;
 }
 
 .table-responsive::-webkit-scrollbar {
@@ -554,10 +598,10 @@ footer {
 /* Touch Friendly Mobile Targets */
 @media (max-width: 768px) {
     .btn {
-        min-height: 40px;
+        min-height: 42px;
     }
     .form-control, .form-select {
-        min-height: 42px;
+        min-height: 44px;
     }
     .card-body {
         padding: 1rem !important;
@@ -598,90 +642,81 @@ footer {
    ========================================================= */
 @media (max-width: 576px) {
     #page-content-wrapper {
-        padding: 12px 10px !important;
+        padding: 10px 8px !important;
     }
     
     .container-fluid {
-        padding-left: 6px !important;
-        padding-right: 6px !important;
+        padding-left: 2px !important;
+        padding-right: 2px !important;
     }
     
     .card {
         border-radius: 0.875rem !important;
-        margin-bottom: 1rem !important;
+        margin-bottom: 0.875rem !important;
     }
 
     .card.p-4, .card.p-3, .card-body.p-4, .card-body.p-3 {
-        padding: 1rem !important;
+        padding: 0.875rem !important;
     }
 
     .topbar {
         padding: 8px 12px !important;
-        margin-bottom: 14px !important;
+        margin-bottom: 12px !important;
         border-radius: 0.75rem !important;
+        flex-direction: column;
+        align-items: stretch;
     }
 
     /* Modal Responsive Sizing on Mobile */
     .modal-dialog {
         margin: 0.5rem auto !important;
-        max-width: calc(100vw - 16px) !important;
+        max-width: calc(100vw - 12px) !important;
     }
 
     .modal-content {
         border-radius: 1rem !important;
+        max-height: calc(100dvh - 20px) !important;
+        display: flex !important;
+        flex-direction: column !important;
     }
 
     .modal-header, .modal-footer {
         padding: 0.75rem 1rem !important;
+        flex-shrink: 0;
     }
 
     .modal-body {
-        padding: 1rem !important;
-    }
-
-    /* Responsive Typography on Phones */
-    h2, .h2 {
-        font-size: 1.35rem !important;
-    }
-
-    h3, .h3 {
-        font-size: 1.2rem !important;
-    }
-
-    h4, .h4 {
-        font-size: 1.1rem !important;
-    }
-
-    h5, .h5 {
-        font-size: 1rem !important;
+        padding: 0.875rem !important;
+        overflow-y: auto !important;
+        max-height: calc(85dvh - 120px) !important;
     }
 
     /* Calendar Grid on Cellphones */
     .calendar-day-cell {
-        min-height: 52px !important;
-        padding: 3px !important;
+        min-height: 48px !important;
+        padding: 2px !important;
     }
 
     .calendar-weekday-grid {
-        font-size: 0.7rem !important;
+        font-size: 0.68rem !important;
         padding: 4px 0 !important;
     }
 
     /* Responsive Tables */
     .table th, .table td {
-        padding: 0.65rem 0.5rem !important;
-        font-size: 0.825rem !important;
+        padding: 0.6rem 0.4rem !important;
+        font-size: 0.8rem !important;
     }
 }
 
 @media (max-width: 380px) {
     #page-content-wrapper {
-        padding: 8px 6px !important;
+        padding: 6px 4px !important;
     }
 
     .container-fluid {
-        padding-left: 2px !important;
-        padding-right: 2px !important;
+        padding-left: 0 !important;
+        padding-right: 0 !important;
     }
 
     .card.p-4, .card.p-3, .card-body.p-4, .card-body.p-3 {
@@ -690,7 +725,7 @@ footer {
 
     .btn {
         font-size: 0.8rem !important;
-        padding-left: 0.6rem !important;
-        padding-right: 0.6rem !important;
+        padding-left: 0.5rem !important;
+        padding-right: 0.5rem !important;
     }
 }

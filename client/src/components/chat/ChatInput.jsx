@@ -394,8 +394,8 @@ const ChatInput = ({ onSendMessage, onTyping, onStopTyping }) => {
                         </span>
                     </div>
 
-                    {/* Animated Sound Wave Equalizer */}
-                    <div className="d-flex align-items-center gap-1 mx-3 flex-grow-1 justify-content-center" style={{ height: '24px' }}>
+                    {/* Animated Sound Wave Equalizer (hidden on ultra-narrow screens to preserve button space) */}
+                    <div className="d-none d-sm-flex align-items-center gap-1 mx-2 flex-grow-1 justify-content-center" style={{ height: '24px' }}>
                         {waveformBars.map((h, i) => (
                             <div
                                 key={i}
@@ -411,34 +411,34 @@ const ChatInput = ({ onSendMessage, onTyping, onStopTyping }) => {
                     </div>
 
                     {/* Action Controls */}
-                    <div className="d-flex align-items-center gap-2 pe-1">
+                    <div className="d-flex align-items-center gap-1.5 pe-1">
                         {/* Cancel / Trash */}
                         <button
                             type="button"
                             className="btn btn-outline-danger btn-sm rounded-circle d-flex align-items-center justify-content-center hover-scale shadow-sm"
-                            style={{ width: '38px', height: '38px' }}
+                            style={{ width: '36px', height: '36px' }}
                             onClick={cancelRecording}
                             title="Discard recording"
                         >
-                            <FaTrash size={14} />
+                            <FaTrash size={13} />
                         </button>
 
                         {/* Stop & Review */}
                         <button
                             type="button"
                             className="btn btn-light btn-sm rounded-circle text-dark d-flex align-items-center justify-content-center hover-scale shadow-sm"
-                            style={{ width: '38px', height: '38px' }}
+                            style={{ width: '36px', height: '36px' }}
                             onClick={stopRecordingForPreview}
                             title="Stop & review"
                         >
-                            <FaStop size={14} className="text-secondary" />
+                            <FaStop size={13} className="text-secondary" />
                         </button>
 
                         {/* Send Immediately */}
                         <button
                             type="button"
                             className="btn btn-primary btn-sm rounded-circle d-flex align-items-center justify-content-center hover-scale shadow-sm"
-                            style={{ width: '38px', height: '38px' }}
+                            style={{ width: '36px', height: '36px' }}
                             onClick={() => sendVoiceMessage(null)}
                             title="Send voice note"
                         >
@@ -553,7 +553,8 @@ const ChatInput = ({ onSendMessage, onTyping, onStopTyping }) => {
                                     bottom: '100%',
                                     right: '0',
                                     marginBottom: '10px',
-                                    zIndex: 1080
+                                    zIndex: 1080,
+                                    maxWidth: 'calc(100vw - 20px)'
                                 }}
                             >
                                 <EmojiPicker
@@ -561,8 +562,8 @@ const ChatInput = ({ onSendMessage, onTyping, onStopTyping }) => {
                                     autoFocusSearch={false}
                                     searchPlaceholder="Search emoji..."
                                     previewConfig={{ showPreview: false }}
-                                    width={320}
-                                    height={380}
+                                    width={Math.min(typeof window !== 'undefined' ? window.innerWidth - 24 : 320, 320)}
+                                    height={360}
                                 />
                             </div>
                         )}

@@ -290,7 +290,7 @@ const AdminPOS = () => {
                                 </div>
                             </div>
                             <div className="col-md-6">
-                                <div className="d-flex gap-2 overflow-auto py-1">
+                                <div className="chip-scroll-container py-1">
                                     {['ALL', 'wearable', 'accessories', 'stationery', 'other'].map(cat => (
                                         <button
                                             key={cat}

@@ -44,11 +44,49 @@ body {
   background-color: var(--bg-main);
   color: var(--text-primary);
   line-height: 1.5;
+  overflow-x: hidden;
 }
 
-h1, h2, h3, h4, h5, h6, .fw-heading {
+/* =========================================================
+   FLUID TYPOGRAPHY SCALE (Ultra-wide to Small Screen)
+   ========================================================= */
+h1, .h1 {
   font-family: 'Outfit', 'Inter', sans-serif;
+  font-size: clamp(1.45rem, 2.2vw + 0.5rem, 2.25rem);
+  letter-spacing: -0.025em;
+  font-weight: 800;
+}
+
+h2, .h2 {
+  font-family: 'Outfit', 'Inter', sans-serif;
+  font-size: clamp(1.25rem, 1.8vw + 0.4rem, 1.85rem);
   letter-spacing: -0.02em;
+  font-weight: 700;
+}
+
+h3, .h3 {
+  font-family: 'Outfit', 'Inter', sans-serif;
+  font-size: clamp(1.1rem, 1.4vw + 0.3rem, 1.45rem);
+  letter-spacing: -0.015em;
+  font-weight: 700;
+}
+
+h4, .h4 {
+  font-family: 'Outfit', 'Inter', sans-serif;
+  font-size: clamp(1rem, 1.1vw + 0.2rem, 1.25rem);
+  font-weight: 600;
+}
+
+h5, .h5 {
+  font-family: 'Outfit', 'Inter', sans-serif;
+  font-size: clamp(0.925rem, 0.9vw + 0.2rem, 1.1rem);
+  font-weight: 600;
+}
+
+h6, .h6 {
+  font-family: 'Outfit', 'Inter', sans-serif;
+  font-size: clamp(0.85rem, 0.75vw + 0.2rem, 0.975rem);
+  font-weight: 600;
 }
 
 /* =========================================================
@@ -96,10 +134,64 @@ h1, h2, h3, h4, h5, h6, .fw-heading {
   display: flex;
   width: 100%;
   align-items: stretch;
+  min-height: 100vh;
 }
 
 code {
   font-family: 'JetBrains Mono', Consolas, Monaco, monospace;
+}
+
+/* =========================================================
+   RESPONSIVE CONTAINER & GRID UTILITIES (4K down to 320px)
+   ========================================================= */
+.app-container-max {
+  width: 100%;
+  max-width: 1600px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+/* Fluid Auto-Fit Grids */
+.responsive-grid-auto-sm {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr));
+  gap: 1rem;
+}
+
+.responsive-grid-auto-md {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 270px), 1fr));
+  gap: 1.25rem;
+}
+
+.responsive-grid-auto-lg {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr));
+  gap: 1.5rem;
+}
+
+/* Swipeable Chip & Tab Navigation Bar */
+.chip-scroll-container {
+  display: flex;
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  gap: 0.5rem;
+  padding-bottom: 4px;
+}
+
+.chip-scroll-container::-webkit-scrollbar {
+  display: none;
+}
+
+.no-scrollbar {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
 }
 
 /* =========================================================
@@ -131,7 +223,7 @@ code {
   border: 1px solid #e2e8f0;
   border-radius: 0.5rem;
   padding: 0.625rem 0.875rem;
-  font-size: 0.925rem;
+  font-size: clamp(0.875rem, 0.5vw + 0.75rem, 0.95rem);
   color: var(--text-primary);
   background-color: #ffffff;
   transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out, background-color 0.15s ease-in-out;
@@ -213,6 +305,13 @@ code {
   overflow: hidden;
 }
 
+.line-clamp-3 {
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
 /* =========================================================
    MESSENGER CHAT BUBBLES & QUICK REACTIONS
    ========================================================= */
@@ -258,6 +357,15 @@ code {
 }
 
 .hover-scale:hover {
-  transform: scale(1.15);
+  transform: scale(1.12);
 }
 
+/* Touch Friendly Mobile Targets (44px min touch target) */
+@media (max-width: 768px) {
+  .btn, .touch-target {
+    min-height: 44px;
+  }
+  .form-control, .form-select {
+    min-height: 44px;
+  }
+}

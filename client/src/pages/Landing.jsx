@@ -55,18 +55,18 @@ const Landing = () => {
                             <div className="d-inline-flex align-items-center gap-2 px-3 py-1 mb-4 rounded-pill bg-white bg-opacity-10 border border-white border-opacity-20 text-warning small fw-semibold backdrop-blur">
                                 <FaGraduationCap /> University of Cebu Official Digital Platform
                             </div>
-                            <h1 className="display-4 fw-bolder mb-4 text-white">
+                            <h1 className="fw-bolder mb-4 text-white font-outfit" style={{ fontSize: 'clamp(1.85rem, 4.5vw + 0.5rem, 3.5rem)', lineHeight: 1.15 }}>
                                 Your Campus Life, <span style={{ color: '#fbbf24' }}>Centralized.</span>
                             </h1>
-                            <p className="lead mb-5 text-white text-opacity-85 fs-5 mx-auto" style={{ maxWidth: '680px' }}>
+                            <p className="lead mb-4 mb-sm-5 text-white text-opacity-85 fs-5 mx-auto" style={{ maxWidth: '680px', fontSize: 'clamp(0.95rem, 1.2vw + 0.5rem, 1.25rem)' }}>
                                 Welcome to UC-Central, the unified platform for University of Cebu students and administrators.
                                 Stay ahead with university events, departmental merchandise, and official announcements.
                             </p>
-                            <div className="d-flex flex-wrap justify-content-center gap-3">
-                                <Link to="/register" className="btn btn-lg btn-warning text-dark fw-bold px-5 py-3 rounded-pill shadow-lg hover-lift">
+                            <div className="d-flex flex-column flex-sm-row justify-content-center gap-3">
+                                <Link to="/register" className="btn btn-lg btn-warning text-dark fw-bold px-4 px-sm-5 py-3 rounded-pill shadow-lg hover-lift">
                                     Get Started Free
                                 </Link>
-                                <Link to="/login" className="btn btn-lg btn-outline-light fw-bold px-5 py-3 rounded-pill hover-lift">
+                                <Link to="/login" className="btn btn-lg btn-outline-light fw-bold px-4 px-sm-5 py-3 rounded-pill hover-lift">
                                     Student & Faculty Login
                                 </Link>
                             </div>

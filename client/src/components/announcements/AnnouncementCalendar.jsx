@@ -182,11 +182,11 @@ const AnnouncementCalendar = ({ announcements = [], departments = [], onSelectAn
     return (
         <div className="announcement-calendar-container">
             {/* Type Filters & Legend */}
-            <div className="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
-                <div className="d-flex flex-wrap align-items-center gap-1">
+            <div className="d-flex align-items-center justify-content-between gap-2 mb-3">
+                <div className="chip-scroll-container py-1 w-100">
                     <button
                         type="button"
-                        className={`btn btn-sm rounded-pill px-3 fw-semibold ${selectedTypeFilter === 'ALL' ? 'btn-dark' : 'btn-outline-secondary'}`}
+                        className={`btn btn-sm rounded-pill px-3 fw-semibold text-nowrap flex-shrink-0 ${selectedTypeFilter === 'ALL' ? 'btn-dark' : 'btn-outline-secondary'}`}
                         onClick={() => setSelectedTypeFilter('ALL')}
                     >
                         All Categories ({announcements.length})
@@ -199,7 +199,7 @@ const AnnouncementCalendar = ({ announcements = [], departments = [], onSelectAn
                             <button
                                 key={typeKey}
                                 type="button"
-                                className={`btn btn-sm rounded-pill px-2.5 d-flex align-items-center gap-1.5 fw-semibold transition-all`}
+                                className={`btn btn-sm rounded-pill px-2.5 d-flex align-items-center gap-1.5 fw-semibold transition-all text-nowrap flex-shrink-0`}
                                 style={{
                                     backgroundColor: isActive ? meta.color : meta.bg,
                                     color: isActive ? '#ffffff' : meta.text,

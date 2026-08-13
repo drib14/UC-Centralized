@@ -36,10 +36,10 @@ const ChatLayout = ({
     onToggleReaction
 }) => {
     return (
-        <div className="container-fluid p-0" style={{ height: 'calc(100vh - 60px)', overflow: 'hidden' }}>
-            <div className="row g-0 h-100">
+        <div className="container-fluid p-0 chat-layout-container" style={{ height: '100dvh', maxHeight: '100dvh', overflow: 'hidden' }}>
+            <div className="row g-0 h-100 w-100">
                 {/* Sidebar Column */}
-                <div className={`${isMobile && selectedConversation ? 'd-none' : 'd-block'} col-12 col-md-4 col-lg-3 h-100 border-end`}>
+                <div className={`${isMobile && selectedConversation ? 'd-none' : 'd-block'} col-12 col-md-5 col-lg-4 col-xl-3 h-100 border-end overflow-hidden`}>
                     <ChatSidebar
                         conversations={conversations}
                         selectedConversation={selectedConversation}
@@ -59,7 +59,7 @@ const ChatLayout = ({
                 </div>
 
                 {/* Chat Window Column */}
-                <div className={`${isMobile && !selectedConversation ? 'd-none' : 'd-block'} col-12 col-md-8 col-lg-9 h-100`}>
+                <div className={`${isMobile && !selectedConversation ? 'd-none' : 'd-block'} col-12 col-md-7 col-lg-8 col-xl-9 h-100 overflow-hidden`}>
                     {selectedConversation ? (
                         <ChatWindow
                             conversation={selectedConversation}
