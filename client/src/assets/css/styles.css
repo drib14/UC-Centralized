@@ -611,7 +611,7 @@ footer {
         margin-bottom: 1rem !important;
     }
 
-    .card.p-4, .card.p-3.5, .card.p-3, .card-body.p-4, .card-body.p-3 {
+    .card.p-4, .card.p-3, .card-body.p-4, .card-body.p-3 {
         padding: 1rem !important;
     }
 
@@ -684,7 +684,7 @@ footer {
         padding-right: 2px !important;
     }
 
-    .card.p-4, .card.p-3.5, .card.p-3, .card-body.p-4, .card-body.p-3 {
+    .card.p-4, .card.p-3, .card-body.p-4, .card-body.p-3 {
         padding: 0.75rem !important;
     }
 

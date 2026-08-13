@@ -19,83 +19,76 @@ const SplashScreen = ({ onComplete }) => {
     useEffect(() => {
         isCancelledRef.current = false;
 
-        // Progress bar smooth advance
+        const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+        // Smooth progress advance
         const progressInterval = setInterval(() => {
             setProgress((prev) => {
                 if (prev >= 100) {
                     clearInterval(progressInterval);
                     return 100;
                 }
-                return prev + Math.random() * 8 + 3;
+                return Math.min(100, prev + 5);
             });
-        }, 120);
+        }, 80);
 
-        const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
-
-        // Get random human keystroke latency
-        const getKeystrokeDelay = (char) => {
-            if (char === ' ' || char === '•' || char === '-') return 140 + Math.random() * 80;
-            return 45 + Math.random() * 65; // ~45ms - 110ms human variance
-        };
-
-        const typeString = async (target, setText, speedFactor = 1) => {
-            for (let i = 0; i <= target.length; i++) {
+        // Fluid, rhythmic typing without stutter or lag
+        const typeStringSmooth = async (target, setText, charSpeed = 30) => {
+            for (let i = 1; i <= target.length; i++) {
                 if (isCancelledRef.current) return;
                 setText(target.slice(0, i));
-                const char = target[i - 1] || '';
-                const delay = getKeystrokeDelay(char) * speedFactor;
-                await sleep(delay);
+                await sleep(charSpeed);
             }
         };
 
-        const backspaceString = async (current, count, setText, speed = 35) => {
+        const backspaceSmooth = async (current, count, setText, charSpeed = 14) => {
             for (let i = 0; i < count; i++) {
                 if (isCancelledRef.current) return;
                 current = current.slice(0, -1);
                 setText(current);
-                await sleep(speed + Math.random() * 20);
+                await sleep(charSpeed);
             }
         };
 
         const runAnimationSequence = async () => {
-            await sleep(400); // Initial entrance pause
+            await sleep(250);
             if (isCancelledRef.current) return;
 
-            // Step 1: Type initial phrase
+            // Step 1: Smooth initial title
             setStatusText('Connecting to UC Network...');
             setIsTypingActive(true);
-            await typeString('University of Cebu', setMainText);
+            await typeStringSmooth('University of Cebu', setMainText, 28);
             setIsTypingActive(false);
 
-            await sleep(550); // Pause for comprehension
+            await sleep(320);
             if (isCancelledRef.current) return;
 
-            // Step 2: Realistic backspacing
+            // Step 2: Swift, smooth backspacing
             setIsTypingActive(true);
-            await backspaceString('University of Cebu', 18, setMainText);
+            await backspaceSmooth('University of Cebu', 18, setMainText, 14);
 
-            // Step 3: Type the final branded title
+            // Step 3: Smooth branded title
             setStatusText('Loading Centralized Core Services...');
-            await typeString('UC CENTRALIZED', setMainText);
+            await typeStringSmooth('UC CENTRALIZED', setMainText, 32);
             setIsTypingActive(false);
 
-            await sleep(250);
+            await sleep(180);
             if (isCancelledRef.current) return;
 
             // Step 4: Subtitle typewriter
             setIsTypingActive(true);
-            await typeString('Campus Portal • Web Services • Intelligence', setSubText, 0.7);
+            await typeStringSmooth('Campus Portal • Web Services • Intelligence', setSubText, 18);
             setIsTypingActive(false);
 
             setStatusText('Ready. Entering workspace...');
             setProgress(100);
 
-            await sleep(650);
+            await sleep(400);
             if (isCancelledRef.current) return;
 
-            // Step 5: Fade out
+            // Step 5: Seamless fade out
             setIsFadingOut(true);
-            await sleep(450);
+            await sleep(400);
             if (onComplete && !isCancelledRef.current) {
                 onComplete();
             }
@@ -113,7 +106,7 @@ const SplashScreen = ({ onComplete }) => {
         setIsFadingOut(true);
         setTimeout(() => {
             if (onComplete) onComplete();
-        }, 300);
+        }, 250);
     };
 
     return (

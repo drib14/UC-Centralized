@@ -112,7 +112,7 @@ const AdminDashboard = () => {
             <div className="row g-3 mb-4">
                 {/* Total Revenue */}
                 <div className="col-12 col-sm-6 col-xl-3">
-                    <div className="card border-0 shadow-sm rounded-4 p-3.5 bg-white h-100 position-relative overflow-hidden hover-lift">
+                    <div className="card border-0 shadow-sm rounded-4 p-3 bg-white h-100 position-relative overflow-hidden hover-lift">
                         <div className="d-flex justify-content-between align-items-start">
                             <div>
                                 <span className="text-muted small fw-bold text-uppercase">Total Sales</span>
@@ -128,7 +128,7 @@ const AdminDashboard = () => {
 
                 {/* Active Orders */}
                 <div className="col-12 col-sm-6 col-xl-3">
-                    <div className="card border-0 shadow-sm rounded-4 p-3.5 bg-white h-100 position-relative overflow-hidden hover-lift">
+                    <div className="card border-0 shadow-sm rounded-4 p-3 bg-white h-100 position-relative overflow-hidden hover-lift">
                         <div className="d-flex justify-content-between align-items-start">
                             <div>
                                 <span className="text-muted small fw-bold text-uppercase">Active Orders</span>
@@ -144,7 +144,7 @@ const AdminDashboard = () => {
 
                 {/* Registered Users */}
                 <div className="col-12 col-sm-6 col-xl-3">
-                    <div className="card border-0 shadow-sm rounded-4 p-3.5 bg-white h-100 position-relative overflow-hidden hover-lift">
+                    <div className="card border-0 shadow-sm rounded-4 p-3 bg-white h-100 position-relative overflow-hidden hover-lift">
                         <div className="d-flex justify-content-between align-items-start">
                             <div>
                                 <span className="text-muted small fw-bold text-uppercase">Total Users</span>
@@ -160,7 +160,7 @@ const AdminDashboard = () => {
 
                 {/* Campus Events */}
                 <div className="col-12 col-sm-6 col-xl-3">
-                    <div className="card border-0 shadow-sm rounded-4 p-3.5 bg-white h-100 position-relative overflow-hidden hover-lift">
+                    <div className="card border-0 shadow-sm rounded-4 p-3 bg-white h-100 position-relative overflow-hidden hover-lift">
                         <div className="d-flex justify-content-between align-items-start">
                             <div>
                                 <span className="text-muted small fw-bold text-uppercase">Campus Events</span>

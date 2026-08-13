@@ -56,7 +56,7 @@ function App() {
     useEffect(() => {
         const timer = setTimeout(() => {
             setShowSplash(false);
-        }, 7000);
+        }, 4500);
         return () => clearTimeout(timer);
     }, []);
 
@@ -103,8 +103,8 @@ function App() {
                                 <Route path="announcements" element={<AdminAnnouncements />} />
                                 <Route path="orders" element={<AdminOrders />} />
                                 <Route path="pos" element={<AdminPOS />} />
-                                <Route path="notifications" element={<Notifications />} />
-                                <Route path="profile" element={<StudentProfile />} />
+                                <Route path="notifications" element={<Navigate to="dashboard" replace />} />
+                                <Route path="profile" element={<Navigate to="dashboard" replace />} />
                             </Route>
 
                             {/* Catch all */}

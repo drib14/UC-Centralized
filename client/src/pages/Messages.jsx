@@ -272,6 +272,20 @@ const Messages = () => {
         };
     }, [socket, selectedConversation, fetchConversations, user._id]);
 
+    // Polling fallback when WebSocket is unavailable or disconnected
+    useEffect(() => {
+        const interval = setInterval(() => {
+            if (!socket || !socket.connected) {
+                if (selectedConversation && !selectedConversation.isTemp) {
+                    fetchMessages(selectedConversation._id);
+                }
+                fetchConversations();
+            }
+        }, 5000);
+
+        return () => clearInterval(interval);
+    }, [socket, selectedConversation, fetchConversations]);
+
 
     // --- HANDLERS (SEARCH & MISC) ---
 

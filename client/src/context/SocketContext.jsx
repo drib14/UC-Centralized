@@ -81,76 +81,122 @@ export const SocketProvider = ({ children }) => {
             const fetchCounts = async () => {
                 try {
                     const msgData = await API.getUnreadMessageCount();
-                    setUnreadMessageCount(msgData.count || 0);
+                    setUnreadMessageCount(msgData?.count || 0);
                 } catch (e) {
-                    console.error("Failed to fetch unread counts", e);
+                    // Ignore background count fetch error
+                }
+                try {
+                    const notifData = await API.getNotifications();
+                    if (notifData && typeof notifData.unreadCount === 'number') {
+                        setUnreadCount(notifData.unreadCount);
+                    }
+                } catch (e) {
+                    // Ignore background count fetch error
                 }
             };
             fetchCounts();
 
-            // Setup Socket
-            const socketUrl = import.meta.env.VITE_SOCKET_URL || (import.meta.env.PROD ? '/' : 'http://localhost:5000');
-            const newSocket = io(socketUrl, {
-                transports: ['websocket', 'polling'],
-                reconnection: true,
-                withCredentials: true
-            });
-
-            newSocket.on('connect', () => {
-                newSocket.emit('join_room', user._id);
-            });
-
-            newSocket.on('connect_error', (err) => {
-                console.error("Socket Connection Error:", err);
-            });
-
-            // Listen for user status changes
-            newSocket.on('user_status_change', (data) => {
-                setOnlineUsers(prev => {
-                    const currentSet = new Set(prev);
-                    if (data.isOnline) currentSet.add(data.userId);
-                    else currentSet.delete(data.userId);
-                    return Array.from(currentSet);
-                });
-            });
-
-            newSocket.on('new_notification', (data) => {
-                playNotificationSound();
-                setUnreadCount(prev => prev + 1);
-                setNotifications(prev => [data, ...prev]);
-                toast.info(data.content, { icon: "🔔" });
-
-                // Cross-device push notification if enabled
-                if (user?.notificationPreferences?.app !== false) {
-                    notifyDevice("UC-Central Campus Alert", data.content || "You have a new campus notification.");
+            // Resolve socket URL: explicit env var -> dev localhost -> null (serverless/production)
+            const getSocketUrl = () => {
+                const explicitUrl = import.meta.env.VITE_SOCKET_URL;
+                if (explicitUrl && explicitUrl.trim() !== '' && explicitUrl !== 'disabled') {
+                    return explicitUrl.trim();
                 }
-            });
-
-            newSocket.on('receive_message', (data) => {
-                // If the user is sender, don't increment unread count
-                if (data.sender._id === user._id) return;
-
-                const isChatOpen = window.location.pathname.includes('/messages');
-                if (!isChatOpen) {
-                    playMessageSound();
-                    toast.info(`New message from ${data.sender.firstName}`);
-                    setUnreadMessageCount(prev => prev + 1);
-
-                    // Native device notification when outside of chat
-                    if (user?.notificationPreferences?.app !== false) {
-                        notifyDevice(
-                            `Message from ${data.sender.firstName}`,
-                            data.type === 'text' ? data.content : `Sent an attachment (${data.type})`,
-                            `msg-${data.sender._id}`
-                        );
-                    }
-                } else {
-                    playMessageSound();
+                if (import.meta.env.DEV) {
+                    return 'http://localhost:5000';
                 }
-            });
+                return null;
+            };
 
-            setSocket(newSocket);
-            return () => newSocket.close();
+            const socketUrl = getSocketUrl();
+            let newSocket = null;
+
+            if (socketUrl) {
+                try {
+                    newSocket = io(socketUrl, {
+                        transports: ['websocket', 'polling'],
+                        reconnection: true,
+                        reconnectionAttempts: 5,
+                        reconnectionDelay: 2000,
+                        reconnectionDelayMax: 10000,
+                        timeout: 10000,
+                        withCredentials: true
+                    });
+
+                    newSocket.on('connect', () => {
+                        newSocket.emit('join_room', user._id);
+                    });
+
+                    newSocket.on('connect_error', (err) => {
+                        console.warn("Socket connection unavailable, fallback active:", err.message || err);
+                    });
+
+                    // Listen for user status changes
+                    newSocket.on('user_status_change', (data) => {
+                        setOnlineUsers(prev => {
+                            const currentSet = new Set(prev);
+                            if (data.isOnline) currentSet.add(data.userId);
+                            else currentSet.delete(data.userId);
+                            return Array.from(currentSet);
+                        });
+                    });
+
+                    newSocket.on('new_notification', (data) => {
+                        playNotificationSound();
+                        setUnreadCount(prev => prev + 1);
+                        setNotifications(prev => [data, ...prev]);
+                        toast.info(data.content, { icon: "🔔" });
+
+                        // Cross-device push notification if enabled
+                        if (user?.notificationPreferences?.app !== false) {
+                            notifyDevice("UC-Central Campus Alert", data.content || "You have a new campus notification.");
+                        }
+                    });
+
+                    newSocket.on('receive_message', (data) => {
+                        // If the user is sender, don't increment unread count
+                        if (data.sender._id === user._id) return;
+
+                        const isChatOpen = window.location.pathname.includes('/messages');
+                        if (!isChatOpen) {
+                            playMessageSound();
+                            toast.info(`New message from ${data.sender.firstName}`);
+                            setUnreadMessageCount(prev => prev + 1);
+
+                            // Native device notification when outside of chat
+                            if (user?.notificationPreferences?.app !== false) {
+                                notifyDevice(
+                                    `Message from ${data.sender.firstName}`,
+                                    data.type === 'text' ? data.content : `Sent an attachment (${data.type})`,
+                                    `msg-${data.sender._id}`
+                                );
+                            }
+                        } else {
+                            playMessageSound();
+                        }
+                    });
+
+                    setSocket(newSocket);
+                } catch (socketErr) {
+                    console.warn("Failed to initialize Socket.IO client:", socketErr);
+                }
+            } else {
+                setSocket(null);
+            }
+
+            // Fallback polling for unread counts when socket is null or disconnected
+            const pollInterval = setInterval(() => {
+                if (!newSocket || !newSocket.connected) {
+                    fetchCounts();
+                }
+            }, 15000);
+
+            return () => {
+                clearInterval(pollInterval);
+                if (newSocket) {
+                    newSocket.close();
+                }
+            };
         } else {
             if (socket) {
                 socket.close();

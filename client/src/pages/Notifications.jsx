@@ -36,6 +36,17 @@ const Notifications = () => {
         };
     }, [socket]);
 
+    // Polling fallback when WebSocket is unavailable or disconnected
+    useEffect(() => {
+        const interval = setInterval(() => {
+            if (!socket || !socket.connected) {
+                loadNotifications();
+            }
+        }, 10000);
+
+        return () => clearInterval(interval);
+    }, [socket]);
+
     const loadNotifications = async () => {
         try {
             const { notifications: data, unreadCount } = await API.getNotifications();
