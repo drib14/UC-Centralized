@@ -12,6 +12,41 @@ function escapeRegex(text) {
     return text.replace(/[-[\]{}()*+?.,\\^$|#\s]/g, '\\$&');
 }
 
+// Helper to determine specific file type
+function detectFileType(mimetype = '', originalname = '') {
+    const mime = (mimetype || '').toLowerCase();
+    const ext = ((originalname || '').split('.').pop() || '').toLowerCase();
+
+    if (mime.startsWith('image/') || ['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg', 'bmp', 'ico', 'heic', 'tiff'].includes(ext)) {
+        return 'image';
+    }
+    if (mime.startsWith('video/') || ['mp4', 'webm', 'mov', 'avi', 'mkv', 'flv', 'wmv', 'm4v', '3gp', 'ogv'].includes(ext)) {
+        return 'video';
+    }
+    if (mime.startsWith('audio/') || ['mp3', 'wav', 'ogg', 'm4a', 'aac', 'flac', 'wma', 'opus', 'mid'].includes(ext)) {
+        return 'audio';
+    }
+    if (mime === 'application/pdf' || ext === 'pdf') {
+        return 'pdf';
+    }
+    if (['doc', 'docx', 'rtf', 'odt', 'pages'].includes(ext)) {
+        return 'document';
+    }
+    if (['xls', 'xlsx', 'csv', 'tsv', 'ods', 'numbers'].includes(ext)) {
+        return 'spreadsheet';
+    }
+    if (['ppt', 'pptx', 'odp', 'key'].includes(ext)) {
+        return 'presentation';
+    }
+    if (['zip', 'rar', '7z', 'tar', 'gz', 'bz2', 'xz', 'iso'].includes(ext)) {
+        return 'archive';
+    }
+    if (['js', 'jsx', 'ts', 'tsx', 'html', 'css', 'scss', 'json', 'py', 'java', 'c', 'cpp', 'cs', 'php', 'rb', 'go', 'rs', 'swift', 'kt', 'sql', 'sh', 'xml', 'yaml', 'yml', 'md', 'txt'].includes(ext)) {
+        return 'code';
+    }
+    return 'file';
+}
+
 // --- STATIC & SPECIFIC ROUTES (Must come before dynamic /:id) ---
 
 // UNREAD COUNT
@@ -82,12 +117,23 @@ router.get('/conversations/:conversationId', verifyToken, async (req, res) => {
         const messages = await Message.find({
             conversationId: req.params.conversationId,
             deletedFor: { $ne: req.user.id }
-        }).populate('sender', 'firstName lastName profileImage name role');
+        })
+        .populate('sender', 'firstName lastName profileImage name role')
+        .populate('reactions.user', 'firstName lastName profileImage name role');
 
         const mappedMessages = messages.map(m => {
             const msgObj = m.toObject();
-            if(msgObj.sender) {
+            if (msgObj.sender) {
                 msgObj.sender.profilePicture = msgObj.sender.profileImage || msgObj.sender.profilePicture;
+            }
+            if (msgObj.reactions) {
+                msgObj.reactions = msgObj.reactions.map(r => ({
+                    ...r,
+                    user: r.user ? {
+                        ...r.user,
+                        profilePicture: r.user.profileImage || r.user.profilePicture
+                    } : r.user
+                }));
             }
             return msgObj;
         });
@@ -257,7 +303,8 @@ router.post('/', verifyToken, parser.single('file'), async (req, res) => {
             return res.status(403).json({ message: "Administrators manage the application and cannot participate in direct messaging." });
         }
 
-        const { recipientId, content, conversationId, type } = req.body;
+        const { recipientId, content, conversationId } = req.body;
+        let requestedType = req.body.type;
         const senderId = req.user.id;
         let chatId = conversationId;
 
@@ -287,27 +334,34 @@ router.post('/', verifyToken, parser.single('file'), async (req, res) => {
 
         if (!chatId) return res.status(400).json({ message: "Recipient or Conversation ID required" });
 
+        let detectedType = requestedType || 'text';
+        let fileUrl = req.body.fileUrl || "";
+        let fileName = req.body.fileName || "";
+        let fileSize = Number(req.body.fileSize) || 0;
+        let fileType = req.body.fileType || "";
+
+        if (req.file) {
+            fileUrl = req.file.path || req.file.secure_url || "";
+            fileName = req.file.originalname || "";
+            fileSize = req.file.size || 0;
+            fileType = req.file.mimetype || "";
+            detectedType = detectFileType(req.file.mimetype, req.file.originalname);
+        } else if (fileUrl && (!requestedType || requestedType === 'text')) {
+            detectedType = detectFileType('', fileName || fileUrl);
+        }
+
         let messageData = {
             conversationId: chatId,
             sender: senderId,
             content: content || "",
-            type: type || 'text',
-            fileUrl: req.body.fileUrl || "",
-            fileName: req.body.fileName || "",
+            type: detectedType,
+            fileUrl: fileUrl,
+            fileName: fileName,
+            fileSize: fileSize,
+            fileType: fileType,
+            reactions: [],
             readBy: [senderId]
         };
-
-        if (req.file) {
-            messageData.fileUrl = req.file.path;
-            messageData.fileName = req.file.originalname;
-
-            if (!messageData.type || messageData.type === 'text') {
-                if (req.file.mimetype.startsWith('image')) messageData.type = 'image';
-                else if (req.file.mimetype.startsWith('video')) messageData.type = 'video';
-                else if (req.file.mimetype.startsWith('audio')) messageData.type = 'audio';
-                else messageData.type = 'file';
-            }
-        }
 
         const newMessage = new Message(messageData);
         const savedMessage = await newMessage.save();
@@ -319,27 +373,111 @@ router.post('/', verifyToken, parser.single('file'), async (req, res) => {
 
         const io = req.app.get('io');
         await savedMessage.populate('sender', 'firstName lastName profileImage name role');
+        await savedMessage.populate('reactions.user', 'firstName lastName profileImage name role');
 
         const responseMessage = savedMessage.toObject();
-        if(responseMessage.sender) {
+        if (responseMessage.sender) {
              responseMessage.sender.profilePicture = responseMessage.sender.profileImage || responseMessage.sender.profilePicture;
         }
 
         const conversation = await Conversation.findById(chatId);
-        conversation.participants.forEach(participantId => {
-            const pId = participantId.toString();
-            io.to(pId).emit("receive_message", responseMessage);
-            io.to(pId).emit("conversation_updated", {
-                conversationId: chatId,
-                lastMessage: responseMessage
+        if (conversation && conversation.participants) {
+            conversation.participants.forEach(participantId => {
+                const pId = participantId.toString();
+                if (io) {
+                    io.to(pId).emit("receive_message", responseMessage);
+                    io.to(pId).emit("conversation_updated", {
+                        conversationId: chatId,
+                        lastMessage: responseMessage
+                    });
+                }
             });
-        });
+        }
 
         res.status(200).json(responseMessage);
 
     } catch (err) {
         console.error("Send message error:", err);
-        res.status(500).json(err);
+        res.status(500).json({ message: err.message || "Failed to send message" });
+    }
+});
+
+// TOGGLE REACTION (PUT /:id/react)
+router.put('/:id/react', verifyToken, async (req, res) => {
+    try {
+        if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+            return res.status(400).json({ message: "Invalid message ID" });
+        }
+
+        const { emoji } = req.body;
+        if (!emoji || typeof emoji !== 'string') {
+            return res.status(400).json({ message: "Emoji is required" });
+        }
+
+        const message = await Message.findById(req.params.id);
+        if (!message) return res.status(404).json({ message: "Message not found" });
+
+        const userIdStr = req.user.id.toString();
+        const existingIndex = (message.reactions || []).findIndex(
+            r => r.user && r.user.toString() === userIdStr
+        );
+
+        if (existingIndex > -1) {
+            if (message.reactions[existingIndex].emoji === emoji) {
+                // Same emoji clicked -> remove reaction (toggle off)
+                message.reactions.splice(existingIndex, 1);
+            } else {
+                // Different emoji clicked -> change reaction
+                message.reactions[existingIndex].emoji = emoji;
+                message.reactions[existingIndex].createdAt = new Date();
+            }
+        } else {
+            // New reaction
+            message.reactions.push({
+                user: req.user.id,
+                emoji: emoji,
+                createdAt: new Date()
+            });
+        }
+
+        await message.save();
+
+        const updatedMessage = await Message.findById(req.params.id)
+            .populate('sender', 'firstName lastName profileImage name role')
+            .populate('reactions.user', 'firstName lastName profileImage name role');
+
+        const mappedMessage = updatedMessage.toObject();
+        if (mappedMessage.sender) {
+            mappedMessage.sender.profilePicture = mappedMessage.sender.profileImage || mappedMessage.sender.profilePicture;
+        }
+        if (mappedMessage.reactions) {
+            mappedMessage.reactions = mappedMessage.reactions.map(r => ({
+                ...r,
+                user: r.user ? {
+                    ...r.user,
+                    profilePicture: r.user.profileImage || r.user.profilePicture
+                } : r.user
+            }));
+        }
+
+        const conversation = await Conversation.findById(message.conversationId);
+        const io = req.app.get('io');
+        if (io && conversation) {
+            conversation.participants.forEach(participantId => {
+                const pId = participantId.toString();
+                io.to(pId).emit("message_reaction_updated", {
+                    messageId: req.params.id,
+                    conversationId: message.conversationId,
+                    reactions: mappedMessage.reactions
+                });
+                io.to(pId).emit("message_updated", mappedMessage);
+            });
+        }
+
+        res.status(200).json(mappedMessage);
+    } catch (err) {
+        console.error("Toggle reaction error:", err);
+        res.status(500).json({ message: "Failed to update reaction" });
     }
 });
 
@@ -358,17 +496,24 @@ router.put('/:id', verifyToken, async (req, res) => {
             req.params.id,
             { $set: { content: req.body.content } },
             { new: true }
-        ).populate('sender', 'firstName lastName profileImage name role');
+        )
+        .populate('sender', 'firstName lastName profileImage name role')
+        .populate('reactions.user', 'firstName lastName profileImage name role');
+
+        const mappedMessage = updatedMessage.toObject();
+        if (mappedMessage.sender) {
+            mappedMessage.sender.profilePicture = mappedMessage.sender.profileImage || mappedMessage.sender.profilePicture;
+        }
 
         const conversation = await Conversation.findById(message.conversationId);
         const io = req.app.get('io');
         if (io && conversation) {
             conversation.participants.forEach(participantId => {
-                io.to(participantId.toString()).emit("message_updated", updatedMessage);
+                io.to(participantId.toString()).emit("message_updated", mappedMessage);
             });
         }
 
-        res.status(200).json(updatedMessage);
+        res.status(200).json(mappedMessage);
     } catch (err) {
         console.error("Edit message error:", err);
         res.status(500).json({ message: "Failed to edit message" });

@@ -148,6 +148,51 @@ const Messages = () => {
         }
     };
 
+    const handleToggleReaction = async (messageId, emoji) => {
+        // Optimistic UI update
+        setMessages(prev => prev.map(m => {
+            if (m._id !== messageId) return m;
+            let reactions = [...(m.reactions || [])];
+            const userIdStr = user._id.toString();
+            const existingIdx = reactions.findIndex(r => {
+                const rUid = r.user?._id || r.user;
+                return rUid && rUid.toString() === userIdStr;
+            });
+
+            if (existingIdx > -1) {
+                if (reactions[existingIdx].emoji === emoji) {
+                    reactions.splice(existingIdx, 1);
+                } else {
+                    reactions[existingIdx] = {
+                        ...reactions[existingIdx],
+                        emoji: emoji,
+                        createdAt: new Date()
+                    };
+                }
+            } else {
+                reactions.push({
+                    user: user,
+                    emoji: emoji,
+                    createdAt: new Date()
+                });
+            }
+            return { ...m, reactions };
+        }));
+
+        try {
+            const updated = await api.toggleReaction(messageId, emoji);
+            if (updated) {
+                setMessages(prev => prev.map(m => m._id === messageId ? updated : m));
+            }
+        } catch (err) {
+            console.error("Toggle reaction error:", err);
+            toast.error("Failed to react to message");
+            if (selectedConversation && !selectedConversation.isTemp) {
+                fetchMessages(selectedConversation._id);
+            }
+        }
+    };
+
     // --- SOCKET EVENTS ---
     useEffect(() => {
         if (!socket) return;
@@ -243,6 +288,17 @@ const Messages = () => {
             fetchConversations();
         };
 
+        const handleMessageReactionUpdated = (data) => {
+            if (selectedConversation && selectedConversation._id === data.conversationId) {
+                setMessages(prev => prev.map(m => {
+                    if (m._id === data.messageId) {
+                        return { ...m, reactions: data.reactions };
+                    }
+                    return m;
+                }));
+            }
+        };
+
         socket.on("receive_message", handleReceiveMessage);
         socket.on("conversation_updated", handleConversationUpdated);
         socket.on("conversation_deleted", (convId) => {
@@ -258,6 +314,7 @@ const Messages = () => {
         socket.on("user_status_change", handleUserStatusChange);
         socket.on('message_updated', handleMessageUpdated);
         socket.on('message_deleted', handleMessageDeleted);
+        socket.on('message_reaction_updated', handleMessageReactionUpdated);
 
         return () => {
             socket.off("receive_message", handleReceiveMessage);
@@ -269,6 +326,7 @@ const Messages = () => {
             socket.off("user_status_change", handleUserStatusChange);
             socket.off('message_updated', handleMessageUpdated);
             socket.off('message_deleted', handleMessageDeleted);
+            socket.off('message_reaction_updated', handleMessageReactionUpdated);
         };
     }, [socket, selectedConversation, fetchConversations, user._id]);
 
@@ -503,6 +561,7 @@ const Messages = () => {
                 onEditMessage={handleEditMessage}
                 onRequestDelete={handleRequestDelete}
                 onRequestForward={handleRequestForward}
+                onToggleReaction={handleToggleReaction}
             />
             <ImageModal show={!!viewImage} onClose={() => setViewImage(null)} imageUrl={viewImage} />
             <VideoModal show={!!viewVideo} onClose={() => setViewVideo(null)} videoUrl={viewVideo} />

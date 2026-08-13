@@ -32,7 +32,8 @@ const ChatLayout = ({
     onViewVideo,
     onEditMessage,
     onRequestDelete,
-    onRequestForward
+    onRequestForward,
+    onToggleReaction
 }) => {
     return (
         <div className="container-fluid p-0" style={{ height: 'calc(100vh - 60px)', overflow: 'hidden' }}>
@@ -77,6 +78,7 @@ const ChatLayout = ({
                             onEditMessage={onEditMessage}
                             onDeleteMessage={onRequestDelete}
                             onRequestForward={onRequestForward}
+                            onToggleReaction={onToggleReaction}
                         />
                     ) : (
                         <div className="d-flex flex-column align-items-center justify-content-center h-100 bg-light text-muted p-4 text-center">

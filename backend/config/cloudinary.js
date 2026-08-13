@@ -1,6 +1,7 @@
 const cloudinary = require('cloudinary').v2;
 const { CloudinaryStorage } = require('multer-storage-cloudinary');
 const multer = require('multer');
+const path = require('path');
 const dotenv = require('dotenv');
 
 dotenv.config();
@@ -14,49 +15,43 @@ cloudinary.config({
 const storage = new CloudinaryStorage({
     cloudinary: cloudinary,
     params: async (req, file) => {
-        let resource_type = 'image';
-        if (file.mimetype.startsWith('audio') || file.mimetype.startsWith('video')) {
+        let resource_type = 'raw';
+        const mime = (file.mimetype || '').toLowerCase();
+        
+        if (mime.startsWith('image/')) {
+            resource_type = 'image';
+        } else if (mime.startsWith('video/') || mime.startsWith('audio/')) {
             resource_type = 'video';
-        } else if (file.mimetype.startsWith('application') || file.mimetype === 'application/pdf') {
+        } else {
             resource_type = 'raw';
         }
 
-        // Clean filename to prevent path traversal or invalid characters
-        const safeOriginalName = (file.originalname || 'upload')
+        const ext = path.extname(file.originalname || '').toLowerCase();
+        const baseName = path.basename(file.originalname || 'file', ext)
             .replace(/[^a-zA-Z0-9_-]/g, '_')
-            .substring(0, 50);
+            .substring(0, 40);
+
+        // For raw files (documents, zips, code, etc.), include the extension in public_id so Cloudinary preserves the file type when accessed/downloaded
+        const publicId = resource_type === 'raw' 
+            ? `${Date.now()}-${baseName}${ext}`
+            : `${Date.now()}-${baseName}`;
 
         return {
             folder: 'uc-central',
             resource_type: resource_type,
-            public_id: `${Date.now()}-${safeOriginalName}`
+            public_id: publicId
         };
     }
 });
 
-const allowedMimeTypes = [
-    'image/jpeg',
-    'image/png',
-    'image/webp',
-    'image/gif',
-    'video/mp4',
-    'video/webm',
-    'audio/mpeg',
-    'audio/wav',
-    'application/pdf'
-];
-
 const parser = multer({
     storage: storage,
     limits: {
-        fileSize: 10 * 1024 * 1024 // 10 MB maximum file size limit
+        fileSize: 50 * 1024 * 1024 // 50 MB maximum file size limit
     },
     fileFilter: (req, file, cb) => {
-        if (allowedMimeTypes.includes(file.mimetype)) {
-            cb(null, true);
-        } else {
-            cb(new Error(`Unsupported file type: ${file.mimetype}. Allowed types: JPEG, PNG, WEBP, GIF, MP4, WEBM, MP3, WAV, PDF`));
-        }
+        // Accept all file types
+        cb(null, true);
     }
 });
 

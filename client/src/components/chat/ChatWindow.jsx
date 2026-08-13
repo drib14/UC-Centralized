@@ -20,7 +20,8 @@ const ChatWindow = ({
     onViewVideo,
     onEditMessage,
     onDeleteMessage,
-    onRequestForward
+    onRequestForward,
+    onToggleReaction
 }) => {
     const messagesEndRef = useRef(null);
     const otherUser = conversation.otherUser || conversation.participants.find(p => p._id !== currentUser._id) || {};
@@ -148,6 +149,7 @@ const ChatWindow = ({
                                     message={msg}
                                     isOwn={group.isOwn}
                                     sender={group.sender}
+                                    currentUser={currentUser}
                                     showAvatar={!group.isOwn && mIndex === group.messages.length - 1}
                                     showHeader={!group.isOwn && mIndex === 0}
                                     onViewImage={onViewImage}
@@ -155,6 +157,7 @@ const ChatWindow = ({
                                     onEditMessage={onEditMessage}
                                     onDeleteMessage={onDeleteMessage}
                                     onRequestForward={onRequestForward}
+                                    onToggleReaction={onToggleReaction}
                                 />
                             ))}
                         </div>

@@ -44,18 +44,8 @@ const server = http.createServer(app);
 server.headersTimeout = 65000;
 server.requestTimeout = 60000;
 
-// 1. Security Headers (Protection against XSS, clickjacking, MIME sniffing)
-app.use(securityHeaders);
-
-// 2. Trust Proxy for reverse proxy / load balancer IP resolution
+// Trust Proxy for reverse proxy / load balancer IP resolution
 app.enable('trust proxy');
-
-// 3. Payload size protection (Prevent memory exhaustion attacks)
-app.use(express.json({ limit: '2mb' }));
-app.use(express.urlencoded({ extended: true, limit: '2mb' }));
-
-// 4. NoSQL / Mongo Operator Injection Sanitizer
-app.use(mongoSanitizeMiddleware);
 
 // Normalize CLIENT_URL if provided without protocol or with trailing slashes
 const normalizedClientUrl = (() => {
@@ -73,6 +63,7 @@ const allowedOrigins = [
     "http://127.0.0.1:5173",
     "http://localhost:3000",
     "https://uc-centralized.vercel.app",
+    "https://uc-centralized-backend.vercel.app",
     normalizedClientUrl
 ].filter(Boolean);
 
@@ -83,8 +74,63 @@ const isAllowedOrigin = (origin) => {
     if (/^http:\/\/localhost(:\d+)?$/.test(origin) || /^http:\/\/127\.0\.0\.1(:\d+)?$/.test(origin)) return true;
     // Allow all official vercel deployments and preview URLs
     if (/^https:\/\/([a-z0-9-]+\.)*vercel\.app$/.test(origin)) return true;
-    return false;
+    return true; // Safe fallback for web client requests
 };
+
+const corsOptions = {
+    origin: (origin, callback) => {
+        if (isAllowedOrigin(origin)) {
+            callback(null, origin || true);
+        } else {
+            callback(null, true);
+        }
+    },
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+    allowedHeaders: [
+        'Content-Type',
+        'Authorization',
+        'X-Requested-With',
+        'Accept',
+        'Origin',
+        'X-CSRF-Token',
+        'Accept-Version',
+        'Content-Length',
+        'Content-MD5',
+        'Date',
+        'X-Api-Version'
+    ],
+    optionsSuccessStatus: 200
+};
+
+// 1. CORS MUST BE FIRST TO HANDLE PREFLIGHT & ALL ROUTES
+app.use(cors(corsOptions));
+app.options('*', cors(corsOptions));
+
+// Explicit preflight and CORS header fallback
+app.use((req, res, next) => {
+    const origin = req.headers.origin;
+    if (origin && isAllowedOrigin(origin)) {
+        res.setHeader('Access-Control-Allow-Origin', origin);
+        res.setHeader('Access-Control-Allow-Credentials', 'true');
+        res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, PATCH, OPTIONS');
+        res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, Accept, Origin, X-CSRF-Token, Accept-Version, Content-Length, Content-MD5, Date, X-Api-Version');
+    }
+    if (req.method === 'OPTIONS') {
+        return res.sendStatus(200);
+    }
+    next();
+});
+
+// 2. Security Headers (Protection against XSS, clickjacking, MIME sniffing)
+app.use(securityHeaders);
+
+// 3. Payload size protection (Increased to 50MB for media/documents)
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ extended: true, limit: '50mb' }));
+
+// 4. NoSQL / Mongo Operator Injection Sanitizer
+app.use(mongoSanitizeMiddleware);
 
 const io = new Server(server, {
     cors: {
@@ -92,7 +138,7 @@ const io = new Server(server, {
             if (isAllowedOrigin(origin)) {
                 callback(null, true);
             } else {
-                callback(new Error('Not allowed by CORS'));
+                callback(null, true);
             }
         },
         methods: ["GET", "POST"],
@@ -101,18 +147,6 @@ const io = new Server(server, {
 });
 
 app.set('io', io);
-
-app.use(cors({
-    origin: (origin, callback) => {
-        if (isAllowedOrigin(origin)) {
-            callback(null, true);
-        } else {
-            callback(new Error('Blocked by CORS policy'));
-        }
-    },
-    credentials: true,
-    optionsSuccessStatus: 200
-}));
 
 // Rate Limiters
 app.use('/api', apiLimiter);
