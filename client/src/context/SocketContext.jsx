@@ -98,13 +98,26 @@ export const SocketProvider = ({ children }) => {
 
             // Resolve socket URL: explicit env var -> dev localhost -> null (serverless/production)
             const getSocketUrl = () => {
-                const explicitUrl = import.meta.env.VITE_SOCKET_URL;
-                if (explicitUrl && explicitUrl.trim() !== '' && explicitUrl !== 'disabled') {
-                    return explicitUrl.trim();
+                const isLocalhost = typeof window !== 'undefined' && 
+                    (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
+
+                const explicitUrl = (import.meta.env.VITE_SOCKET_URL || '').trim();
+
+                // 1. If explicit URL is provided and not disabled
+                if (explicitUrl && explicitUrl !== 'disabled') {
+                    // If deployed in production (not on localhost) and explicitUrl points to localhost, ignore it to prevent browser connection errors
+                    if (!isLocalhost && (explicitUrl.includes('localhost') || explicitUrl.includes('127.0.0.1'))) {
+                        return null;
+                    }
+                    return explicitUrl;
                 }
-                if (import.meta.env.DEV) {
+
+                // 2. Only use localhost fallback when actually running in a local dev environment
+                if (isLocalhost) {
                     return 'http://localhost:5000';
                 }
+
+                // 3. In production on cloud/serverless without dedicated socket server, disable socket to rely on HTTP polling
                 return null;
             };
 
