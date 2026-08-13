@@ -77,10 +77,16 @@ router.post('/login', async (req, res) => {
             ]
         });
 
-        if (!user) return res.status(404).json({ message: "User not found" });
+        if (!user) {
+            // Dummy compare prevents timing attacks for user enumeration
+            await bcrypt.compare(String(password), '$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy');
+            return res.status(401).json({ message: "Invalid student ID / email or password." });
+        }
 
         const validPassword = await bcrypt.compare(String(password), user.password);
-        if (!validPassword) return res.status(400).json({ message: "Wrong password" });
+        if (!validPassword) {
+            return res.status(401).json({ message: "Invalid student ID / email or password." });
+        }
 
         const accessToken = jwt.sign(
             { id: user._id, role: user.role },
@@ -279,11 +285,22 @@ router.post('/verify-code', async (req, res) => {
         }
 
         const stringCode = String(code).trim();
-        if (user.resetCode !== stringCode) {
+        let isCodeValid = false;
+        try {
+            const bufStored = Buffer.from(String(user.resetCode));
+            const bufInput = Buffer.from(stringCode);
+            if (bufStored.length === bufInput.length && crypto.timingSafeEqual(bufStored, bufInput)) {
+                isCodeValid = true;
+            }
+        } catch (e) {
+            isCodeValid = false;
+        }
+
+        if (!isCodeValid) {
             const update = { $inc: { resetAttempts: 1 } };
-            if (user.resetAttempts + 1 >= 10) {
+            if ((user.resetAttempts || 0) + 1 >= 5) {
                 update.$set = {
-                    resetLockoutUntil: new Date(new Date().getTime() + 60 * 60 * 1000), // 1 hour lockout
+                    resetLockoutUntil: new Date(new Date().getTime() + 60 * 60 * 1000), // 1 hour lockout after 5 attempts
                     resetCode: undefined,
                     resetCodeExpires: undefined
                 };
