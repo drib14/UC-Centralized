@@ -96,23 +96,29 @@ const notifyAllStudents = async (type, content, relatedId, link, req) => {
             }
         }
 
-        // Send Email with Dynamic CTA to all students
-        students.forEach(user => {
-            if (user.email && user.notificationPreferences?.email !== false) {
-                const emailHtml = getNotificationEmail(
-                    user.firstName,
-                    type.charAt(0).toUpperCase() + type.slice(1),
-                    content,
-                    link || '/student/dashboard',
-                    req
-                );
-                sendEmail({
-                    email: user.email,
-                    subject: `UC-Central: ${type.charAt(0).toUpperCase() + type.slice(1)} Notice`,
-                    html: emailHtml
-                }).catch(e => console.error("Email delivery failed for", user.email, e.message));
-            }
-        });
+        // Send Email with Dynamic CTA to all students (awaited with Promise.allSettled for serverless reliability)
+        const emailPromises = students
+            .filter(user => user.email && user.notificationPreferences?.email !== false)
+            .map(async (user) => {
+                try {
+                    const emailHtml = getNotificationEmail(
+                        user.firstName,
+                        type.charAt(0).toUpperCase() + type.slice(1),
+                        content,
+                        link || '/student/dashboard',
+                        req
+                    );
+                    await sendEmail({
+                        email: user.email,
+                        subject: `UC-Central: ${type.charAt(0).toUpperCase() + type.slice(1)} Notice`,
+                        html: emailHtml
+                    });
+                } catch (e) {
+                    console.error("Email delivery failed for", user.email, e.message);
+                }
+            });
+
+        await Promise.allSettled(emailPromises);
 
     } catch (err) {
         console.error("Notify All Students Error:", err);
