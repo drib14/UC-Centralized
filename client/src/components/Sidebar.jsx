@@ -69,27 +69,6 @@ const Sidebar = () => {
 
     return (
         <>
-            {/* Mobile Floating Toggle Button (visible when mobile drawer is closed) */}
-            {isMobile && !mobileActive && (
-                <button
-                    type="button"
-                    className="btn btn-warning shadow d-md-none position-fixed rounded-circle d-flex align-items-center justify-content-center"
-                    style={{
-                        top: '12px',
-                        left: '12px',
-                        width: '42px',
-                        height: '42px',
-                        zIndex: 990,
-                        border: '2px solid #ffffff'
-                    }}
-                    onClick={() => setMobileActive(true)}
-                    aria-label="Open Navigation Menu"
-                    title="Menu"
-                >
-                    <FaChevronRight size={16} className="text-dark" />
-                </button>
-            )}
-
             {/* Mobile Overlay */}
             {isMobile && mobileActive && (
                 <div
@@ -100,12 +79,11 @@ const Sidebar = () => {
             )}
 
             <div className={`sidebar ${collapsed ? 'collapsed' : ''} ${mobileActive ? 'active' : ''}`} id="sidebar">
-                <div className="sidebar-toggle-btn" onClick={toggleSidebar} id="sidebar-toggle">
-                    {isMobile
-                        ? (mobileActive ? <FaChevronLeft /> : <FaChevronRight />)
-                        : (collapsed ? <FaChevronRight /> : <FaChevronLeft />)
-                    }
-                </div>
+                {!isMobile && (
+                    <div className="sidebar-toggle-btn" onClick={toggleSidebar} id="sidebar-toggle" title={collapsed ? "Expand sidebar" : "Collapse sidebar"}>
+                        {collapsed ? <FaChevronRight /> : <FaChevronLeft />}
+                    </div>
+                )}
 
                 <div className="sidebar-header">
                     <img src={logo} className="logo-img" alt="Logo" />

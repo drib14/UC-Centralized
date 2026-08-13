@@ -117,13 +117,13 @@ const MessengerAudioPlayer = ({ src, fileName = '', fileSize = 0, isOwn }) => {
     const waveformHeights = [30, 60, 45, 85, 55, 95, 75, 45, 85, 60, 95, 50, 80, 40, 70, 90, 55, 75, 45, 65, 85, 40, 60];
 
     return (
-        <div className={`messenger-audio-player d-flex flex-column p-2 rounded-4 ${isOwn ? 'text-white' : 'text-dark'}`} style={{ minWidth: '240px', maxWidth: '320px' }}>
+        <div className={`messenger-audio-player d-flex flex-column p-2 rounded-4 ${isOwn ? 'text-white' : 'text-dark'}`} style={{ minWidth: 0, width: '100%', maxWidth: 'min(100%, 280px)' }}>
             <audio ref={audioRef} src={src} preload="metadata" />
 
             {/* Audio Title & Meta Info */}
             {!isVoiceNote && (
                 <div className="d-flex align-items-center justify-content-between mb-1 px-1">
-                    <span className="fw-bold text-truncate small" style={{ maxWidth: '190px' }} title={displayName}>
+                    <span className="fw-bold text-truncate small" style={{ maxWidth: '160px' }} title={displayName}>
                         {displayName}
                     </span>
                     {fileSize > 0 && (
@@ -139,19 +139,19 @@ const MessengerAudioPlayer = ({ src, fileName = '', fileSize = 0, isOwn }) => {
                 <button
                     type="button"
                     className={`btn rounded-circle d-flex align-items-center justify-content-center me-2 shadow-sm hover-scale flex-shrink-0 ${isOwn ? 'btn-light text-primary' : 'btn-primary text-white'}`}
-                    style={{ width: '38px', height: '38px' }}
+                    style={{ width: '34px', height: '34px' }}
                     onClick={togglePlay}
                     title={isPlaying ? "Pause" : "Play"}
                 >
-                    {isPlaying ? <FaPause size={13} /> : <FaPlay size={13} className="ms-1" />}
+                    {isPlaying ? <FaPause size={12} /> : <FaPlay size={12} className="ms-0.5" />}
                 </button>
 
                 {/* Waveform & Duration Container */}
-                <div className="flex-grow-1 d-flex flex-column justify-content-center cursor-pointer me-2" onClick={handleSeek}>
+                <div className="flex-grow-1 d-flex flex-column justify-content-center cursor-pointer me-1.5 overflow-hidden" onClick={handleSeek}>
                     {/* Interactive Waveform Visualization */}
-                    <div className="d-flex align-items-center gap-1 mb-1" style={{ height: '26px' }}>
-                        {waveformHeights.map((h, i) => {
-                            const barProgress = (i / waveformHeights.length) * 100;
+                    <div className="d-flex align-items-center gap-0.5 gap-sm-1 mb-1" style={{ height: '22px' }}>
+                        {waveformHeights.slice(0, 16).map((h, i) => {
+                            const barProgress = (i / 16) * 100;
                             const isFilled = barProgress <= progress;
                             return (
                                 <div
@@ -172,7 +172,7 @@ const MessengerAudioPlayer = ({ src, fileName = '', fileSize = 0, isOwn }) => {
                     </div>
 
                     {/* Timestamps */}
-                    <div className="d-flex justify-content-between align-items-center font-monospace" style={{ fontSize: '0.7rem', opacity: 0.88 }}>
+                    <div className="d-flex justify-content-between align-items-center font-monospace" style={{ fontSize: '0.68rem', opacity: 0.88 }}>
                         <span>{formatAudioTime(currentTime)}</span>
                         <span>{formatAudioTime(duration || 0)}</span>
                     </div>
@@ -183,7 +183,7 @@ const MessengerAudioPlayer = ({ src, fileName = '', fileSize = 0, isOwn }) => {
                     <button
                         type="button"
                         className={`btn btn-sm px-1 py-0 rounded-pill fw-bold hover-scale ${isOwn ? 'btn-outline-light text-white' : 'btn-outline-primary'}`}
-                        style={{ fontSize: '0.68rem', minWidth: '30px', height: '22px' }}
+                        style={{ fontSize: '0.65rem', minWidth: '28px', height: '20px' }}
                         onClick={toggleSpeed}
                         title="Playback speed"
                     >
@@ -195,11 +195,11 @@ const MessengerAudioPlayer = ({ src, fileName = '', fileSize = 0, isOwn }) => {
                         target="_blank"
                         rel="noreferrer"
                         className={`btn btn-sm rounded-circle p-1 d-flex align-items-center justify-content-center hover-scale ${isOwn ? 'text-white text-opacity-75' : 'text-secondary'}`}
-                        style={{ width: '24px', height: '24px' }}
+                        style={{ width: '22px', height: '22px' }}
                         title="Download audio"
                         onClick={(e) => e.stopPropagation()}
                     >
-                        <FaDownload size={10} />
+                        <FaDownload size={9} />
                     </a>
                 </div>
             </div>
@@ -458,7 +458,7 @@ const MessageBubble = ({
                 default:
                     // Documents, Spreadsheets, Presentations, PDFs, Archives, Code, General Files
                     return (
-                        <div className="d-flex flex-column" style={{ minWidth: '240px', maxWidth: '320px' }}>
+                        <div className="d-flex flex-column" style={{ minWidth: 'min(100%, 200px)', maxWidth: 'min(100%, 320px)' }}>
                             <div className="d-flex align-items-center p-2 rounded-3 bg-white border shadow-sm text-dark">
                                 {/* Customized File Icon Tile */}
                                 <div
@@ -558,7 +558,7 @@ const MessageBubble = ({
                 </div>
             )}
 
-            <div className={`d-flex flex-column ${isOwn ? 'align-items-end' : 'align-items-start'} chat-bubble-group`} style={{ maxWidth: 'min(90%, 560px)' }}>
+            <div className={`d-flex flex-column ${isOwn ? 'align-items-end' : 'align-items-start'} chat-bubble-group`} style={{ maxWidth: isOwn ? 'min(88%, 540px)' : 'calc(100% - 38px)' }}>
                 {/* Sender Name for group / received messages */}
                 {!isOwn && showHeader && (
                     <small className="text-muted ms-1 mb-1 fw-semibold" style={{ fontSize: '0.75rem' }}>{sender?.firstName}</small>
@@ -578,7 +578,7 @@ const MessageBubble = ({
                             borderBottomRightRadius: isOwn ? '4px' : (isMedia ? '16px' : '18px'),
                             borderBottomLeftRadius: !isOwn ? '4px' : (isMedia ? '16px' : '18px'),
                             width: 'fit-content',
-                            minWidth: isMedia ? 'auto' : '50px',
+                            minWidth: isMedia ? 'auto' : '44px',
                             maxWidth: '100%'
                         }}
                     >
@@ -587,19 +587,19 @@ const MessageBubble = ({
 
                     {/* Hover Controls: Quick Reaction Trigger + More Options Dropdown */}
                     {!isEditing && (
-                        <div className="bubble-actions d-flex align-items-center gap-1 mx-2 opacity-0 group-hover-visible transition-opacity">
+                        <div className="bubble-actions d-flex align-items-center gap-1 mx-1.5 opacity-0 group-hover-visible transition-opacity">
                             {/* Emoji Reaction Trigger Button */}
                             <button
                                 type="button"
                                 className="btn btn-sm btn-light rounded-circle shadow-sm text-muted d-flex align-items-center justify-content-center hover-lift p-0"
-                                style={{ width: '28px', height: '28px' }}
+                                style={{ width: '26px', height: '26px' }}
                                 title="React"
                                 onClick={() => {
                                     setShowReactionBar(prev => !prev);
                                     setShowCustomPicker(false);
                                 }}
                             >
-                                <FaRegSmile size={14} className="text-secondary" />
+                                <FaRegSmile size={13} className="text-secondary" />
                             </button>
 
                             {/* Dropdown Menu (Edit / Forward / Delete) */}
@@ -607,7 +607,7 @@ const MessageBubble = ({
                                 <button
                                     type="button"
                                     className="btn btn-sm btn-light rounded-circle shadow-sm text-muted d-flex align-items-center justify-content-center hover-lift p-0"
-                                    style={{ width: '28px', height: '28px' }}
+                                    style={{ width: '26px', height: '26px' }}
                                     data-bs-toggle="dropdown"
                                     aria-expanded="false"
                                     title="More"
@@ -645,8 +645,9 @@ const MessageBubble = ({
                             style={{
                                 bottom: '100%',
                                 [isOwn ? 'right' : 'left']: '0',
-                                marginBottom: '8px',
-                                zIndex: 1060
+                                marginBottom: '6px',
+                                zIndex: 1060,
+                                maxWidth: 'calc(100vw - 20px)'
                             }}
                         >
                             {QUICK_EMOJIS.map((emoji) => (
@@ -656,7 +657,7 @@ const MessageBubble = ({
                                     className="btn btn-link p-1 text-decoration-none reaction-emoji-btn hover-scale"
                                     onClick={() => handleReact(emoji)}
                                 >
-                                    <span style={{ fontSize: '1.4rem', lineHeight: 1 }}>{emoji}</span>
+                                    <span style={{ fontSize: '1.25rem', lineHeight: 1 }}>{emoji}</span>
                                 </button>
                             ))}
 
@@ -664,11 +665,11 @@ const MessageBubble = ({
                             <button
                                 type="button"
                                 className="btn btn-light rounded-circle d-flex align-items-center justify-content-center p-1 hover-lift"
-                                style={{ width: '28px', height: '28px', backgroundColor: '#f1f5f9' }}
+                                style={{ width: '26px', height: '26px', backgroundColor: '#f1f5f9' }}
                                 title="Custom Emoji"
                                 onClick={() => setShowCustomPicker(prev => !prev)}
                             >
-                                <FaPlus size={11} className="text-secondary" />
+                                <FaPlus size={10} className="text-secondary" />
                             </button>
 
                             {/* Custom Emoji Picker Popover */}
@@ -678,7 +679,7 @@ const MessageBubble = ({
                                     style={{
                                         top: '100%',
                                         [isOwn ? 'right' : 'left']: '0',
-                                        marginTop: '10px',
+                                        marginTop: '8px',
                                         zIndex: 1070
                                     }}
                                 >
@@ -687,8 +688,8 @@ const MessageBubble = ({
                                         autoFocusSearch={false}
                                         searchPlaceholder="Search emojis..."
                                         previewConfig={{ showPreview: false }}
-                                        width={300}
-                                        height={360}
+                                        width={Math.min(typeof window !== 'undefined' ? window.innerWidth - 20 : 280, 280)}
+                                        height={320}
                                     />
                                 </div>
                             )}

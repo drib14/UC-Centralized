@@ -269,10 +269,7 @@ footer {
 
 @media (max-width: 768px) {
     .sidebar-toggle-btn {
-        right: -36px;
-        width: 36px;
-        height: 36px;
-        border-radius: 0 50% 50% 0;
+        display: none !important;
     }
 }
 
@@ -380,6 +377,23 @@ footer {
     min-width: 0; /* Prevent flex blowout */
 }
 
+#page-content-wrapper.chat-page-wrapper {
+    padding: 0 !important;
+    height: 100vh !important;
+    height: 100dvh !important;
+    max-height: 100dvh !important;
+    min-height: 0 !important;
+    overflow: hidden !important;
+}
+
+#page-content-wrapper.chat-page-wrapper > div {
+    height: 100% !important;
+    max-height: 100% !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    overflow: hidden !important;
+}
+
 #page-content-wrapper > .container-fluid {
     max-width: 1600px;
     margin-left: auto;
@@ -389,7 +403,7 @@ footer {
 }
 
 @media (max-width: 1200px) {
-    #page-content-wrapper {
+    #page-content-wrapper:not(.chat-page-wrapper) {
         padding: clamp(12px, 2vw, 24px);
     }
 }
@@ -439,12 +453,16 @@ footer {
     }
     #page-content-wrapper {
         margin-left: 0 !important;
-        padding: 12px 10px;
+        padding: 12px 10px 76px 10px;
     }
 
     #page-content-wrapper.chat-page-wrapper {
         padding: 0 !important;
+        margin: 0 !important;
+        height: 100dvh !important;
+        max-height: 100dvh !important;
     }
+
     .sidebar.collapsed {
         min-width: 255px;
     }
@@ -465,11 +483,39 @@ footer {
     }
 }
 
+/* Mobile Bottom Navigation Bar Tokens */
+.mobile-bottom-nav {
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    background-color: rgba(255, 255, 255, 0.96) !important;
+    border-top: 1px solid rgba(0, 43, 127, 0.1) !important;
+}
+
+.mobile-nav-item {
+    transition: transform 0.15s ease, color 0.15s ease;
+}
+
+.mobile-nav-item:active {
+    transform: scale(0.92);
+}
+
+.mobile-nav-item.active {
+    color: var(--primary-uc-blue, #002b7f) !important;
+}
+
 /* Chat Layout Responsiveness */
 .chat-layout-container {
     height: 100dvh;
     max-height: 100dvh;
     overflow: hidden;
+    background-color: #f8fafc;
+}
+
+.chat-messages-area {
+    scroll-behavior: smooth;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
+    background-color: #f8fafc !important;
 }
 
 .chat-sidebar-container {
@@ -479,12 +525,13 @@ footer {
 }
 
 .chat-bubble-group {
-    max-width: min(90%, 560px) !important;
+    max-width: min(88%, 540px) !important;
 }
 
 @media (max-width: 768px) {
     .chat-layout-container {
         height: 100dvh;
+        max-height: 100dvh;
         border: none !important;
         border-radius: 0 !important;
     }
@@ -496,15 +543,15 @@ footer {
     }
 
     .chat-layout-container .p-3 {
-        padding: 0.75rem !important;
+        padding: 0.5rem !important;
     }
 
     .chat-bubble-group {
-        max-width: 92% !important;
+        max-width: 90% !important;
     }
 
     .bubble-actions {
-        opacity: 0.65 !important;
+        opacity: 0.75 !important;
     }
 
     .bubble-actions:active, .bubble-actions:focus-within {
@@ -512,7 +559,7 @@ footer {
     }
 
     .floating-reaction-bar {
-        scale: 0.92;
+        scale: 0.9;
         transform-origin: bottom center;
     }
 
@@ -524,10 +571,10 @@ footer {
 
 @media (max-width: 480px) {
     .chat-bubble-group {
-        max-width: 96% !important;
+        max-width: 94% !important;
     }
     .floating-reaction-bar {
-        scale: 0.85;
+        scale: 0.82;
         transform-origin: bottom right;
     }
 }
@@ -641,7 +688,7 @@ footer {
    CELLPHONE & SMALL SCREEN RESPONSIVENESS (< 576px / < 380px)
    ========================================================= */
 @media (max-width: 576px) {
-    #page-content-wrapper {
+    #page-content-wrapper:not(.chat-page-wrapper) {
         padding: 10px 8px !important;
     }
     
@@ -710,7 +757,7 @@ footer {
 }
 
 @media (max-width: 380px) {
-    #page-content-wrapper {
+    #page-content-wrapper:not(.chat-page-wrapper) {
         padding: 6px 4px !important;
     }
 

@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
 import Sidebar from './Sidebar';
-import Navbar from './Navbar';
+import MobileNav from './MobileNav';
 
 const Layout = () => {
     const [collapsed, setCollapsed] = useState(false);
@@ -37,12 +37,12 @@ const Layout = () => {
     return (
         <div id="wrapper">
             <Sidebar />
-            <div id="page-content-wrapper" className={`${collapsed ? 'collapsed' : ''} ${isChatPage ? 'chat-page-wrapper' : ''}`} style={isChatPage ? { height: '100dvh', overflow: 'hidden' } : {}}>
-                {/* Navbar removed as per request to fit content */}
-                <div className={isChatPage ? 'h-100 p-0' : 'container-fluid'}>
+            <div id="page-content-wrapper" className={`${collapsed ? 'collapsed' : ''} ${isChatPage ? 'chat-page-wrapper' : ''}`} style={isChatPage ? { height: '100dvh', maxHeight: '100dvh', overflow: 'hidden', padding: 0 } : {}}>
+                <div className={isChatPage ? 'h-100 p-0' : 'container-fluid app-container-max'}>
                     <Outlet />
                 </div>
             </div>
+            <MobileNav />
         </div>
     );
 };

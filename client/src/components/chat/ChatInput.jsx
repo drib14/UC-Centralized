@@ -348,14 +348,17 @@ const ChatInput = ({ onSendMessage, onTyping, onStopTyping }) => {
     const waveformBars = [40, 70, 90, 45, 80, 100, 60, 85, 50, 95, 65, 40, 80, 55, 90, 75, 45, 85, 60, 40];
 
     return (
-        <div className="bg-white p-3 border-top position-relative">
+        <div
+            className="bg-white p-2 p-sm-2.5 border-top position-relative"
+            style={{ paddingBottom: 'max(8px, env(safe-area-inset-bottom))' }}
+        >
             {/* File Preview Bar */}
             {file && (
                 <div className="mb-2 p-2 bg-light border rounded-3 d-flex align-items-center justify-content-between animate-fade-in shadow-sm">
                     <div className="d-flex align-items-center overflow-hidden me-2">
-                        <div className="me-2">{getFileIcon(file.name)}</div>
+                        <div className="me-2 flex-shrink-0">{getFileIcon(file.name)}</div>
                         <div className="text-truncate">
-                            <span className="small fw-bold text-dark d-block text-truncate" style={{ maxWidth: '240px' }}>
+                            <span className="small fw-bold text-dark d-block text-truncate" style={{ maxWidth: '200px' }}>
                                 {file.name}
                             </span>
                             <span className="text-muted" style={{ fontSize: '0.72rem' }}>
@@ -365,7 +368,7 @@ const ChatInput = ({ onSendMessage, onTyping, onStopTyping }) => {
                     </div>
                     <button
                         type="button"
-                        className="btn btn-sm btn-light rounded-circle text-danger p-1 d-flex align-items-center justify-content-center hover-scale"
+                        className="btn btn-sm btn-light rounded-circle text-danger p-1 d-flex align-items-center justify-content-center hover-scale flex-shrink-0"
                         style={{ width: '26px', height: '26px' }}
                         onClick={() => {
                             setFile(null);
@@ -379,23 +382,23 @@ const ChatInput = ({ onSendMessage, onTyping, onStopTyping }) => {
 
             {/* LIVE VOICE RECORDING BAR */}
             {isRecording ? (
-                <div className="d-flex align-items-center justify-content-between p-2 bg-danger bg-opacity-10 border border-danger border-opacity-25 rounded-4 animate-fade-in shadow-sm">
-                    <div className="d-flex align-items-center gap-2 ps-2">
+                <div className="d-flex align-items-center justify-content-between p-1.5 p-sm-2 bg-danger bg-opacity-10 border border-danger border-opacity-25 rounded-4 animate-fade-in shadow-sm">
+                    <div className="d-flex align-items-center gap-1.5 gap-sm-2 ps-1 ps-sm-2 flex-shrink-0">
                         {/* Pulsing Red Dot */}
                         <div
-                            className="rounded-circle bg-danger animate-pulse"
-                            style={{ width: '12px', height: '12px', boxShadow: '0 0 10px rgba(220, 38, 38, 0.8)' }}
+                            className="rounded-circle bg-danger animate-pulse flex-shrink-0"
+                            style={{ width: '10px', height: '10px', boxShadow: '0 0 8px rgba(220, 38, 38, 0.8)' }}
                         />
-                        <span className="badge bg-danger text-white fw-bold px-2 py-1" style={{ fontSize: '0.75rem' }}>
+                        <span className="badge bg-danger text-white fw-bold px-1.5 py-0.5" style={{ fontSize: '0.68rem' }}>
                             REC
                         </span>
-                        <span className="fw-bold text-danger font-monospace" style={{ fontSize: '0.95rem' }}>
+                        <span className="fw-bold text-danger font-monospace" style={{ fontSize: '0.85rem' }}>
                             {formatTime(recordingTime)}
                         </span>
                     </div>
 
                     {/* Animated Sound Wave Equalizer (hidden on ultra-narrow screens to preserve button space) */}
-                    <div className="d-none d-sm-flex align-items-center gap-1 mx-2 flex-grow-1 justify-content-center" style={{ height: '24px' }}>
+                    <div className="d-none d-md-flex align-items-center gap-1 mx-2 flex-grow-1 justify-content-center" style={{ height: '20px' }}>
                         {waveformBars.map((h, i) => (
                             <div
                                 key={i}
@@ -411,60 +414,60 @@ const ChatInput = ({ onSendMessage, onTyping, onStopTyping }) => {
                     </div>
 
                     {/* Action Controls */}
-                    <div className="d-flex align-items-center gap-1.5 pe-1">
+                    <div className="d-flex align-items-center gap-1 flex-shrink-0">
                         {/* Cancel / Trash */}
                         <button
                             type="button"
                             className="btn btn-outline-danger btn-sm rounded-circle d-flex align-items-center justify-content-center hover-scale shadow-sm"
-                            style={{ width: '36px', height: '36px' }}
+                            style={{ width: '32px', height: '32px' }}
                             onClick={cancelRecording}
                             title="Discard recording"
                         >
-                            <FaTrash size={13} />
+                            <FaTrash size={12} />
                         </button>
 
                         {/* Stop & Review */}
                         <button
                             type="button"
                             className="btn btn-light btn-sm rounded-circle text-dark d-flex align-items-center justify-content-center hover-scale shadow-sm"
-                            style={{ width: '36px', height: '36px' }}
+                            style={{ width: '32px', height: '32px' }}
                             onClick={stopRecordingForPreview}
                             title="Stop & review"
                         >
-                            <FaStop size={13} className="text-secondary" />
+                            <FaStop size={12} className="text-secondary" />
                         </button>
 
                         {/* Send Immediately */}
                         <button
                             type="button"
                             className="btn btn-primary btn-sm rounded-circle d-flex align-items-center justify-content-center hover-scale shadow-sm"
-                            style={{ width: '36px', height: '36px' }}
+                            style={{ width: '32px', height: '32px' }}
                             onClick={() => sendVoiceMessage(null)}
                             title="Send voice note"
                         >
-                            <FaPaperPlane size={13} />
+                            <FaPaperPlane size={11} />
                         </button>
                     </div>
                 </div>
             ) : previewUrl ? (
                 /* VOICE NOTE PREVIEW BAR */
-                <div className="d-flex align-items-center justify-content-between p-2 bg-primary bg-opacity-10 border border-primary border-opacity-25 rounded-4 animate-fade-in shadow-sm">
+                <div className="d-flex align-items-center justify-content-between p-1.5 p-sm-2 bg-primary bg-opacity-10 border border-primary border-opacity-25 rounded-4 animate-fade-in shadow-sm">
                     <audio ref={previewAudioRef} src={previewUrl} preload="metadata" />
 
-                    <div className="d-flex align-items-center gap-3 ps-2 flex-grow-1">
+                    <div className="d-flex align-items-center gap-2 ps-1 flex-grow-1 min-w-0">
                         <button
                             type="button"
-                            className="btn btn-primary btn-sm rounded-circle d-flex align-items-center justify-content-center shadow-sm hover-scale"
-                            style={{ width: '36px', height: '36px' }}
+                            className="btn btn-primary btn-sm rounded-circle d-flex align-items-center justify-content-center shadow-sm flex-shrink-0"
+                            style={{ width: '32px', height: '32px' }}
                             onClick={togglePreviewPlay}
                             title={isPreviewPlaying ? "Pause preview" : "Listen to preview"}
                         >
-                            {isPreviewPlaying ? <FaPause size={12} /> : <FaPlay size={12} className="ms-1" />}
+                            {isPreviewPlaying ? <FaPause size={10} /> : <FaPlay size={10} className="ms-0.5" />}
                         </button>
 
-                        <div className="flex-grow-1 me-3">
-                            <div className="d-flex justify-content-between small text-primary fw-medium mb-1" style={{ fontSize: '0.75rem' }}>
-                                <span>Voice Message Preview</span>
+                        <div className="flex-grow-1 me-2 overflow-hidden">
+                            <div className="d-flex justify-content-between text-primary fw-medium mb-1 font-monospace" style={{ fontSize: '0.68rem' }}>
+                                <span className="text-truncate">Preview</span>
                                 <span>{formatTime(previewCurrentTime)} / {formatTime(previewDuration || recordingTime)}</span>
                             </div>
                             <div className="progress rounded-pill" style={{ height: '4px' }}>
@@ -477,41 +480,41 @@ const ChatInput = ({ onSendMessage, onTyping, onStopTyping }) => {
                         </div>
                     </div>
 
-                    <div className="d-flex align-items-center gap-2 pe-1">
+                    <div className="d-flex align-items-center gap-1 flex-shrink-0">
                         <button
                             type="button"
-                            className="btn btn-outline-danger btn-sm rounded-circle d-flex align-items-center justify-content-center hover-scale shadow-sm"
-                            style={{ width: '38px', height: '38px' }}
+                            className="btn btn-outline-danger btn-sm rounded-circle d-flex align-items-center justify-content-center shadow-sm"
+                            style={{ width: '32px', height: '32px' }}
                             onClick={cancelRecording}
                             title="Discard recording"
                         >
-                            <FaTrash size={14} />
+                            <FaTrash size={12} />
                         </button>
 
                         <button
                             type="button"
-                            className="btn btn-primary btn-sm rounded-circle d-flex align-items-center justify-content-center hover-scale shadow-sm"
-                            style={{ width: '38px', height: '38px' }}
+                            className="btn btn-primary btn-sm rounded-circle d-flex align-items-center justify-content-center shadow-sm"
+                            style={{ width: '32px', height: '32px' }}
                             onClick={() => sendVoiceMessage(recordedBlob)}
                             title="Send voice note"
                         >
-                            <FaPaperPlane size={13} />
+                            <FaPaperPlane size={11} />
                         </button>
                     </div>
                 </div>
             ) : (
                 /* STANDARD TEXT & ATTACHMENT INPUT BAR */
-                <form onSubmit={handleSubmit} className="d-flex align-items-end gap-2 position-relative">
+                <form onSubmit={handleSubmit} className="d-flex align-items-end gap-1 gap-sm-2 position-relative w-100">
                     {/* File Attachment Button */}
-                    <div className="position-relative">
+                    <div className="position-relative flex-shrink-0">
                         <button
                             type="button"
-                            className="btn btn-light rounded-circle text-muted d-flex align-items-center justify-content-center shadow-sm hover-lift"
-                            style={{ width: '40px', height: '40px' }}
+                            className="btn btn-light rounded-circle text-muted d-flex align-items-center justify-content-center shadow-sm"
+                            style={{ width: '36px', height: '36px' }}
                             onClick={() => fileInputRef.current?.click()}
-                            title="Attach Any File"
+                            title="Attach File"
                         >
-                            <FaPaperclip size={16} />
+                            <FaPaperclip size={14} />
                         </button>
                         <input
                             type="file"
@@ -522,12 +525,12 @@ const ChatInput = ({ onSendMessage, onTyping, onStopTyping }) => {
                     </div>
 
                     {/* Textarea + Emoji Button */}
-                    <div className="flex-grow-1 position-relative d-flex align-items-center">
+                    <div className="flex-grow-1 position-relative d-flex align-items-center min-w-0">
                         <textarea
-                            className="form-control border-0 bg-light rounded-4 px-3 py-2 pe-5"
+                            className="form-control border-0 bg-light rounded-4 px-3 py-1.5 pe-5"
                             rows="1"
                             placeholder="Type a message..."
-                            style={{ resize: 'none', minHeight: '40px', maxHeight: '120px' }}
+                            style={{ resize: 'none', minHeight: '36px', maxHeight: '90px', fontSize: '0.9rem' }}
                             value={message}
                             onChange={handleTextChange}
                             onKeyDown={handleKeyDown}
@@ -536,12 +539,12 @@ const ChatInput = ({ onSendMessage, onTyping, onStopTyping }) => {
                         {/* Emoji Picker Button inside input */}
                         <button
                             type="button"
-                            className="btn btn-link text-muted position-absolute end-0 me-2 p-1 d-flex align-items-center justify-content-center hover-scale"
+                            className="btn btn-link text-muted position-absolute end-0 me-1.5 p-1 d-flex align-items-center justify-content-center hover-scale"
                             style={{ width: '28px', height: '28px' }}
                             onClick={() => setShowInputEmojiPicker(prev => !prev)}
                             title="Insert emoji"
                         >
-                            <FaRegSmile size={18} className="text-secondary" />
+                            <FaRegSmile size={16} className="text-secondary" />
                         </button>
 
                         {/* Emoji Picker Popup */}
@@ -552,9 +555,9 @@ const ChatInput = ({ onSendMessage, onTyping, onStopTyping }) => {
                                 style={{
                                     bottom: '100%',
                                     right: '0',
-                                    marginBottom: '10px',
+                                    marginBottom: '8px',
                                     zIndex: 1080,
-                                    maxWidth: 'calc(100vw - 20px)'
+                                    maxWidth: 'calc(100vw - 16px)'
                                 }}
                             >
                                 <EmojiPicker
@@ -562,34 +565,34 @@ const ChatInput = ({ onSendMessage, onTyping, onStopTyping }) => {
                                     autoFocusSearch={false}
                                     searchPlaceholder="Search emoji..."
                                     previewConfig={{ showPreview: false }}
-                                    width={Math.min(typeof window !== 'undefined' ? window.innerWidth - 24 : 320, 320)}
-                                    height={360}
+                                    width={Math.min(typeof window !== 'undefined' ? window.innerWidth - 20 : 300, 300)}
+                                    height={320}
                                 />
                             </div>
                         )}
                     </div>
 
-                    {/* Microphone Voice Recording Button */}
+                    {/* Microphone Voice Recording / Send Button */}
                     {!message.trim() && !file ? (
                         <button
                             type="button"
                             className="btn btn-primary rounded-circle shadow-sm d-flex align-items-center justify-content-center hover-lift flex-shrink-0"
-                            style={{ width: '40px', height: '40px' }}
+                            style={{ width: '36px', height: '36px' }}
                             onClick={startRecording}
                             title="Record voice message"
                         >
-                            <FaMicrophone size={16} />
+                            <FaMicrophone size={14} />
                         </button>
                     ) : (
                         /* Send Button */
                         <button
                             type="submit"
                             className="btn btn-primary rounded-circle shadow-sm d-flex align-items-center justify-content-center hover-lift flex-shrink-0"
-                            style={{ width: '40px', height: '40px' }}
+                            style={{ width: '36px', height: '36px' }}
                             disabled={!message.trim() && !file}
-                            title="Send"
+                            title="Send message"
                         >
-                            <FaPaperPlane size={14} />
+                            <FaPaperPlane size={13} />
                         </button>
                     )}
                 </form>

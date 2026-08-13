@@ -78,14 +78,14 @@ const VerifyCode = () => {
                 </div>
 
                 <form onSubmit={handleSubmit}>
-                    <div className="d-flex justify-content-center gap-2 mb-4" onPaste={handlePaste}>
+                    <div className="d-flex justify-content-center gap-1.5 gap-sm-2 mb-4" onPaste={handlePaste}>
                         {code.map((digit, index) => (
                             <input
                                 key={index}
                                 ref={el => inputsRef.current[index] = el}
                                 type="text"
-                                className="form-control text-center"
-                                style={{ width: '45px', height: '45px', fontSize: '1.2rem' }}
+                                className="form-control text-center p-0"
+                                style={{ width: 'clamp(36px, 11vw, 48px)', height: 'clamp(42px, 12vw, 48px)', fontSize: 'clamp(1.1rem, 3.5vw, 1.35rem)' }}
                                 maxLength="1"
                                 value={digit}
                                 onChange={e => handleChange(e, index)}

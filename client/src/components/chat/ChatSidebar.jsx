@@ -50,40 +50,42 @@ const ChatSidebar = ({
     };
 
     return (
-        <div className="d-flex flex-column h-100 bg-white">
+        <div className="d-flex flex-column h-100 bg-white w-100" style={{ height: '100%', minHeight: 0, overflow: 'hidden' }}>
             {/* Header */}
-            <div className="p-3 border-bottom d-flex align-items-center justify-content-between">
-                <h4 className="fw-bold mb-0">Messages</h4>
+            <div className="p-2.5 p-sm-3 border-bottom d-flex align-items-center justify-content-between flex-shrink-0">
+                <h5 className="fw-bold mb-0">Messages</h5>
                 <button
-                    className="btn btn-light rounded-circle shadow-sm"
+                    className="btn btn-light btn-sm rounded-circle shadow-sm d-flex align-items-center justify-content-center"
+                    style={{ width: '34px', height: '34px' }}
                     onClick={() => setShowNewChatModal(true)}
                     title="New Message"
                 >
-                    <FaEdit />
+                    <FaEdit size={14} />
                 </button>
             </div>
 
             {/* Search */}
-            <div className="p-3 pb-2">
+            <div className="p-2.5 pb-2 p-sm-3 pb-sm-2 flex-shrink-0">
                 <div className="input-group">
-                    <span className="input-group-text bg-light border-0"><FaSearch className="text-muted" /></span>
+                    <span className="input-group-text bg-light border-0 py-1.5"><FaSearch className="text-muted" size={13} /></span>
                     <input
                         type="text"
-                        className="form-control bg-light border-0"
+                        className="form-control bg-light border-0 py-1.5"
                         placeholder="Search conversations..."
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
+                        style={{ fontSize: '0.9rem' }}
                     />
                 </div>
             </div>
 
             {/* Conversation List */}
-            <div className="flex-grow-1 overflow-auto custom-scrollbar">
+            <div className="flex-grow-1 overflow-y-auto overflow-x-hidden custom-scrollbar" style={{ minHeight: 0 }}>
 
                 {/* Existing Conversations */}
                 {filteredConversations.length > 0 && (
                     <>
-                        {searchTerm && <div className="px-3 py-2 text-muted small fw-bold bg-light">CONVERSATIONS</div>}
+                        {searchTerm && <div className="px-3 py-1.5 text-muted small fw-bold bg-light" style={{ fontSize: '0.72rem' }}>CONVERSATIONS</div>}
                         {filteredConversations.map(conv => {
                             const other = conv.otherUser;
                             const isSelected = selectedConversation && selectedConversation._id === conv._id;
@@ -93,22 +95,22 @@ const ChatSidebar = ({
                             return (
                                 <div
                                     key={conv._id}
-                                    className={`d-flex align-items-center p-3 cursor-pointer border-bottom-light ${isSelected ? 'bg-primary-subtle' : 'hover-bg-light'}`}
+                                    className={`d-flex align-items-center p-2.5 p-sm-3 cursor-pointer border-bottom-light ${isSelected ? 'bg-primary-subtle' : 'hover-bg-light'}`}
                                     onClick={() => onSelectConversation(conv)}
                                     style={{ cursor: 'pointer', transition: 'background-color 0.2s' }}
                                 >
-                                    <div className="position-relative me-3">
+                                    <div className="position-relative me-2.5 flex-shrink-0">
                                         {other?.profilePicture ? (
                                             <img
                                                 src={other.profilePicture}
                                                 alt={other.firstName}
                                                 className="rounded-circle border"
-                                                width="48"
-                                                height="48"
+                                                width="42"
+                                                height="42"
                                                 style={{ objectFit: 'cover' }}
                                             />
                                         ) : (
-                                            <div className="rounded-circle border bg-light d-flex align-items-center justify-content-center text-primary fw-bold" style={{width: '48px', height: '48px'}}>
+                                            <div className="rounded-circle border bg-light d-flex align-items-center justify-content-center text-primary fw-bold" style={{width: '42px', height: '42px', fontSize: '13px'}}>
                                                 {getInitials(other)}
                                             </div>
                                         )}
@@ -203,10 +205,10 @@ const ChatSidebar = ({
             {/* New Chat Modal (Custom minimal implementation) */}
             {showNewChatModal && (
                 <div className="modal show d-block" tabIndex="-1" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>
-                    <div className="modal-dialog modal-dialog-centered">
-                        <div className="modal-content">
-                            <div className="modal-header">
-                                <h5 className="modal-title">New Message</h5>
+                    <div className="modal-dialog modal-dialog-centered modal-dialog-scrollable mx-2 mx-sm-auto" style={{ maxWidth: '440px' }}>
+                        <div className="modal-content border-0 shadow-lg rounded-4 overflow-hidden">
+                            <div className="modal-header border-bottom py-2.5 px-3">
+                                <h6 className="modal-title fw-bold mb-0">New Message</h6>
                                 <button type="button" className="btn-close" onClick={() => setShowNewChatModal(false)}></button>
                             </div>
                             <div className="modal-body">
