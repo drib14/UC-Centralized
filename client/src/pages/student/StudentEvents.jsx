@@ -324,24 +324,24 @@ const StudentEvents = () => {
                                     </div>
                                     <div className="card-body p-4 d-flex flex-column flex-grow-1">
                                         <div className="d-flex justify-content-between align-items-center mb-2">
-                                            <small className="text-muted d-flex align-items-center gap-1">
-                                                <FaClock size={11} /> {event.date} {event.time ? `• ${formatTime(event.time)}` : ''}
+                                            <small className="text-muted d-flex align-items-center gap-1.5">
+                                                <FaClock size={12} /> {event.date} {event.time ? `• ${formatTime(event.time)}` : ''}
                                             </small>
                                             {registered && (
-                                                <span className="badge bg-success bg-opacity-10 text-success border border-success rounded-pill px-2 py-1 small">
-                                                    <FaCircleCheck className="me-1" /> Registered
+                                                <span className="badge bg-success bg-opacity-10 text-success border border-success rounded-pill px-2.5 py-1 small d-inline-flex align-items-center gap-1.5">
+                                                    <FaCircleCheck /> Registered
                                                 </span>
                                             )}
                                             {ended && !registered && (
-                                                <span className="badge bg-secondary rounded-pill px-2 py-1 small">
+                                                <span className="badge bg-secondary rounded-pill px-2.5 py-1 small">
                                                     Ended
                                                 </span>
                                             )}
                                         </div>
 
-                                        <h5 className="card-title fw-bold text-dark mb-2">{event.title}</h5>
+                                        <h5 className="card-title fw-bold text-dark mb-2 font-outfit">{event.title}</h5>
 
-                                        <div className="text-secondary small mb-3 d-flex align-items-center gap-1">
+                                        <div className="text-secondary small mb-3 d-flex align-items-center gap-1.5">
                                             <FaLocationDot size={12} className="text-danger" /> {event.location || 'UC Main Campus'}
                                         </div>
 
@@ -350,11 +350,11 @@ const StudentEvents = () => {
                                         </p>
 
                                         <div className="d-flex justify-content-between align-items-center pt-3 border-top mt-auto">
-                                            <span className="small text-primary fw-semibold d-flex align-items-center gap-1">
-                                                <FaUsers size={12} /> {event.attendees?.length || 0} Attending
+                                            <span className="small text-primary fw-semibold d-flex align-items-center gap-1.5">
+                                                <FaUsers size={13} /> {event.attendees?.length || 0} Attending
                                             </span>
                                             <button
-                                                className="btn btn-sm btn-outline-primary rounded-pill px-3 fw-semibold"
+                                                className="btn btn-sm btn-outline-primary rounded-pill px-3 py-1.5 fw-semibold"
                                                 onClick={() => setSelectedEvent(event)}
                                             >
                                                 Details & RSVP

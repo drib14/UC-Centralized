@@ -19,34 +19,36 @@ const notifyUser = async (userId, type, content, relatedId, link = null, shouldS
         await notification.save();
 
         // 2. Socket Emit
-        if (req) {
+        if (req && req.app) {
             const io = req.app.get('io');
-            // Populate sender for frontend
-            const populatedNotif = await Notification.findById(notification._id).populate('sender', 'firstName lastName profileImage');
+            if (io) {
+                const populatedNotif = await Notification.findById(notification._id).populate('sender', 'firstName lastName profileImage');
 
-            io.emit('new_notification', {
-                _id: populatedNotif._id,
-                recipientId: userId,
-                type,
-                content,
-                relatedId,
-                sender: populatedNotif.sender,
-                createdAt: populatedNotif.createdAt
-            });
+                io.emit('new_notification', {
+                    _id: populatedNotif._id,
+                    recipientId: userId,
+                    type,
+                    content,
+                    relatedId,
+                    sender: populatedNotif.sender,
+                    createdAt: populatedNotif.createdAt
+                });
+            }
         }
 
-        // 3. Email
+        // 3. Email (with dynamic URL resolution)
         if (shouldSendEmail && user.email && user.notificationPreferences?.email !== false) {
             const emailHtml = getNotificationEmail(
                 user.firstName,
-                type.charAt(0).toUpperCase() + type.slice(1), // Capitalize
+                type.charAt(0).toUpperCase() + type.slice(1),
                 content,
-                link || process.env.CLIENT_URL || 'http://localhost:5173'
+                link || '/student/dashboard',
+                req
             );
 
             await sendEmail({
                 email: user.email,
-                subject: `New Notification: ${type}`,
+                subject: `UC-Central Notice: ${type.charAt(0).toUpperCase() + type.slice(1)}`,
                 html: emailHtml
             });
         }
@@ -63,15 +65,13 @@ const notifyAdmins = async (type, content, relatedId, link, req) => {
             await notifyUser(admin._id, type, content, relatedId, link, true, req);
         }
     } catch (err) {
-        console.error(err);
+        console.error("Notify Admins Error:", err);
     }
 };
 
 const notifyAllStudents = async (type, content, relatedId, link, req) => {
     try {
         const students = await User.find({ role: 'student' });
-        // Optimization: Create DB entries in bulk, but for emails/sockets, loop is safer for now.
-        // For strict real-time, individual sockets are best.
 
         // Bulk Insert Notifications
         const notificationsData = students.map(s => ({
@@ -80,44 +80,42 @@ const notifyAllStudents = async (type, content, relatedId, link, req) => {
             content,
             relatedId
         }));
-        const savedNotifications = await Notification.insertMany(notificationsData);
+        await Notification.insertMany(notificationsData);
 
-        // Socket Emit (Global/Batch)
-        // If we emit once with "all students", clients can check their role.
-        // But reusing 'new_notification' with recipientId is standard.
-        // We'll emit one event that says "broadcast to students" if possible, or loop.
-        // Looping 1000 users for socket might be slow.
-        // Better: emit 'broadcast_notification' { role: 'student', ... }
-        if (req) {
+        // Socket Broadcast
+        if (req && req.app) {
             const io = req.app.get('io');
-            io.emit('broadcast_notification', {
-                role: 'student',
-                type,
-                content,
-                relatedId,
-                createdAt: new Date()
-            });
+            if (io) {
+                io.emit('broadcast_notification', {
+                    role: 'student',
+                    type,
+                    content,
+                    relatedId,
+                    createdAt: new Date()
+                });
+            }
         }
 
-        // Emails (Async loop)
+        // Send Email with Dynamic CTA to all students
         students.forEach(user => {
             if (user.email && user.notificationPreferences?.email !== false) {
                 const emailHtml = getNotificationEmail(
                     user.firstName,
                     type.charAt(0).toUpperCase() + type.slice(1),
                     content,
-                    link || process.env.CLIENT_URL
+                    link || '/student/dashboard',
+                    req
                 );
                 sendEmail({
                     email: user.email,
-                    subject: `New ${type.charAt(0).toUpperCase() + type.slice(1)}`,
+                    subject: `UC-Central: ${type.charAt(0).toUpperCase() + type.slice(1)} Notice`,
                     html: emailHtml
-                }).catch(e => console.error("Email failed", e));
+                }).catch(e => console.error("Email delivery failed for", user.email, e.message));
             }
         });
 
     } catch (err) {
-        console.error(err);
+        console.error("Notify All Students Error:", err);
     }
 };
 

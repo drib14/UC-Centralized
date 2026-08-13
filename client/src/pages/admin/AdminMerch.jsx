@@ -191,11 +191,11 @@ const AdminMerch = () => {
 
     const getStockBadge = (stock) => {
         if (stock <= 0) {
-            return <span className="badge bg-danger bg-opacity-10 text-danger border border-danger px-3 py-1 rounded-pill"><FaCircleXmark className="me-1" /> Out of Stock</span>;
+            return <span className="badge bg-danger bg-opacity-10 text-danger border border-danger px-3 py-1 rounded-pill d-inline-flex align-items-center gap-1.5"><FaCircleXmark /> Out of Stock</span>;
         } else if (stock < 5) {
-            return <span className="badge bg-warning bg-opacity-10 text-dark border border-warning px-3 py-1 rounded-pill"><FaTriangleExclamation className="me-1 text-warning" /> Low ({stock})</span>;
+            return <span className="badge bg-warning bg-opacity-10 text-dark border border-warning px-3 py-1 rounded-pill d-inline-flex align-items-center gap-1.5"><FaTriangleExclamation className="text-warning" /> Low ({stock})</span>;
         }
-        return <span className="badge bg-success bg-opacity-10 text-success border border-success px-3 py-1 rounded-pill"><FaCircleCheck className="me-1" /> In Stock ({stock})</span>;
+        return <span className="badge bg-success bg-opacity-10 text-success border border-success px-3 py-1 rounded-pill d-inline-flex align-items-center gap-1.5"><FaCircleCheck /> In Stock ({stock})</span>;
     };
 
     // Filter Logic
@@ -308,11 +308,11 @@ const AdminMerch = () => {
                         </div>
                     </div>
                     <div className="col-md-5">
-                        <div className="d-flex gap-1 overflow-auto">
+                        <div className="d-flex gap-2 overflow-auto py-1">
                             {['ALL', 'wearable', 'accessories', 'stationery', 'other'].map(cat => (
                                 <button
                                     key={cat}
-                                    className={`btn btn-sm rounded-pill px-3 fw-semibold text-capitalize ${categoryFilter === cat ? 'btn-primary' : 'btn-light'}`}
+                                    className={`btn btn-sm rounded-pill px-3 py-1 fw-semibold text-capitalize text-nowrap transition-all ${categoryFilter === cat ? 'btn-primary' : 'btn-light'}`}
                                     onClick={() => setCategoryFilter(cat)}
                                 >
                                     {cat === 'ALL' ? 'All Items' : cat}

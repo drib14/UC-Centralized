@@ -14,6 +14,7 @@ const AdminPOS = () => {
     const [loading, setLoading] = useState(true);
     const [search, setSearch] = useState('');
     const [categoryFilter, setCategoryFilter] = useState('ALL');
+    const [mobileTab, setMobileTab] = useState('catalog'); // 'catalog' | 'register'
 
     // Customer Selection
     const [userQuery, setUserQuery] = useState('');
@@ -237,19 +238,42 @@ const AdminPOS = () => {
         <div className="container-fluid py-4">
             <SEO title="Point of Sale" description="Campus cashier checkout terminal for student merchandise." />
 
-            {/* Header */}
+            {/* Header with Mobile/Tablet View Switcher */}
             <div className="d-flex flex-column flex-md-row justify-content-between align-items-md-center mb-4 gap-3">
                 <div>
-                    <h2 className="mb-1 fw-bold text-dark d-flex align-items-center">
+                    <h2 className="mb-1 fw-bold text-dark d-flex align-items-center font-outfit">
                         <FaCashRegister className="me-2 text-primary" /> Campus POS Cashier Terminal
                     </h2>
                     <p className="text-muted mb-0">Fast merchandise checkout with instant inventory deduction and receipt generation.</p>
                 </div>
+
+                {/* Mobile / Tablet Tab Switcher (< 992px) */}
+                <div className="d-flex d-lg-none btn-group bg-white p-1 rounded-pill shadow-sm border w-100">
+                    <button
+                        type="button"
+                        className={`btn btn-sm rounded-pill py-2 fw-semibold w-50 d-flex align-items-center justify-content-center gap-2 ${mobileTab === 'catalog' ? 'btn-primary' : 'btn-light border-0'}`}
+                        onClick={() => setMobileTab('catalog')}
+                    >
+                        <FaShirt /> Products ({filteredMerch.length})
+                    </button>
+                    <button
+                        type="button"
+                        className={`btn btn-sm rounded-pill py-2 fw-semibold w-50 d-flex align-items-center justify-content-center gap-2 ${mobileTab === 'register' ? 'btn-primary' : 'btn-light border-0'}`}
+                        onClick={() => setMobileTab('register')}
+                    >
+                        <FaCashRegister /> Cart & Register
+                        {cart.length > 0 && (
+                            <span className="badge rounded-pill bg-danger text-white ms-1">
+                                {cart.length}
+                            </span>
+                        )}
+                    </button>
+                </div>
             </div>
 
             <div className="row g-4">
-                {/* Left Side: Product Catalog Grid */}
-                <div className="col-lg-8 order-2 order-lg-1">
+                {/* Left Side: Product Catalog Grid (Visible if mobileTab === 'catalog' or on desktop >= 992px) */}
+                <div className={`col-lg-8 order-2 order-lg-1 ${mobileTab === 'catalog' ? 'd-block' : 'd-none d-lg-block'}`}>
                     {/* Catalog Filters */}
                     <div className="card border-0 shadow-sm rounded-4 mb-3 p-3 bg-white">
                         <div className="row g-2 align-items-center">
@@ -258,7 +282,7 @@ const AdminPOS = () => {
                                     <span className="input-group-text bg-light border-0"><FaMagnifyingGlass className="text-muted" /></span>
                                     <input
                                         type="text"
-                                        className="form-control bg-light border-0"
+                                        className="form-control bg-light border-0 rounded-end-3"
                                         placeholder="Search products..."
                                         value={search}
                                         onChange={e => setSearch(e.target.value)}
@@ -266,11 +290,11 @@ const AdminPOS = () => {
                                 </div>
                             </div>
                             <div className="col-md-6">
-                                <div className="d-flex gap-1 overflow-auto">
+                                <div className="d-flex gap-2 overflow-auto py-1">
                                     {['ALL', 'wearable', 'accessories', 'stationery', 'other'].map(cat => (
                                         <button
                                             key={cat}
-                                            className={`btn btn-sm rounded-pill px-3 fw-semibold text-capitalize ${categoryFilter === cat ? 'btn-primary' : 'btn-light'}`}
+                                            className={`btn btn-sm rounded-pill px-3 py-1 fw-semibold text-capitalize text-nowrap transition-all ${categoryFilter === cat ? 'btn-primary' : 'btn-light'}`}
                                             onClick={() => setCategoryFilter(cat)}
                                         >
                                             {cat === 'ALL' ? 'All' : cat}
@@ -295,7 +319,7 @@ const AdminPOS = () => {
                             filteredMerch.map(item => (
                                 <div className="col-6 col-sm-4 col-md-3" key={item._id}>
                                     <div
-                                        className={`card border-0 shadow-sm rounded-4 h-100 overflow-hidden bg-white text-center p-2 cursor-pointer transition-all ${item.stock <= 0 ? 'opacity-50' : 'hover-shadow'}`}
+                                        className={`card border-0 shadow-sm rounded-4 h-100 overflow-hidden bg-white text-center p-2 cursor-pointer transition-all hover-lift ${item.stock <= 0 ? 'opacity-50' : 'hover-shadow'}`}
                                         style={{ cursor: item.stock > 0 ? 'pointer' : 'not-allowed' }}
                                         onClick={() => handleProductClick(item)}
                                     >
@@ -312,7 +336,7 @@ const AdminPOS = () => {
                                             )}
                                         </div>
                                         <div className="p-2">
-                                            <h6 className="card-title fw-bold text-dark text-truncate small mb-1">{item.name}</h6>
+                                            <h6 className="card-title fw-bold text-dark text-truncate small mb-1 font-outfit">{item.name}</h6>
                                             <div className="fw-bold text-primary mb-1">{formatCurrency(item.price)}</div>
                                             <small className={item.stock > 0 ? 'text-success' : 'text-danger'}>
                                                 {item.stock > 0 ? `${item.stock} in stock` : 'Unavailable'}
@@ -325,11 +349,11 @@ const AdminPOS = () => {
                     </div>
                 </div>
 
-                {/* Right Side: Register & Checkout Terminal */}
-                <div className="col-lg-4 order-1 order-lg-2">
+                {/* Right Side: Register & Checkout Terminal (Visible if mobileTab === 'register' or on desktop >= 992px) */}
+                <div className={`col-lg-4 order-1 order-lg-2 ${mobileTab === 'register' ? 'd-block' : 'd-none d-lg-block'}`}>
                     <div className="card border-0 shadow-sm rounded-4 bg-white sticky-top" style={{ top: '20px' }}>
                         <div className="card-body p-4 d-flex flex-column" style={{ minHeight: '600px' }}>
-                            <h5 className="fw-bold mb-3 text-dark d-flex align-items-center">
+                            <h5 className="fw-bold mb-3 text-dark d-flex align-items-center font-outfit">
                                 <FaCashRegister className="me-2 text-primary" /> Active Register
                             </h5>
 

@@ -373,9 +373,15 @@ footer {
     width: 100%;
     margin-left: 255px;
     transition: margin-left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    padding: 24px;
+    padding: 28px 32px;
     background-color: var(--bs-body-bg);
     min-height: 100vh;
+}
+
+@media (max-width: 1200px) {
+    #page-content-wrapper {
+        padding: 22px 24px;
+    }
 }
 
 #page-content-wrapper.collapsed {
@@ -492,4 +498,199 @@ footer {
 
 .reaction-pop {
     animation: pop-heart 0.3s ease-out;
+}
+
+/* Card Hover & Elevation Tokens */
+.hover-lift {
+    transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.hover-lift:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 10px 25px -5px rgba(0, 43, 127, 0.12), 0 8px 10px -6px rgba(0, 43, 127, 0.08) !important;
+}
+
+.hover-shadow {
+    transition: box-shadow 0.2s ease;
+}
+
+.hover-shadow:hover {
+    box-shadow: 0 8px 20px rgba(0, 43, 127, 0.1) !important;
+}
+
+.cursor-pointer {
+    cursor: pointer;
+}
+
+.font-outfit {
+    font-family: 'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
+}
+
+/* Responsive Table Wrappers */
+.table-responsive {
+    -webkit-overflow-scrolling: touch;
+    border-radius: 0.75rem;
+}
+
+.table-responsive::-webkit-scrollbar {
+    height: 6px;
+}
+
+.table-responsive::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    border-radius: 4px;
+}
+
+/* Horizontal Scroll Containers for Category Chips */
+.overflow-auto::-webkit-scrollbar, .overflow-x-auto::-webkit-scrollbar {
+    height: 4px;
+}
+
+.overflow-auto::-webkit-scrollbar-thumb, .overflow-x-auto::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    border-radius: 4px;
+}
+
+/* Touch Friendly Mobile Targets */
+@media (max-width: 768px) {
+    .btn {
+        min-height: 40px;
+    }
+    .form-control, .form-select {
+        min-height: 42px;
+    }
+    .card-body {
+        padding: 1rem !important;
+    }
+}
+
+/* =========================================================
+   UNIVERSAL ICON SPACING & ALIGNMENT
+   ========================================================= */
+.btn svg, .btn i {
+    margin-right: 0.5rem;
+    vertical-align: -0.125em;
+    flex-shrink: 0;
+}
+
+.btn.d-inline-flex svg, .btn.d-flex svg,
+.badge.d-inline-flex svg, .badge.d-flex svg {
+    margin-right: 0; /* Handled by flex gap */
+}
+
+.badge svg, .badge i {
+    margin-right: 0.375rem;
+    vertical-align: -0.1em;
+    flex-shrink: 0;
+}
+
+.input-group-text svg {
+    font-size: 1rem;
+}
+
+.dropdown-item svg {
+    margin-right: 0.625rem;
+    vertical-align: -0.125em;
+}
+
+/* =========================================================
+   CELLPHONE & SMALL SCREEN RESPONSIVENESS (< 576px / < 380px)
+   ========================================================= */
+@media (max-width: 576px) {
+    #page-content-wrapper {
+        padding: 12px 10px !important;
+    }
+    
+    .container-fluid {
+        padding-left: 6px !important;
+        padding-right: 6px !important;
+    }
+    
+    .card {
+        border-radius: 0.875rem !important;
+        margin-bottom: 1rem !important;
+    }
+
+    .card.p-4, .card.p-3.5, .card.p-3, .card-body.p-4, .card-body.p-3 {
+        padding: 1rem !important;
+    }
+
+    .topbar {
+        padding: 8px 12px !important;
+        margin-bottom: 14px !important;
+        border-radius: 0.75rem !important;
+    }
+
+    /* Modal Responsive Sizing on Mobile */
+    .modal-dialog {
+        margin: 0.5rem auto !important;
+        max-width: calc(100vw - 16px) !important;
+    }
+
+    .modal-content {
+        border-radius: 1rem !important;
+    }
+
+    .modal-header, .modal-footer {
+        padding: 0.75rem 1rem !important;
+    }
+
+    .modal-body {
+        padding: 1rem !important;
+    }
+
+    /* Responsive Typography on Phones */
+    h2, .h2 {
+        font-size: 1.35rem !important;
+    }
+
+    h3, .h3 {
+        font-size: 1.2rem !important;
+    }
+
+    h4, .h4 {
+        font-size: 1.1rem !important;
+    }
+
+    h5, .h5 {
+        font-size: 1rem !important;
+    }
+
+    /* Calendar Grid on Cellphones */
+    .calendar-day-cell {
+        min-height: 52px !important;
+        padding: 3px !important;
+    }
+
+    .calendar-weekday-grid {
+        font-size: 0.7rem !important;
+        padding: 4px 0 !important;
+    }
+
+    /* Responsive Tables */
+    .table th, .table td {
+        padding: 0.65rem 0.5rem !important;
+        font-size: 0.825rem !important;
+    }
+}
+
+@media (max-width: 380px) {
+    #page-content-wrapper {
+        padding: 8px 6px !important;
+    }
+
+    .container-fluid {
+        padding-left: 2px !important;
+        padding-right: 2px !important;
+    }
+
+    .card.p-4, .card.p-3.5, .card.p-3, .card-body.p-4, .card-body.p-3 {
+        padding: 0.75rem !important;
+    }
+
+    .btn {
+        font-size: 0.8rem !important;
+        padding-left: 0.6rem !important;
+        padding-right: 0.6rem !important;
+    }
 }

@@ -54,7 +54,7 @@ const Sidebar = () => {
 
     const isAdmin = user?.role === 'admin';
     const navLinkClass = collapsed ? 'nav-link justify-content-center' : 'nav-link';
-    const iconClass = collapsed ? '' : 'me-2';
+    const iconClass = collapsed ? '' : 'me-3';
 
     return (
         <>

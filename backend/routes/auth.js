@@ -186,12 +186,13 @@ router.put('/profile', verifyToken, parser.single('image'), async (req, res) => 
 });
 
 const sendEmail = require('../utils/sendEmail');
+const { getPasswordResetEmail } = require('../utils/emailTemplates');
 const crypto = require('crypto');
 
 // FORGOT PASSWORD
 router.post('/forgot-password', async (req, res) => {
     try {
-        const identifier = (req.body.studentId || req.body.identifier || req.body.idNumber || '').toString().trim();
+        const identifier = (req.body.studentId || req.body.identifier || req.body.email || req.body.idNumber || '').toString().trim();
         const inputEmail = (req.body.email || '').toString().trim().toLowerCase();
 
         if (!identifier || !inputEmail) {
@@ -227,23 +228,16 @@ router.post('/forgot-password', async (req, res) => {
             }
         });
 
-        const emailTemplate = `
-            <div style="font-family: Arial, sans-serif; text-align: center; color: #333;">
-              <div style="max-width: 600px; margin: auto; border: 1px solid #ddd; padding: 20px; border-radius: 10px;">
-                <h2 style="color: #003399;">Password Reset Request</h2>
-                <p>We received a request to reset your password. Use the code below to complete the process.</p>
-                <div style="background-color: #f0f0f0; padding: 15px; border-radius: 5px; margin: 20px 0;">
-                  <h3 style="margin: 0; font-size: 24px; letter-spacing: 5px; color: #003399;">${resetCode}</h3>
-                </div>
-                <p>This code is valid for 5 minutes. If you did not request this, please ignore this email.</p>
-                <hr style="border: none; border-top: 1px solid #eee; margin-top: 20px;">
-                <p style="font-size: 0.9em; color: #999;">UC-Central</p>
-              </div>
-            </div>`;
+        const emailTemplate = getPasswordResetEmail(
+            user.firstName || 'Student',
+            resetCode,
+            `/verify-code?email=${encodeURIComponent(user.email)}`,
+            req
+        );
 
         await sendEmail({
             email: user.email,
-            subject: 'Your Password Reset Code',
+            subject: 'UC-Central: Password Reset Verification Code',
             html: emailTemplate,
         });
 

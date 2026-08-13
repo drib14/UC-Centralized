@@ -302,11 +302,11 @@ const StudentProfile = () => {
                         {/* Official Academic Records List (Locked) */}
                         <div className="card-body p-4 text-start">
                             <div className="d-flex align-items-center justify-content-between mb-3">
-                                <h6 className="fw-bold text-dark mb-0 d-flex align-items-center">
-                                    <FaIdCard className="me-2 text-primary" /> Official University Records
+                                <h6 className="fw-bold text-dark mb-0 d-flex align-items-center gap-2">
+                                    <FaIdCard className="text-primary" /> Official University Records
                                 </h6>
-                                <span className="badge bg-secondary bg-opacity-10 text-secondary border border-secondary rounded-pill px-2 py-1 small">
-                                    <FaLock size={10} className="me-1" /> Locked
+                                <span className="badge bg-secondary bg-opacity-10 text-secondary border border-secondary rounded-pill px-2.5 py-1 small d-inline-flex align-items-center gap-1.5">
+                                    <FaLock size={10} /> Locked
                                 </span>
                             </div>
 
@@ -325,7 +325,7 @@ const StudentProfile = () => {
                                 </li>
                                 <li className="list-group-item d-flex justify-content-between align-items-center px-0 py-2 border-bottom">
                                     <span className="text-muted small">College Department</span>
-                                    <span className="badge text-white px-2 py-1 rounded-pill" style={{ backgroundColor: deptObj?.color || '#003399' }}>
+                                    <span className="badge text-white px-2.5 py-1 rounded-pill" style={{ backgroundColor: deptObj?.color || '#003399' }}>
                                         {user.department || 'General'}
                                     </span>
                                 </li>
@@ -337,13 +337,13 @@ const StudentProfile = () => {
                                 </li>
                                 <li className="list-group-item d-flex justify-content-between align-items-center px-0 py-2">
                                     <span className="text-muted small">Year Level</span>
-                                    <span className="badge bg-light text-dark border px-2 py-1 fw-bold">
+                                    <span className="badge bg-light text-dark border px-2.5 py-1 fw-bold">
                                         {user.year ? `Year ${user.year}` : '1st Year'}
                                     </span>
                                 </li>
                             </ul>
 
-                            <div className="alert alert-light border rounded-3 p-2 small text-muted d-flex align-items-start gap-2 mb-0">
+                            <div className="alert alert-light border rounded-3 p-2.5 small text-muted d-flex align-items-start gap-2 mb-0">
                                 <FaLock className="text-secondary mt-1 flex-shrink-0" size={12} />
                                 <span style={{ fontSize: '0.75rem' }}>
                                     Official student records are managed by the University Registrar. Contact campus administration to request name or program corrections.
@@ -355,10 +355,10 @@ const StudentProfile = () => {
                     {/* Cross-Device Push Notification Settings */}
                     <div className="card border-0 shadow-sm rounded-4 bg-white p-4 mb-4">
                         <div className="d-flex align-items-center justify-content-between mb-3">
-                            <h6 className="fw-bold text-dark mb-0 d-flex align-items-center">
-                                <FaBell className="me-2 text-warning" /> Device Notifications
+                            <h6 className="fw-bold text-dark mb-0 d-flex align-items-center gap-2">
+                                <FaBell className="text-warning" /> Device Notifications
                             </h6>
-                            <span className={`badge rounded-pill px-2 py-1 small ${
+                            <span className={`badge rounded-pill px-2.5 py-1 small ${
                                 devicePermission === 'granted' ? 'bg-success bg-opacity-10 text-success border border-success' :
                                 devicePermission === 'denied' ? 'bg-danger bg-opacity-10 text-danger border border-danger' :
                                 'bg-warning bg-opacity-10 text-dark border border-warning'
@@ -374,9 +374,9 @@ const StudentProfile = () => {
 
                         <div className="list-group list-group-flush mb-3">
                             {/* Native Device Push Toggle */}
-                            <div className="list-group-item d-flex justify-content-between align-items-center px-0 py-2 border-bottom">
-                                <div className="d-flex align-items-center">
-                                    <FaMobileScreenButton className="me-2 text-primary" />
+                            <div className="list-group-item d-flex justify-content-between align-items-center px-0 py-2.5 border-bottom">
+                                <div className="d-flex align-items-center gap-2.5">
+                                    <FaMobileScreenButton className="text-primary" />
                                     <div>
                                         <div className="fw-semibold small text-dark">Native Device Push</div>
                                         <small className="text-muted" style={{ fontSize: '0.75rem' }}>Desktop & mobile alerts</small>
@@ -395,9 +395,9 @@ const StudentProfile = () => {
                             </div>
 
                             {/* Email Broadcast Alerts */}
-                            <div className="list-group-item d-flex justify-content-between align-items-center px-0 py-2">
-                                <div className="d-flex align-items-center">
-                                    <FaEnvelope className="me-2 text-primary" />
+                            <div className="list-group-item d-flex justify-content-between align-items-center px-0 py-2.5">
+                                <div className="d-flex align-items-center gap-2.5">
+                                    <FaEnvelope className="text-primary" />
                                     <div>
                                         <div className="fw-semibold small text-dark">Email Broadcasts</div>
                                         <small className="text-muted" style={{ fontSize: '0.75rem' }}>Announcements to your inbox</small>
@@ -418,10 +418,10 @@ const StudentProfile = () => {
 
                         {devicePermission === 'granted' && (
                             <button
-                                className="btn btn-sm btn-outline-primary w-100 rounded-pill fw-semibold"
+                                className="btn btn-sm btn-outline-primary w-100 rounded-pill fw-semibold d-flex align-items-center justify-content-center gap-2 py-2"
                                 onClick={sendTestDeviceNotification}
                             >
-                                <FaBell className="me-1" /> Send Test Notification to this Device
+                                <FaBell /> Send Test Notification to this Device
                             </button>
                         )}
 

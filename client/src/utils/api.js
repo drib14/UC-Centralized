@@ -119,12 +119,27 @@ class API {
     }
 
     // Announcements
-    static getAnnouncements() {
-        return this.request('/announcements');
+    static getAnnouncements(params) {
+        let endpoint = '/announcements';
+        if (params && typeof params === 'object') {
+            const searchParams = new URLSearchParams();
+            Object.entries(params).forEach(([key, val]) => {
+                if (val !== undefined && val !== null && val !== '') {
+                    searchParams.append(key, val);
+                }
+            });
+            const qs = searchParams.toString();
+            if (qs) endpoint += `?${qs}`;
+        }
+        return this.request(endpoint);
     }
 
     static createAnnouncement(data) {
         return this.request('/announcements', 'POST', data);
+    }
+
+    static updateAnnouncement(id, data) {
+        return this.request(`/announcements/${id}`, 'PUT', data);
     }
 
     static deleteAnnouncement(id) {

@@ -188,11 +188,11 @@ const AdminOrders = () => {
                         </div>
                     </div>
                     <div className="col-md-5">
-                        <div className="d-flex gap-1 overflow-auto">
+                        <div className="d-flex gap-2 overflow-auto py-1">
                             {['ALL', 'pending', 'processing', 'claimed', 'cancelled'].map(st => (
                                 <button
                                     key={st}
-                                    className={`btn btn-sm rounded-pill px-3 fw-semibold text-capitalize ${statusFilter.toLowerCase() === st.toLowerCase() ? 'btn-primary' : 'btn-light'}`}
+                                    className={`btn btn-sm rounded-pill px-3 py-1 fw-semibold text-capitalize text-nowrap transition-all ${statusFilter.toLowerCase() === st.toLowerCase() ? 'btn-primary' : 'btn-light'}`}
                                     onClick={() => setStatusFilter(st)}
                                 >
                                     {st === 'ALL' ? 'All Orders' : st}
@@ -268,18 +268,18 @@ const AdminOrders = () => {
                                                 {getStatusBadge(order.status)}
                                             </td>
                                             <td className="text-end pe-4">
-                                                <div className="d-flex justify-content-end gap-1">
+                                                <div className="d-flex justify-content-end gap-2">
                                                     {order.status !== 'claimed' && (
                                                         <button
-                                                            className="btn btn-sm btn-outline-success"
+                                                            className="btn btn-sm btn-outline-success rounded-pill px-3 d-inline-flex align-items-center gap-1.5 fw-semibold"
                                                             onClick={() => handleQuickStatus(order._id, 'claimed')}
                                                             title="Mark as Claimed"
                                                         >
-                                                            <FaCircleCheck className="me-1" /> Claim
+                                                            <FaCircleCheck /> Claim
                                                         </button>
                                                     )}
                                                     <button
-                                                        className="btn btn-sm btn-outline-primary"
+                                                        className="btn btn-sm btn-outline-primary rounded-pill px-3 fw-semibold"
                                                         onClick={() => { setSelectedOrder(order); setShowModal(true); }}
                                                     >
                                                         Details

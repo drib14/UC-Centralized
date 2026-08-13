@@ -57,7 +57,7 @@ router.post('/', verifyToken, async (req, res) => {
                     'alert',
                     `Low Stock Alert: ${updatedProduct.name} has only ${updatedProduct.stock} items left.`,
                     updatedProduct._id,
-                    `${process.env.CLIENT_URL || 'http://localhost:5173'}/admin/merch`,
+                    '/admin/merch',
                     req
                 );
             }
@@ -133,7 +133,7 @@ router.put('/:id', verifyAdmin, async (req, res) => {
                 'alert',
                 `Your Order #${updatedOrder._id.toString().slice(-6)} status is now: ${updatedOrder.status}`,
                 updatedOrder._id,
-                `${process.env.CLIENT_URL || 'http://localhost:5173'}/student/cart`,
+                '/student/cart',
                 true,
                 req
             );

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import UniversalSkeleton from '../../components/skeletons/UniversalSkeleton';
 import API from '../../utils/api';
 import { useAuth } from '../../context/AuthContext';
@@ -9,8 +9,10 @@ import SEO from '../../components/SEO';
 import {
     FaBullhorn, FaCalendarDays, FaShirt, FaLocationDot,
     FaClock, FaPlus, FaArrowRight, FaCartShopping,
-    FaGraduationCap, FaCircleCheck
+    FaGraduationCap, FaCircleCheck, FaTriangleExclamation,
+    FaBuildingColumns, FaTag, FaCalendarWeek, FaXmark
 } from 'react-icons/fa6';
+import AnnouncementCalendar, { ANNOUNCEMENT_TYPES, getTypeMeta } from '../../components/announcements/AnnouncementCalendar';
 
 const StudentDashboard = () => {
     const { user } = useAuth();
@@ -25,6 +27,7 @@ const StudentDashboard = () => {
 
     const [merch, setMerch] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [showCalendarModal, setShowCalendarModal] = useState(false);
 
     // Merch Variant Selection State (Map of itemID -> {size, color})
     const [selections, setSelections] = useState({});
@@ -96,6 +99,33 @@ const StudentDashboard = () => {
         fetchData();
     }, []);
 
+    // Check for active Class Suspension today
+    const activeSuspension = useMemo(() => {
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const todayTime = today.getTime();
+
+        return announcements.find(ann => {
+            if (ann.type !== 'suspension') return false;
+            const startRaw = ann.startDate || ann.date || ann.createdAt;
+            if (!startRaw) return false;
+
+            const start = new Date(startRaw);
+            start.setHours(0, 0, 0, 0);
+            const startTime = start.getTime();
+
+            if (!ann.endDate) {
+                return todayTime === startTime;
+            }
+
+            const end = new Date(ann.endDate);
+            end.setHours(23, 59, 59, 999);
+            const endTime = end.getTime();
+
+            return todayTime >= startTime && todayTime <= endTime;
+        });
+    }, [announcements]);
+
     const handleSelectionChange = (itemId, field, value) => {
         setSelections(prev => {
             const newItemState = { ...prev[itemId], [field]: value };
@@ -159,6 +189,16 @@ const StudentDashboard = () => {
         return `${formattedHour}:${formattedMinute} ${ampm}`;
     };
 
+    const formatDuration = (startDate, endDate) => {
+        if (!startDate) return '';
+        const start = new Date(startDate);
+        const startStr = start.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
+        if (!endDate) return startStr;
+        const end = new Date(endDate);
+        const endStr = end.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
+        return `${startStr} — ${endStr}`;
+    };
+
     const studentName = user ? ((user.firstName && user.lastName) ? `${user.firstName} ${user.lastName}` : (user.name || 'Student')) : 'Student';
     const userDept = user?.department || 'CCS';
     const deptMatch = departments.find(d => d.code === userDept);
@@ -167,14 +207,52 @@ const StudentDashboard = () => {
 
     return (
         <div className="container-fluid py-4">
-            <SEO title="Student Portal" description="Campus updates, official announcements, merchandise, and scheduled events." />
+            <SEO title="Student Portal" description="Campus updates, class suspensions, official announcements, merchandise, and scheduled events." />
+
+            {/* Live Class Suspension / Urgent Alert Banner */}
+            {activeSuspension && (
+                <div className="card border-0 rounded-4 shadow-sm mb-4 overflow-hidden" style={{ backgroundColor: '#fef2f2', borderLeft: '6px solid #dc2626' }}>
+                    <div className="card-body p-4">
+                        <div className="d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-3">
+                            <div className="d-flex align-items-start gap-3">
+                                <div className="p-3 bg-danger text-white rounded-circle d-flex align-items-center justify-content-center shadow-sm flex-shrink-0" style={{ width: '48px', height: '48px' }}>
+                                    <FaTriangleExclamation size={22} />
+                                </div>
+                                <div>
+                                    <div className="d-flex align-items-center gap-2 mb-1">
+                                        <span className="badge bg-danger text-white px-2.5 py-0.5 rounded-pill fw-bold" style={{ fontSize: '0.75rem' }}>
+                                            🚨 CLASS SUSPENSION IN EFFECT
+                                        </span>
+                                        <span className="badge bg-white text-danger border border-danger border-opacity-25 rounded-pill px-2.5 py-0.5" style={{ fontSize: '0.75rem' }}>
+                                            {formatDuration(activeSuspension.startDate || activeSuspension.date, activeSuspension.endDate)}
+                                        </span>
+                                    </div>
+                                    <h5 className="fw-bold text-danger mb-1 font-outfit">
+                                        {activeSuspension.title}
+                                    </h5>
+                                    <p className="text-secondary mb-0 small" style={{ whiteSpace: 'pre-line' }}>
+                                        {activeSuspension.message || activeSuspension.content}
+                                    </p>
+                                </div>
+                            </div>
+                            <button
+                                type="button"
+                                className="btn btn-outline-danger btn-sm rounded-pill px-3 fw-semibold flex-shrink-0 d-flex align-items-center gap-2"
+                                onClick={() => setShowCalendarModal(true)}
+                            >
+                                <FaCalendarDays /> View Schedule
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             {/* Personalized Welcome Banner */}
             <div className="card border-0 shadow-sm rounded-4 p-4 mb-4 bg-white position-relative overflow-hidden">
                 <div className="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
                     <div className="d-flex align-items-center gap-3">
                         <div
-                            className="rounded-circle d-flex align-items-center justify-content-center text-white fw-bold shadow-sm"
+                            className="rounded-circle d-flex align-items-center justify-content-center text-white fw-bold shadow-sm flex-shrink-0"
                             style={{
                                 width: '56px',
                                 height: '56px',
@@ -189,43 +267,57 @@ const StudentDashboard = () => {
                             )}
                         </div>
                         <div>
-                            <h3 className="fw-bold mb-1 text-dark">Welcome back, {studentName}!</h3>
+                            <h3 className="fw-bold mb-1 text-dark font-outfit">Welcome back, {studentName}!</h3>
                             <div className="d-flex flex-wrap align-items-center gap-2 small text-muted">
-                                <span className="badge text-white px-3 py-1 rounded-pill" style={{ backgroundColor: deptMatch?.color || '#003399' }}>
-                                    <FaGraduationCap className="me-1" /> {userDept} • {deptMatch?.name || 'Department'}
+                                <span className="badge text-white px-3 py-1.5 rounded-pill d-inline-flex align-items-center gap-2" style={{ backgroundColor: deptMatch?.color || '#003399' }}>
+                                    <FaGraduationCap /> {userDept} • {deptMatch?.name || 'Department'}
                                 </span>
                                 {user?.studentId && (
-                                    <span className="badge bg-light text-dark border font-monospace px-2 py-1">
+                                    <span className="badge bg-light text-dark border font-monospace px-2.5 py-1.5">
                                         ID: {user.studentId}
                                     </span>
                                 )}
                                 {user?.program && (
-                                    <span className="text-secondary fw-semibold">
+                                    <span className="text-secondary fw-semibold ms-1">
                                         {user.program} • Year {user.year || '1'}
                                     </span>
                                 )}
                             </div>
                         </div>
                     </div>
-                    <div className="d-flex gap-2">
-                        <Link to="/student/merch" className="btn btn-primary d-flex align-items-center gap-2 rounded-pill px-3 fw-semibold shadow-sm">
-                            <FaShirt /> Campus Store
+                    <div className="d-flex flex-wrap gap-2">
+                        <button
+                            type="button"
+                            className="btn btn-outline-secondary d-flex align-items-center gap-2 rounded-pill px-3 py-2 fw-semibold shadow-sm"
+                            onClick={() => setShowCalendarModal(true)}
+                        >
+                            <FaCalendarDays size={14} /> Bulletin Calendar
+                        </button>
+                        <Link to="/student/merch" className="btn btn-primary d-flex align-items-center gap-2 rounded-pill px-3 py-2 fw-semibold shadow-sm hover-lift">
+                            <FaShirt size={14} /> Campus Store
                         </Link>
-                        <Link to="/student/cart" className="btn btn-outline-primary d-flex align-items-center gap-2 rounded-pill px-3 shadow-sm">
-                            <FaCartShopping /> My Cart
+                        <Link to="/student/cart" className="btn btn-outline-primary d-flex align-items-center gap-2 rounded-pill px-3 py-2 shadow-sm hover-lift">
+                            <FaCartShopping size={14} /> My Cart
                         </Link>
                     </div>
                 </div>
             </div>
 
             <div className="row g-4">
-                {/* Main Left Content: Announcements & Merch Showcase */}
+                {/* Main Left Column: Announcements Feed & Merch Showcase */}
                 <div className="col-lg-8">
-                    {/* Campus Announcements */}
+                    {/* Campus Announcements Header */}
                     <div className="d-flex justify-content-between align-items-center mb-3">
-                        <h4 className="fw-bold text-dark mb-0 d-flex align-items-center">
-                            <FaBullhorn className="me-2 text-primary" /> Campus Announcements
+                        <h4 className="fw-bold text-dark mb-0 d-flex align-items-center gap-2 font-outfit">
+                            <FaBullhorn className="text-primary" /> Campus Bulletins & Notices
                         </h4>
+                        <button
+                            type="button"
+                            className="btn btn-sm btn-outline-primary rounded-pill px-3 py-1.5 fw-semibold d-flex align-items-center gap-2"
+                            onClick={() => setShowCalendarModal(true)}
+                        >
+                            <FaCalendarWeek size={13} /> Schedule Calendar
+                        </button>
                     </div>
 
                     <div className="mb-4">
@@ -235,24 +327,46 @@ const StudentDashboard = () => {
                                 <p className="mb-0">No active announcements at this time.</p>
                             </div>
                         ) : (
-                            announcements.slice(0, 3).map((ann, i) => {
+                            announcements.slice(0, 4).map((ann, i) => {
                                 const annDept = departments.find(d => d.code === ann.department);
+                                const meta = getTypeMeta(ann.type);
+                                const Icon = meta.icon;
+                                const isSuspension = ann.type === 'suspension';
+
                                 return (
-                                    <div className="card border-0 shadow-sm rounded-4 mb-3 bg-white hover-shadow" key={i}>
+                                    <div
+                                        className="card border-0 shadow-sm rounded-4 mb-3 bg-white hover-shadow transition-all overflow-hidden"
+                                        key={ann._id || i}
+                                        style={isSuspension ? { borderLeft: `6px solid ${meta.color}`, backgroundColor: meta.bg } : {}}
+                                    >
                                         <div className="card-body p-4">
-                                            <div className="d-flex align-items-center gap-2 mb-2">
+                                            <div className="d-flex flex-wrap align-items-center gap-2 mb-2">
                                                 <span
-                                                    className="badge px-3 py-1 rounded-pill text-white fw-bold"
+                                                    className="badge px-3 py-1.5 rounded-pill d-inline-flex align-items-center gap-2 fw-bold"
+                                                    style={{ backgroundColor: meta.color, color: '#ffffff' }}
+                                                >
+                                                    <Icon size={12} /> {meta.label}
+                                                </span>
+                                                <span
+                                                    className="badge px-3 py-1.5 rounded-pill text-white fw-bold"
                                                     style={{ backgroundColor: ann.department === 'ALL' ? '#0d6efd' : (annDept?.color || '#003399') }}
                                                 >
                                                     {ann.department === 'ALL' ? 'Campus-Wide' : ann.department}
                                                 </span>
-                                                <span className="text-muted small">
-                                                    {new Date(ann.createdAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
+                                                {ann.priority === 'urgent' && (
+                                                    <span className="badge bg-danger text-white rounded-pill px-2.5 py-1">
+                                                        URGENT
+                                                    </span>
+                                                )}
+                                                <span className="text-muted small d-flex align-items-center gap-1.5 ms-1">
+                                                    <FaClock size={12} />
+                                                    {formatDuration(ann.startDate || ann.date || ann.createdAt, ann.endDate)}
                                                 </span>
                                             </div>
-                                            <h5 className="card-title fw-bold text-dark mb-2">{ann.title}</h5>
-                                            <p className="card-text text-secondary mb-0" style={{ whiteSpace: 'pre-line' }}>{ann.message}</p>
+                                            <h5 className="card-title fw-bold text-dark mb-2 font-outfit">{ann.title}</h5>
+                                            <p className="card-text text-secondary mb-0" style={{ whiteSpace: 'pre-line' }}>
+                                                {ann.message || ann.content}
+                                            </p>
                                         </div>
                                     </div>
                                 );
@@ -262,11 +376,11 @@ const StudentDashboard = () => {
 
                     {/* Fresh Campus Merchandise */}
                     <div className="d-flex justify-content-between align-items-center mb-3">
-                        <h4 className="fw-bold text-dark mb-0 d-flex align-items-center">
-                            <FaShirt className="me-2 text-primary" /> Official Campus Merchandise
+                        <h4 className="fw-bold text-dark mb-0 d-flex align-items-center gap-2 font-outfit">
+                            <FaShirt className="text-primary" /> Official Campus Merchandise
                         </h4>
-                        <Link to="/student/merch" className="btn btn-sm btn-outline-primary rounded-pill px-3">
-                            View All <FaArrowRight className="ms-1" size={12} />
+                        <Link to="/student/merch" className="btn btn-sm btn-outline-primary rounded-pill px-3 py-1.5 fw-semibold d-flex align-items-center gap-2">
+                            View Catalog <FaArrowRight size={12} />
                         </Link>
                     </div>
 
@@ -280,7 +394,7 @@ const StudentDashboard = () => {
                         ) : (
                             merch.map(item => (
                                 <div className="col-md-6" key={item._id}>
-                                    <div className="card border-0 shadow-sm rounded-4 h-100 bg-white hover-shadow overflow-hidden">
+                                    <div className="card border-0 shadow-sm rounded-4 h-100 bg-white hover-shadow transition-all overflow-hidden">
                                         <div className="row g-0 h-100">
                                             <div className="col-4">
                                                 <img
@@ -292,15 +406,15 @@ const StudentDashboard = () => {
                                             </div>
                                             <div className="col-8">
                                                 <div className="card-body p-3 d-flex flex-column h-100">
-                                                    <h6 className="card-title fw-bold text-dark text-truncate mb-1">{item.name}</h6>
+                                                    <h6 className="card-title fw-bold text-dark text-truncate mb-1 font-outfit">{item.name}</h6>
                                                     <div className="fw-bold text-primary mb-2">{formatCurrency(item.price)}</div>
 
                                                     {/* Variant Selectors */}
                                                     {item.category === 'wearable' && item.variants && item.variants.length > 0 && (
                                                         <div className="mb-2">
-                                                            <div className="d-flex gap-1 mb-1">
+                                                            <div className="d-flex gap-2 mb-1">
                                                                 <select
-                                                                    className="form-select form-select-sm"
+                                                                    className="form-select form-select-sm rounded-2"
                                                                     onChange={(e) => handleSelectionChange(item._id, 'size', e.target.value)}
                                                                     value={selections[item._id]?.size || ''}
                                                                 >
@@ -308,7 +422,7 @@ const StudentDashboard = () => {
                                                                     {[...new Set(item.variants.map(v => v.size))].map(s => <option key={s} value={s}>{s}</option>)}
                                                                 </select>
                                                                 <select
-                                                                    className="form-select form-select-sm"
+                                                                    className="form-select form-select-sm rounded-2"
                                                                     onChange={(e) => handleSelectionChange(item._id, 'color', e.target.value)}
                                                                     value={selections[item._id]?.color || ''}
                                                                 >
@@ -331,10 +445,11 @@ const StudentDashboard = () => {
                                                     )}
 
                                                     <button
-                                                        className="btn btn-sm btn-outline-primary rounded-pill mt-auto w-100 fw-semibold d-flex align-items-center justify-content-center gap-1"
+                                                        type="button"
+                                                        className="btn btn-sm btn-outline-primary rounded-pill mt-auto w-100 fw-semibold d-flex align-items-center justify-content-center gap-2 py-1.5"
                                                         onClick={() => addToCart(item)}
                                                     >
-                                                        <FaPlus size={10} /> Add to Cart
+                                                        <FaPlus size={11} /> Add to Cart
                                                     </button>
                                                 </div>
                                             </div>
@@ -346,17 +461,17 @@ const StudentDashboard = () => {
                     </div>
                 </div>
 
-                {/* Right Side Column: Events Schedule */}
+                {/* Right Column: Events Schedule & Calendar Highlights */}
                 <div className="col-lg-4">
                     {/* Happening Today */}
                     <div className="d-flex justify-content-between align-items-center mb-3">
-                        <h5 className="fw-bold text-dark mb-0 d-flex align-items-center">
+                        <h5 className="fw-bold text-dark mb-0 d-flex align-items-center font-outfit">
                             <FaCalendarDays className="me-2 text-warning" /> Happening Today
                         </h5>
                     </div>
 
                     {latestEvent ? (
-                        <div className="card border-0 shadow-sm rounded-4 mb-4 bg-white overflow-hidden">
+                        <div className="card border-0 shadow-sm rounded-4 mb-4 bg-white overflow-hidden hover-shadow transition-all">
                             {latestEvent.image && (
                                 <img
                                     src={latestEvent.image}
@@ -369,7 +484,7 @@ const StudentDashboard = () => {
                                 <span className="badge bg-warning text-dark px-3 py-1 rounded-pill mb-2 fw-semibold">
                                     Today's Activity
                                 </span>
-                                <h5 className="card-title fw-bold text-dark mb-2">{latestEvent.title}</h5>
+                                <h5 className="card-title fw-bold text-dark mb-2 font-outfit">{latestEvent.title}</h5>
                                 <div className="text-muted small mb-2 d-flex align-items-center gap-2">
                                     <FaClock size={12} />
                                     <span>{formatTime(latestEvent.time)}</span>
@@ -392,7 +507,7 @@ const StudentDashboard = () => {
 
                     {/* Upcoming Events */}
                     <div className="d-flex justify-content-between align-items-center mb-3">
-                        <h5 className="fw-bold text-dark mb-0 d-flex align-items-center">
+                        <h5 className="fw-bold text-dark mb-0 d-flex align-items-center font-outfit">
                             <FaCalendarDays className="me-2 text-primary" /> Upcoming Events
                         </h5>
                         <Link to="/student/events" className="small text-decoration-none fw-semibold">
@@ -407,7 +522,7 @@ const StudentDashboard = () => {
                             </div>
                         ) : (
                             upcomingEvents.slice(0, 3).map((ev, i) => (
-                                <div className="card border-0 shadow-sm rounded-4 mb-2 bg-white p-3 hover-shadow" key={i}>
+                                <div className="card border-0 shadow-sm rounded-4 mb-2 bg-white p-3 hover-shadow transition-all" key={i}>
                                     <div className="d-flex align-items-center gap-3">
                                         <div className="rounded-3 bg-primary bg-opacity-10 text-primary p-2 text-center" style={{ minWidth: '50px' }}>
                                             <small className="d-block fw-bold" style={{ fontSize: '10px' }}>
@@ -418,7 +533,7 @@ const StudentDashboard = () => {
                                             </span>
                                         </div>
                                         <div className="flex-grow-1 overflow-hidden">
-                                            <h6 className="fw-bold text-dark text-truncate mb-1">{ev.title}</h6>
+                                            <h6 className="fw-bold text-dark text-truncate mb-1 font-outfit">{ev.title}</h6>
                                             <small className="text-muted d-flex align-items-center gap-1">
                                                 <FaLocationDot size={10} className="text-danger" /> {ev.location}
                                             </small>
@@ -445,6 +560,34 @@ const StudentDashboard = () => {
                     )}
                 </div>
             </div>
+
+            {/* Announcement Bulletin & Suspension Calendar Modal */}
+            {showCalendarModal && (
+                <div className="modal fade show d-block" tabIndex="-1" style={{ backgroundColor: 'rgba(0,0,0,0.6)', zIndex: 1055 }}>
+                    <div className="modal-dialog modal-dialog-centered modal-xl modal-dialog-scrollable">
+                        <div className="modal-content border-0 rounded-4 shadow">
+                            <div className="modal-header bg-primary text-white rounded-top-4 p-3 px-4">
+                                <h5 className="modal-title d-flex align-items-center fw-bold font-outfit">
+                                    <FaCalendarDays className="me-2" /> Campus Bulletins, Schedules & Suspension Calendar
+                                </h5>
+                                <button type="button" className="btn-close btn-close-white" onClick={() => setShowCalendarModal(false)}></button>
+                            </div>
+                            <div className="modal-body p-4 bg-light">
+                                <AnnouncementCalendar
+                                    announcements={announcements}
+                                    departments={departments}
+                                    isAdmin={false}
+                                />
+                            </div>
+                            <div className="modal-footer bg-white rounded-bottom-4 p-3">
+                                <button type="button" className="btn btn-secondary rounded-pill px-4" onClick={() => setShowCalendarModal(false)}>
+                                    Close Calendar
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };

@@ -163,14 +163,16 @@ const Notifications = () => {
 
     return (
         <div className="container-fluid">
-            <div className="d-flex justify-content-between align-items-center mb-4 pt-3">
-                <h2 className="text-primary"><FaBell className="me-2" />Notifications</h2>
+            <div className="d-flex flex-column flex-sm-row justify-content-between align-items-sm-center gap-3 mb-4 pt-2">
+                <h2 className="text-dark fw-bold mb-0 d-flex align-items-center gap-2 font-outfit">
+                    <FaBell className="text-primary" /> Notifications
+                </h2>
                 <div className="d-flex gap-2">
-                    <button className="btn btn-outline-primary btn-sm" onClick={handleMarkAllRead}>
-                        <FaCheck className="me-1" /> Mark All Read
+                    <button className="btn btn-outline-primary btn-sm rounded-pill px-3 py-1.5 fw-semibold d-inline-flex align-items-center gap-2 shadow-sm" onClick={handleMarkAllRead}>
+                        <FaCheck /> Mark All Read
                     </button>
-                    <button className="btn btn-outline-danger btn-sm" onClick={handleDeleteAll}>
-                        <FaTrash className="me-1" /> Delete All
+                    <button className="btn btn-outline-danger btn-sm rounded-pill px-3 py-1.5 fw-semibold d-inline-flex align-items-center gap-2 shadow-sm" onClick={handleDeleteAll}>
+                        <FaTrash /> Delete All
                     </button>
                 </div>
             </div>

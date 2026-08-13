@@ -34,7 +34,7 @@ router.post('/', verifyAdmin, parser.single('image'), async (req, res) => {
             'event',
             `New Event: ${savedEvent.title}`,
             savedEvent._id,
-            `${process.env.CLIENT_URL || 'http://localhost:5173'}/student/events`,
+            '/student/events',
             req
         );
 

@@ -112,11 +112,11 @@ const AdminDashboard = () => {
             <div className="row g-3 mb-4">
                 {/* Total Revenue */}
                 <div className="col-12 col-sm-6 col-xl-3">
-                    <div className="card border-0 shadow-sm rounded-4 p-3 bg-white h-100 position-relative overflow-hidden">
+                    <div className="card border-0 shadow-sm rounded-4 p-3.5 bg-white h-100 position-relative overflow-hidden hover-lift">
                         <div className="d-flex justify-content-between align-items-start">
                             <div>
                                 <span className="text-muted small fw-bold text-uppercase">Total Sales</span>
-                                <h3 className="fw-bold text-primary mt-1 mb-0">{formatCurrency(stats.totalSales)}</h3>
+                                <h3 className="fw-bold text-primary mt-1 mb-0 font-outfit">{formatCurrency(stats.totalSales)}</h3>
                                 <small className="text-success fw-semibold">Merchandise revenue</small>
                             </div>
                             <div className="p-3 bg-primary bg-opacity-10 text-primary rounded-4">
@@ -128,11 +128,11 @@ const AdminDashboard = () => {
 
                 {/* Active Orders */}
                 <div className="col-12 col-sm-6 col-xl-3">
-                    <div className="card border-0 shadow-sm rounded-4 p-3 bg-white h-100 position-relative overflow-hidden">
+                    <div className="card border-0 shadow-sm rounded-4 p-3.5 bg-white h-100 position-relative overflow-hidden hover-lift">
                         <div className="d-flex justify-content-between align-items-start">
                             <div>
                                 <span className="text-muted small fw-bold text-uppercase">Active Orders</span>
-                                <h3 className="fw-bold text-warning mt-1 mb-0">{stats.activeOrders}</h3>
+                                <h3 className="fw-bold text-warning mt-1 mb-0 font-outfit">{stats.activeOrders}</h3>
                                 <small className="text-muted">Awaiting claim / pickup</small>
                             </div>
                             <div className="p-3 bg-warning bg-opacity-10 text-warning rounded-4">
@@ -142,33 +142,33 @@ const AdminDashboard = () => {
                     </div>
                 </div>
 
-                {/* Upcoming Events */}
+                {/* Registered Users */}
                 <div className="col-12 col-sm-6 col-xl-3">
-                    <div className="card border-0 shadow-sm rounded-4 p-3 bg-white h-100 position-relative overflow-hidden">
+                    <div className="card border-0 shadow-sm rounded-4 p-3.5 bg-white h-100 position-relative overflow-hidden hover-lift">
                         <div className="d-flex justify-content-between align-items-start">
                             <div>
-                                <span className="text-muted small fw-bold text-uppercase">Campus Events</span>
-                                <h3 className="fw-bold text-success mt-1 mb-0">{stats.eventCount}</h3>
-                                <small className="text-muted">Scheduled activities</small>
+                                <span className="text-muted small fw-bold text-uppercase">Total Users</span>
+                                <h3 className="fw-bold text-dark mt-1 mb-0 font-outfit">{stats.userCount}</h3>
+                                <small className="text-muted">Students & Administrators</small>
                             </div>
-                            <div className="p-3 bg-success bg-opacity-10 text-success rounded-4">
-                                <FaCalendarDays size={22} />
+                            <div className="p-3 bg-info bg-opacity-10 text-info rounded-4">
+                                <FaUsers size={22} />
                             </div>
                         </div>
                     </div>
                 </div>
 
-                {/* Registered Users */}
+                {/* Campus Events */}
                 <div className="col-12 col-sm-6 col-xl-3">
-                    <div className="card border-0 shadow-sm rounded-4 p-3 bg-white h-100 position-relative overflow-hidden">
+                    <div className="card border-0 shadow-sm rounded-4 p-3.5 bg-white h-100 position-relative overflow-hidden hover-lift">
                         <div className="d-flex justify-content-between align-items-start">
                             <div>
-                                <span className="text-muted small fw-bold text-uppercase">Enrolled Users</span>
-                                <h3 className="fw-bold text-info mt-1 mb-0">{stats.userCount}</h3>
-                                <small className="text-muted">Across {departments.length} departments</small>
+                                <span className="text-muted small fw-bold text-uppercase">Campus Events</span>
+                                <h3 className="fw-bold text-success mt-1 mb-0 font-outfit">{stats.eventCount}</h3>
+                                <small className="text-muted">Scheduled activities</small>
                             </div>
-                            <div className="p-3 bg-info bg-opacity-10 text-info rounded-4">
-                                <FaUsers size={22} />
+                            <div className="p-3 bg-success bg-opacity-10 text-success rounded-4">
+                                <FaCalendarDays size={22} />
                             </div>
                         </div>
                     </div>

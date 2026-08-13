@@ -130,11 +130,11 @@ const StudentMerch = () => {
                         </div>
                     </div>
                     <div className="col-md-6">
-                        <div className="d-flex gap-1 overflow-auto">
+                        <div className="d-flex gap-2 overflow-auto py-1">
                             {['ALL', 'wearable', 'accessories', 'stationery', 'other'].map(cat => (
                                 <button
                                     key={cat}
-                                    className={`btn btn-sm rounded-pill px-3 fw-semibold text-capitalize ${categoryFilter === cat ? 'btn-primary' : 'btn-light'}`}
+                                    className={`btn btn-sm rounded-pill px-3.5 py-1.5 fw-semibold text-capitalize text-nowrap transition-all ${categoryFilter === cat ? 'btn-primary' : 'btn-outline-secondary'}`}
                                     onClick={() => setCategoryFilter(cat)}
                                 >
                                     {cat === 'ALL' ? 'All Items' : cat}
@@ -145,35 +145,33 @@ const StudentMerch = () => {
                 </div>
             </div>
 
-            {/* Merchandise Grid */}
+            {/* Products Grid */}
             <div className="row g-4">
                 {filteredMerch.length === 0 ? (
-                    <div className="col-12 text-center py-5">
-                        <div className="card border-0 shadow-sm rounded-4 p-5 text-muted bg-white">
-                            <FaShirt size={48} className="mb-3 opacity-25" />
-                            <h5>No merchandise found</h5>
-                            <p className="mb-0">Try changing your search terms or category filter.</p>
-                        </div>
+                    <div className="col-12 text-center py-5 text-muted">
+                        <FaShirt size={48} className="mb-3 opacity-25" />
+                        <h5>No campus merchandise found</h5>
+                        <p className="small">Try adjusting your filters or search keywords</p>
                     </div>
                 ) : (
                     filteredMerch.map(item => (
                         <div className="col-12 col-sm-6 col-lg-4 col-xl-3" key={item._id}>
-                            <div className="card border-0 shadow-sm rounded-4 h-100 bg-white hover-shadow overflow-hidden d-flex flex-column">
+                            <div className="card border-0 shadow-sm rounded-4 h-100 bg-white hover-shadow overflow-hidden d-flex flex-column hover-lift">
                                 <div className="position-relative" style={{ height: '220px', backgroundColor: '#f1f5f9' }}>
                                     <img
                                         src={item.image || 'https://via.placeholder.com/300'}
                                         className="w-100 h-100 object-fit-cover"
                                         alt={item.name}
                                     />
-                                    <span className="position-absolute top-0 start-0 m-3 badge bg-white text-dark shadow-sm rounded-pill px-3 py-1 text-capitalize fw-semibold">
-                                        <FaTag className="me-1 text-primary" size={10} /> {item.category || 'General'}
+                                    <span className="position-absolute top-0 start-0 m-3 badge bg-white text-dark shadow-sm rounded-pill px-3 py-1.5 text-capitalize fw-semibold d-inline-flex align-items-center gap-2">
+                                        <FaTag className="text-primary" size={11} /> {item.category || 'General'}
                                     </span>
                                 </div>
                                 <div className="card-body p-4 d-flex flex-column flex-grow-1">
                                     <div className="d-flex justify-content-between align-items-start mb-2">
-                                        <h5 className="card-title fw-bold text-dark mb-0 line-clamp-1">{item.name}</h5>
+                                        <h5 className="card-title fw-bold text-dark mb-0 line-clamp-1 font-outfit">{item.name}</h5>
                                     </div>
-                                    <h4 className="fw-bold text-primary mb-2">{formatCurrency(item.price)}</h4>
+                                    <h4 className="fw-bold text-primary mb-2 font-outfit">{formatCurrency(item.price)}</h4>
                                     <p className="card-text text-muted small mb-3 line-clamp-2">{item.description || 'Official UC campus item'}</p>
 
                                     {/* Variant Selectors for Wearables */}
@@ -181,7 +179,7 @@ const StudentMerch = () => {
                                         <div className="mb-3">
                                             <div className="d-flex gap-2 mb-1">
                                                 <select
-                                                    className="form-select form-select-sm"
+                                                    className="form-select form-select-sm rounded-2"
                                                     value={selections[item._id]?.size || ''}
                                                     onChange={e => handleSelectionChange(item._id, 'size', e.target.value)}
                                                 >
@@ -191,7 +189,7 @@ const StudentMerch = () => {
                                                     ))}
                                                 </select>
                                                 <select
-                                                    className="form-select form-select-sm"
+                                                    className="form-select form-select-sm rounded-2"
                                                     value={selections[item._id]?.color || ''}
                                                     onChange={e => handleSelectionChange(item._id, 'color', e.target.value)}
                                                 >
@@ -212,19 +210,19 @@ const StudentMerch = () => {
                                     {item.category !== 'wearable' && (
                                         <div className="mb-3">
                                             {item.stock > 0 ? (
-                                                <span className="badge bg-success bg-opacity-10 text-success border border-success px-2 py-1 rounded-pill small">
-                                                    <FaCircleCheck className="me-1" /> {item.stock} in stock
+                                                <span className="badge bg-success bg-opacity-10 text-success border border-success px-2.5 py-1 rounded-pill small d-inline-flex align-items-center gap-1.5">
+                                                    <FaCircleCheck /> {item.stock} in stock
                                                 </span>
                                             ) : (
-                                                <span className="badge bg-danger bg-opacity-10 text-danger border border-danger px-2 py-1 rounded-pill small">
-                                                    <FaCircleXmark className="me-1" /> Out of stock
+                                                <span className="badge bg-danger bg-opacity-10 text-danger border border-danger px-2.5 py-1 rounded-pill small d-inline-flex align-items-center gap-1.5">
+                                                    <FaCircleXmark /> Out of stock
                                                 </span>
                                             )}
                                         </div>
                                     )}
 
                                     <button
-                                        className="btn btn-primary rounded-pill mt-auto w-100 fw-semibold d-flex align-items-center justify-content-center gap-2 shadow-sm"
+                                        className="btn btn-primary rounded-pill mt-auto w-100 fw-semibold d-flex align-items-center justify-content-center gap-2 py-2 shadow-sm"
                                         onClick={() => handleAddToCart(item)}
                                     >
                                         <FaPlus size={12} /> Add to Cart

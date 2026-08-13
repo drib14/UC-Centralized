@@ -215,8 +215,8 @@ const StudentCart = () => {
                         </div>
 
                         <div className="alert alert-light border rounded-3 p-3 mb-3 small text-muted">
-                            <div className="fw-bold text-dark mb-1 d-flex align-items-center">
-                                <FaLocationDot className="me-1 text-danger" /> Pickup Location:
+                            <div className="fw-bold text-dark mb-1 d-flex align-items-center gap-2">
+                                <FaLocationDot className="text-danger" /> Pickup Location:
                             </div>
                             UC Main Campus Central Store & Cashier Window. Present your Student ID upon claim.
                         </div>

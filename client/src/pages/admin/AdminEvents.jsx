@@ -333,16 +333,16 @@ const AdminEvents = () => {
                                         </p>
                                         <div className="d-flex justify-content-between align-items-center pt-3 border-top mt-auto">
                                             <button
-                                                className="btn btn-sm btn-outline-primary rounded-pill px-3"
+                                                className="btn btn-sm btn-outline-primary rounded-pill px-3 py-1.5 fw-semibold d-inline-flex align-items-center gap-2"
                                                 onClick={() => openEditModal(event)}
                                             >
-                                                <FaPencil className="me-1" /> Edit
+                                                <FaPencil /> Edit
                                             </button>
                                             <button
-                                                className="btn btn-sm btn-outline-danger rounded-pill px-3"
+                                                className="btn btn-sm btn-outline-danger rounded-pill px-3 py-1.5 fw-semibold d-inline-flex align-items-center gap-2"
                                                 onClick={() => { setDeleteTarget(event); setShowDeleteModal(true); }}
                                             >
-                                                <FaTrash className="me-1" /> Delete
+                                                <FaTrash /> Delete
                                             </button>
                                         </div>
                                     </div>
