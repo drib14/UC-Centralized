@@ -103,6 +103,7 @@ function App() {
                                 <Route path="announcements" element={<AdminAnnouncements />} />
                                 <Route path="orders" element={<AdminOrders />} />
                                 <Route path="pos" element={<AdminPOS />} />
+                                <Route path="messages" element={<Messages />} />
                                 <Route path="notifications" element={<Navigate to="dashboard" replace />} />
                                 <Route path="profile" element={<Navigate to="dashboard" replace />} />
                             </Route>

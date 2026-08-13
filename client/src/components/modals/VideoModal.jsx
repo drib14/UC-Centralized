@@ -147,33 +147,33 @@ const VideoModal = ({ show, onClose, videoUrl }) => {
                     className="d-flex align-items-center justify-content-between w-100 mb-2"
                     onClick={(e) => e.stopPropagation()}
                 >
-                    <div className="d-flex align-items-center text-white gap-2 bg-dark bg-opacity-50 px-3 py-1 rounded-pill border border-secondary border-opacity-25 shadow-sm">
-                        <FaVideo className="text-info" size={14} />
-                        <span className="small fw-medium text-truncate" style={{ maxWidth: '260px' }}>
+                    <div className="d-flex align-items-center text-white gap-2 bg-dark bg-opacity-50 px-2.5 py-1 rounded-pill border border-secondary border-opacity-25 shadow-sm min-w-0">
+                        <FaVideo className="text-info flex-shrink-0" size={13} />
+                        <span className="small fw-medium text-truncate" style={{ maxWidth: 'min(180px, 42vw)' }}>
                             {fileName}
                         </span>
                     </div>
 
-                    <div className="d-flex align-items-center gap-2">
+                    <div className="d-flex align-items-center gap-1.5 flex-shrink-0">
                         <a
                             href={videoUrl}
                             download={fileName}
                             target="_blank"
                             rel="noreferrer"
-                            className="btn btn-sm btn-dark bg-opacity-50 border border-secondary border-opacity-25 rounded-circle text-white d-flex align-items-center justify-content-center hover-scale shadow-sm"
-                            style={{ width: '40px', height: '40px' }}
+                            className="btn btn-sm btn-dark bg-opacity-50 border border-secondary border-opacity-25 rounded-circle text-white d-flex align-items-center justify-content-center hover-scale shadow-sm p-0"
+                            style={{ width: '36px', height: '36px' }}
                             title="Download video"
                         >
-                            <FaDownload size={14} />
+                            <FaDownload size={13} />
                         </a>
                         <button
                             type="button"
-                            className="btn btn-sm btn-dark bg-opacity-50 border border-secondary border-opacity-25 rounded-circle text-white d-flex align-items-center justify-content-center hover-scale shadow-sm"
-                            style={{ width: '40px', height: '40px' }}
+                            className="btn btn-sm btn-dark bg-opacity-50 border border-secondary border-opacity-25 rounded-circle text-white d-flex align-items-center justify-content-center hover-scale shadow-sm p-0"
+                            style={{ width: '36px', height: '36px' }}
                             onClick={onClose}
                             title="Close (Esc)"
                         >
-                            <FaTimes size={16} />
+                            <FaTimes size={14} />
                         </button>
                     </div>
                 </div>

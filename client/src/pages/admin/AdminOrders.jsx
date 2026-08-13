@@ -297,9 +297,9 @@ const AdminOrders = () => {
 
             {/* Order Inspection & Details Modal */}
             {showModal && selectedOrder && (
-                <div className="modal fade show d-block" tabIndex="-1" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>
-                    <div className="modal-dialog modal-lg modal-dialog-centered">
-                        <div className="modal-content border-0 rounded-4 shadow">
+                <div className="modal fade show d-block animate-fade-in" tabIndex="-1" style={{ backgroundColor: 'rgba(0,0,0,0.55)', backdropFilter: 'blur(4px)', zIndex: 1060 }} onClick={() => setShowModal(false)}>
+                    <div className="modal-dialog modal-lg modal-dialog-centered mx-2 mx-sm-auto" onClick={e => e.stopPropagation()}>
+                        <div className="modal-content border-0 rounded-4 shadow-lg overflow-hidden">
                             <div className="modal-header bg-primary text-white rounded-top-4">
                                 <h5 className="modal-title d-flex align-items-center fw-bold">
                                     <FaClipboardList className="me-2" /> Order Details (#{selectedOrder._id.slice(-6).toUpperCase()})

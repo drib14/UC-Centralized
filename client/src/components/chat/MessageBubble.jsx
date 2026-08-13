@@ -118,7 +118,7 @@ const MessengerAudioPlayer = ({ src, fileName = '', fileSize = 0, isOwn }) => {
     const waveformHeights = [30, 60, 45, 85, 55, 95, 75, 45, 85, 60, 95, 50, 80, 40, 70, 90, 55, 75, 45, 65, 85, 40, 60];
 
     return (
-        <div className={`messenger-audio-player d-flex flex-column p-2 rounded-4 ${isOwn ? 'text-white' : 'text-dark'}`} style={{ minWidth: 0, width: '100%', maxWidth: 'min(100%, 280px)' }}>
+        <div className={`messenger-audio-player d-flex flex-column p-0 ${isOwn ? 'text-white' : 'text-dark'}`} style={{ minWidth: 0, width: '100%', maxWidth: 'min(100%, 260px)' }}>
             <audio ref={audioRef} src={src} preload="metadata" />
 
             {/* Audio Title & Meta Info */}
@@ -333,7 +333,9 @@ const MessageBubble = ({
     };
 
     const fileInfo = message.fileUrl ? getFileCategory(message) : null;
-    const isMedia = fileInfo && (fileInfo.category === 'image' || fileInfo.category === 'video');
+    const isImageOrVideo = fileInfo && (fileInfo.category === 'image' || fileInfo.category === 'video');
+    const isAudio = fileInfo && fileInfo.category === 'audio';
+    const isFile = fileInfo && !isImageOrVideo && !isAudio;
 
     // Grouping Reactions for badges
     const groupedReactions = (message.reactions || []).reduce((acc, r) => {
@@ -362,7 +364,7 @@ const MessageBubble = ({
     const renderContent = () => {
         if (isEditing) {
             return (
-                <div className="d-flex flex-column" style={{ minWidth: '220px' }}>
+                <div className="d-flex flex-column p-1" style={{ minWidth: '220px' }}>
                     <textarea
                         className="form-control form-control-sm mb-2"
                         value={editContent}
@@ -371,10 +373,10 @@ const MessageBubble = ({
                         autoFocus
                     />
                     <div className="btn-group btn-group-sm align-self-end">
-                        <button className="btn btn-outline-secondary" onClick={() => { setIsEditing(false); setEditContent(message.content || ""); }}>
+                        <button className="btn btn-outline-secondary btn-sm" onClick={() => { setIsEditing(false); setEditContent(message.content || ""); }}>
                             <FaTimes />
                         </button>
-                        <button className="btn btn-primary" onClick={handleSaveEdit}>
+                        <button className="btn btn-primary btn-sm" onClick={handleSaveEdit}>
                             <FaSave />
                         </button>
                     </div>
@@ -393,7 +395,7 @@ const MessageBubble = ({
                                 onClick={() => onViewImage && onViewImage(message.fileUrl)}
                             >
                                 {!imageLoaded && (
-                                    <div className="placeholder-glow d-flex align-items-center justify-content-center bg-light" style={{ height: '200px', width: '280px' }}>
+                                    <div className="placeholder-glow d-flex align-items-center justify-content-center bg-light" style={{ height: '180px', width: '260px' }}>
                                         <div className="spinner-border spinner-border-sm text-primary"></div>
                                     </div>
                                 )}
@@ -402,11 +404,11 @@ const MessageBubble = ({
                                     alt={fileInfo.fileName || "Image"}
                                     className={`img-fluid ${imageLoaded ? 'd-block' : 'd-none'}`}
                                     onLoad={() => setImageLoaded(true)}
-                                    style={{ maxHeight: '360px', width: '100%', objectFit: 'cover' }}
+                                    style={{ maxHeight: '340px', width: '100%', objectFit: 'cover' }}
                                 />
                             </div>
                             {message.content && (
-                                <div className={`mt-2 px-1 message-text fw-medium ${isOwn ? 'text-white' : 'text-dark'}`} style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word', fontSize: '0.925rem' }}>
+                                <div className={`mt-1.5 px-2 py-1 message-text fw-medium ${isOwn ? 'text-white' : 'text-dark'}`} style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word', fontSize: '0.9rem' }}>
                                     {message.content}
                                 </div>
                             )}
@@ -427,12 +429,12 @@ const MessageBubble = ({
                                     style={{ objectFit: 'cover', opacity: 0.85 }}
                                     muted
                                 />
-                                <div className="position-absolute top-50 start-50 translate-middle bg-dark bg-opacity-75 rounded-circle d-flex align-items-center justify-content-center shadow" style={{ width: '52px', height: '52px', backdropFilter: 'blur(4px)' }}>
-                                    <FaPlay className="text-white ps-1" size={20} />
+                                <div className="position-absolute top-50 start-50 translate-middle bg-dark bg-opacity-75 rounded-circle d-flex align-items-center justify-content-center shadow" style={{ width: '48px', height: '48px', backdropFilter: 'blur(4px)' }}>
+                                    <FaPlay className="text-white ps-1" size={18} />
                                 </div>
                             </div>
                             {message.content && (
-                                <div className={`mt-2 px-1 message-text fw-medium ${isOwn ? 'text-white' : 'text-dark'}`} style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word', fontSize: '0.925rem' }}>
+                                <div className={`mt-1.5 px-2 py-1 message-text fw-medium ${isOwn ? 'text-white' : 'text-dark'}`} style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word', fontSize: '0.9rem' }}>
                                     {message.content}
                                 </div>
                             )}
@@ -449,7 +451,7 @@ const MessageBubble = ({
                                 isOwn={isOwn}
                             />
                             {message.content && (
-                                <div className={`mt-1 px-1 message-text fw-medium ${isOwn ? 'text-white' : 'text-dark'}`} style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word', fontSize: '0.925rem' }}>
+                                <div className={`mt-1 px-2 message-text fw-medium ${isOwn ? 'text-white' : 'text-dark'}`} style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word', fontSize: '0.88rem' }}>
                                     {message.content}
                                 </div>
                             )}
@@ -459,53 +461,54 @@ const MessageBubble = ({
                 default:
                     // Documents, Spreadsheets, Presentations, PDFs, Archives, Code, General Files
                     return (
-                        <div className="d-flex flex-column" style={{ minWidth: 'min(100%, 200px)', maxWidth: 'min(100%, 320px)' }}>
-                            <div className="d-flex align-items-center p-2 rounded-3 bg-white border shadow-sm text-dark">
+                        <div className="d-flex flex-column" style={{ width: 'fit-content', maxWidth: '270px' }}>
+                            <div className="d-flex align-items-center gap-2.5">
                                 {/* Customized File Icon Tile */}
                                 <div
-                                    className="rounded-3 d-flex align-items-center justify-content-center me-3 flex-shrink-0"
+                                    className="rounded-3 d-flex align-items-center justify-content-center flex-shrink-0"
                                     style={{
-                                        width: '44px',
-                                        height: '44px',
-                                        backgroundColor: fileInfo.bg || '#f1f5f9',
-                                        color: fileInfo.color || '#475569',
-                                        fontSize: '1.4rem'
+                                        width: '38px',
+                                        height: '38px',
+                                        backgroundColor: isOwn ? 'rgba(255, 255, 255, 0.22)' : (fileInfo.bg || '#f1f5f9'),
+                                        color: isOwn ? '#ffffff' : (fileInfo.color || '#475569'),
+                                        fontSize: '1.2rem'
                                     }}
                                 >
                                     {fileInfo.icon}
                                 </div>
 
                                 {/* File Details */}
-                                <div className="flex-grow-1 overflow-hidden me-2">
-                                    <div className="fw-bold text-truncate" style={{ fontSize: '0.875rem' }} title={fileInfo.fileName}>
+                                <div className="flex-grow-1 min-w-0 overflow-hidden me-1">
+                                    <div
+                                        className={`fw-bold text-truncate ${isOwn ? 'text-white' : 'text-dark'}`}
+                                        style={{ fontSize: '0.84rem', maxWidth: '160px' }}
+                                        title={fileInfo.fileName}
+                                    >
                                         {fileInfo.fileName}
                                     </div>
-                                    <div className="d-flex align-items-center text-muted" style={{ fontSize: '0.72rem' }}>
-                                        <span className="badge px-1 py-0 me-1 text-uppercase" style={{ backgroundColor: fileInfo.bg || '#f1f5f9', color: fileInfo.color || '#475569', fontSize: '0.65rem' }}>
-                                            {fileInfo.ext}
-                                        </span>
-                                        {message.fileSize > 0 && <span>{formatFileSize(message.fileSize)}</span>}
+                                    <div className={`d-flex align-items-center gap-1 small ${isOwn ? 'text-white text-opacity-75' : 'text-muted'}`} style={{ fontSize: '0.68rem' }}>
+                                        <span className="text-uppercase fw-semibold">{fileInfo.ext}</span>
+                                        {message.fileSize > 0 && <span>• {formatFileSize(message.fileSize)}</span>}
                                     </div>
                                 </div>
 
-                                {/* Actions (Download) */}
-                                <div className="d-flex align-items-center gap-1 flex-shrink-0">
-                                    <a
-                                        href={message.fileUrl}
-                                        target="_blank"
-                                        rel="noreferrer"
-                                        download={fileInfo.fileName}
-                                        className="btn btn-sm btn-light rounded-circle text-primary p-2 d-flex align-items-center justify-content-center hover-lift"
-                                        title="Download File"
-                                        style={{ width: '32px', height: '32px' }}
-                                    >
-                                        <FaDownload size={13} />
-                                    </a>
-                                </div>
+                                {/* Download Action Button */}
+                                <a
+                                    href={message.fileUrl}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    download={fileInfo.fileName}
+                                    className={`btn btn-sm rounded-circle p-0 d-flex align-items-center justify-content-center hover-scale flex-shrink-0 ${isOwn ? 'btn-light text-primary shadow-xs' : 'btn-light text-secondary border'}`}
+                                    style={{ width: '30px', height: '30px' }}
+                                    title="Download File"
+                                    onClick={(e) => e.stopPropagation()}
+                                >
+                                    <FaDownload size={11} />
+                                </a>
                             </div>
 
                             {message.content && (
-                                <div className={`mt-2 px-1 message-text fw-medium ${isOwn ? 'text-white' : 'text-dark'}`} style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word', fontSize: '0.925rem' }}>
+                                <div className={`mt-1.5 pt-1.5 border-top ${isOwn ? 'border-white border-opacity-25 text-white' : 'border-light text-dark'}`} style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word', fontSize: '0.88rem' }}>
                                     {message.content}
                                 </div>
                             )}
@@ -516,7 +519,7 @@ const MessageBubble = ({
 
         // Standard Text Message
         return (
-            <div className="message-text" style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word', fontSize: '0.94rem', lineHeight: '1.45' }}>
+            <div className="message-text" style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word', fontSize: '0.925rem', lineHeight: '1.45' }}>
                 {message.content}
             </div>
         );
@@ -577,15 +580,15 @@ const MessageBubble = ({
                     {/* Chat Bubble Surface */}
                     <div
                         className={`
-                            ${!isMedia ? (isOwn ? 'p-2 px-3 bg-primary text-white shadow-sm' : 'p-2 px-3 bg-white text-dark border shadow-sm') : ''}
+                            ${isImageOrVideo ? '' : (isOwn ? 'p-2 px-2.5 bg-primary text-white shadow-sm' : 'p-2 px-2.5 bg-white text-dark border shadow-sm')}
                             position-relative transition-all
                         `}
                         style={{
-                            borderRadius: isMedia ? '16px' : '18px',
-                            borderBottomRightRadius: isOwn ? '4px' : (isMedia ? '16px' : '18px'),
-                            borderBottomLeftRadius: !isOwn ? '4px' : (isMedia ? '16px' : '18px'),
+                            borderRadius: isImageOrVideo ? '16px' : '18px',
+                            borderBottomRightRadius: isOwn ? '4px' : (isImageOrVideo ? '16px' : '18px'),
+                            borderBottomLeftRadius: !isOwn ? '4px' : (isImageOrVideo ? '16px' : '18px'),
                             width: 'fit-content',
-                            minWidth: isMedia ? 'auto' : '44px',
+                            minWidth: isImageOrVideo ? 'auto' : '40px',
                             maxWidth: '100%',
                             wordBreak: 'break-word',
                             overflowWrap: 'anywhere'
