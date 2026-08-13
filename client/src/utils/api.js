@@ -236,6 +236,69 @@ class API {
         return this.request(`/users/${userId}/block-status`);
     }
 
+    static async uploadMessageAttachment(file) {
+        const fileName = file.name || 'attachment';
+        const ext = (fileName.split('.').pop() || '').toLowerCase();
+        const mime = (file.type || '').toLowerCase();
+
+        const isImage = mime.startsWith('image/') || ['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg', 'bmp', 'ico', 'heic'].includes(ext);
+        const isVideo = (mime.startsWith('video/') || ['mp4', 'mov', 'avi', 'mkv', 'flv', 'wmv', 'm4v', '3gp'].includes(ext)) && !mime.startsWith('audio/');
+        
+        let resourceType = 'raw';
+        if (isImage) resourceType = 'image';
+        else if (isVideo) resourceType = 'video';
+        else resourceType = 'raw';
+
+        const isRaw = resourceType === 'raw';
+
+        // 1. Get Signature from backend
+        const signRes = await this.get(`/messages/upload-signature?fileName=${encodeURIComponent(fileName)}&isRaw=${isRaw}`);
+        const { signature, timestamp, public_id, folder, apiKey, cloudName } = signRes;
+
+        // 2. Direct upload to Cloudinary (bypasses Vercel 4.5MB payload limitation)
+        const formData = new FormData();
+        formData.append('file', file);
+        formData.append('api_key', apiKey);
+        formData.append('timestamp', timestamp.toString());
+        formData.append('folder', folder);
+        formData.append('public_id', public_id);
+        formData.append('signature', signature);
+
+        const uploadUrl = `https://api.cloudinary.com/v1_1/${cloudName}/${resourceType}/upload`;
+
+        const cldResponse = await fetch(uploadUrl, {
+            method: 'POST',
+            body: formData
+        });
+
+        if (!cldResponse.ok) {
+            const errorData = await cldResponse.json().catch(() => ({}));
+            throw new Error(errorData.error?.message || "Failed to upload file to storage.");
+        }
+
+        const cldData = await cldResponse.json();
+
+        // Determine detected message type
+        let detectedType = 'file';
+        if (isImage) detectedType = 'image';
+        else if (isVideo) detectedType = 'video';
+        else if (mime.startsWith('audio/') || ['mp3', 'wav', 'ogg', 'm4a', 'aac', 'flac', 'wma', 'opus', 'mid'].includes(ext)) detectedType = 'audio';
+        else if (mime === 'application/pdf' || ext === 'pdf') detectedType = 'pdf';
+        else if (['doc', 'docx', 'rtf', 'odt', 'pages'].includes(ext)) detectedType = 'document';
+        else if (['xls', 'xlsx', 'csv', 'tsv', 'ods', 'numbers'].includes(ext)) detectedType = 'spreadsheet';
+        else if (['ppt', 'pptx', 'odp', 'key'].includes(ext)) detectedType = 'presentation';
+        else if (['zip', 'rar', '7z', 'tar', 'gz', 'bz2', 'xz', 'iso'].includes(ext)) detectedType = 'archive';
+        else if (['js', 'jsx', 'ts', 'tsx', 'html', 'css', 'scss', 'json', 'py', 'java', 'c', 'cpp', 'cs', 'php', 'rb', 'go', 'rs', 'swift', 'kt', 'sql', 'sh', 'xml', 'yaml', 'yml', 'md', 'txt'].includes(ext)) detectedType = 'code';
+
+        return {
+            fileUrl: cldData.secure_url || cldData.url,
+            fileName: fileName,
+            fileSize: file.size,
+            fileType: file.type || mime || 'application/octet-stream',
+            detectedType: detectedType
+        };
+    }
+
     static uploadFile(file) {
         const formData = new FormData();
         formData.append('file', file);

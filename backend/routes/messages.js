@@ -4,7 +4,7 @@ const Conversation = require('../models/Conversation');
 const User = require('../models/User');
 const { verifyToken } = require('../middleware/auth');
 const parser = require('../config/cloudinary');
-
+const cloudinary = require('cloudinary').v2;
 const mongoose = require('mongoose');
 
 // Helper to safely escape regex special characters
@@ -48,6 +48,42 @@ function detectFileType(mimetype = '', originalname = '') {
 }
 
 // --- STATIC & SPECIFIC ROUTES (Must come before dynamic /:id) ---
+
+// GET CLOUDINARY UPLOAD SIGNATURE (Allows Direct-to-Cloudinary upload, bypassing Vercel 4.5MB payload limits)
+router.get('/upload-signature', verifyToken, (req, res) => {
+    try {
+        const timestamp = Math.round(new Date().getTime() / 1000);
+        const folder = 'uc-central';
+        const rawFileName = req.query.fileName || 'file';
+        const extMatch = rawFileName.match(/\.([a-zA-Z0-9]+)$/);
+        const rawExt = extMatch ? extMatch[1].toLowerCase() : '';
+        const baseName = (rawFileName.replace(/\.[^/.]+$/, '')).replace(/[^a-zA-Z0-9_-]/g, '_').substring(0, 40) || 'file';
+        
+        // For raw files (audio, pdf, documents, etc.), include extension in public_id
+        const isRaw = req.query.isRaw === 'true';
+        const public_id = isRaw && rawExt ? `${Date.now()}-${baseName}.${rawExt}` : `${Date.now()}-${baseName}`;
+
+        const paramsToSign = {
+            folder,
+            public_id,
+            timestamp
+        };
+
+        const signature = cloudinary.utils.api_sign_request(paramsToSign, process.env.CLOUDINARY_API_SECRET);
+
+        res.status(200).json({
+            signature,
+            timestamp,
+            public_id,
+            folder,
+            apiKey: process.env.CLOUDINARY_API_KEY,
+            cloudName: process.env.CLOUDINARY_CLOUD_NAME
+        });
+    } catch (err) {
+        console.error("Upload signature error:", err);
+        res.status(500).json({ message: "Failed to generate upload signature" });
+    }
+});
 
 // UNREAD COUNT
 router.get('/unread-count', verifyToken, async (req, res) => {

@@ -126,20 +126,18 @@ const Messages = () => {
         const msg = forwardModal.message;
         if (!msg) return;
 
-        const formData = new FormData();
-        formData.append("recipientId", recipientId);
-        if (msg.content) formData.append("content", msg.content);
-        if (msg.type !== 'text') {
-             formData.append("type", msg.type);
-             formData.append("fileUrl", msg.fileUrl);
-             if (msg.fileName) formData.append("fileName", msg.fileName);
-        } else {
-             formData.append("type", 'text');
-        }
+        const payload = {
+            recipientId,
+            content: msg.content || "",
+            type: msg.type || 'text',
+            fileUrl: msg.fileUrl || "",
+            fileName: msg.fileName || "",
+            fileSize: msg.fileSize || 0,
+            fileType: msg.fileType || ""
+        };
 
         try {
-            // Send as new message
-            await api.request('/messages', 'POST', formData, true);
+            await api.post('/messages', payload);
             setForwardModal({ show: false, message: null });
             toast.success("Message forwarded");
         } catch (err) {
@@ -357,19 +355,35 @@ const Messages = () => {
     const handleSendMessage = async (content, type = 'text', file = null) => {
         if (!selectedConversation) return;
 
-        const formData = new FormData();
-        if (selectedConversation.isTemp) {
-            formData.append("recipientId", selectedConversation.recipientId);
-        } else {
-            formData.append("conversationId", selectedConversation._id);
-        }
-
-        formData.append("content", content);
-        formData.append("type", type);
-        if (file) formData.append("file", file);
-
         try {
-            const res = await api.request('/messages', 'POST', formData, true);
+            let fileUrl = "";
+            let fileName = "";
+            let fileSize = 0;
+            let fileType = "";
+            let finalType = type;
+
+            if (file) {
+                // Direct-to-Cloudinary upload bypasses Vercel 4.5MB payload limits & timeouts
+                const uploadResult = await api.uploadMessageAttachment(file);
+                fileUrl = uploadResult.fileUrl;
+                fileName = uploadResult.fileName;
+                fileSize = uploadResult.fileSize;
+                fileType = uploadResult.fileType;
+                finalType = uploadResult.detectedType || type;
+            }
+
+            const payload = {
+                conversationId: selectedConversation.isTemp ? undefined : selectedConversation._id,
+                recipientId: selectedConversation.isTemp ? selectedConversation.recipientId : undefined,
+                content: content || "",
+                type: finalType,
+                fileUrl: fileUrl,
+                fileName: fileName,
+                fileSize: fileSize,
+                fileType: fileType
+            };
+
+            const res = await api.post('/messages', payload);
 
             if (selectedConversation.isTemp) {
                 const realConvId = res.conversationId;
@@ -391,7 +405,7 @@ const Messages = () => {
             }
 
         } catch (err) {
-            console.error(err);
+            console.error("Send message error:", err);
             toast.error(err.message || "Failed to send message");
         }
     };
