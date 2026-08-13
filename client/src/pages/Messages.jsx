@@ -144,7 +144,7 @@ const Messages = () => {
             toast.success("Message forwarded");
         } catch (err) {
             console.error(err);
-            toast.error("Failed to forward message");
+            toast.error(err.message || "Failed to forward message");
         }
     };
 
@@ -392,7 +392,7 @@ const Messages = () => {
 
         } catch (err) {
             console.error(err);
-            toast.error("Failed to send message");
+            toast.error(err.message || "Failed to send message");
         }
     };
 

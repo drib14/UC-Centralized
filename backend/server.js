@@ -309,7 +309,12 @@ app.use((req, res, next) => res.status(404).json({ message: 'Route not found' })
 // Global Error Handler
 app.use((err, req, res, next) => {
     console.error('Unhandled Error:', err.message || err);
-    const statusCode = err.status || 500;
+    const origin = req.headers.origin;
+    if (origin && isAllowedOrigin(origin)) {
+        res.setHeader('Access-Control-Allow-Origin', origin);
+        res.setHeader('Access-Control-Allow-Credentials', 'true');
+    }
+    const statusCode = err.http_code || err.status || (typeof err.statusCode === 'number' ? err.statusCode : 500);
     res.status(statusCode).json({
         message: err.message || 'Internal Server Error'
     });

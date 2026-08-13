@@ -296,8 +296,21 @@ router.get('/search/users', verifyToken, async (req, res) => {
 
 // --- DYNAMIC ROUTES (Must be last) ---
 
+// Middleware to safely handle file uploads and return clean JSON errors on upload failure
+const uploadAttachment = (req, res, next) => {
+    parser.single('file')(req, res, (err) => {
+        if (err) {
+            console.error("Message attachment upload error:", err);
+            return res.status(err.http_code || err.status || 400).json({
+                message: err.message || "Failed to upload file attachment. Please try again."
+            });
+        }
+        next();
+    });
+};
+
 // SEND MESSAGE (POST /)
-router.post('/', verifyToken, parser.single('file'), async (req, res) => {
+router.post('/', verifyToken, uploadAttachment, async (req, res) => {
     try {
         if (req.user.role === 'admin') {
             return res.status(403).json({ message: "Administrators manage the application and cannot participate in direct messaging." });
