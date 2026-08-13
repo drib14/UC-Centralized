@@ -267,6 +267,10 @@ class API {
         return this.request('/notifications', 'DELETE');
     }
 
+    static sendTestEmail() {
+        return this.request('/notifications/test-email', 'POST');
+    }
+
     // User Actions
     static blockUser(id) {
         return this.request(`/users/${id}/block`, 'PUT');

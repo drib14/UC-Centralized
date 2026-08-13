@@ -42,6 +42,7 @@ const StudentProfile = () => {
     // Notification Preferences State
     const [notifPrefs, setNotifPrefs] = useState({ email: true, app: true });
     const [savingNotif, setSavingNotif] = useState(false);
+    const [sendingTestEmail, setSendingTestEmail] = useState(false);
 
     // Profile Photo Upload State
     const [uploadingPhoto, setUploadingPhoto] = useState(false);
@@ -216,6 +217,19 @@ const StudentProfile = () => {
             console.error("Failed to save notification preferences", e);
         } finally {
             setSavingNotif(false);
+        }
+    };
+
+    const handleSendTestEmail = async () => {
+        setSendingTestEmail(true);
+        try {
+            const res = await API.sendTestEmail();
+            toast.success(res?.message || "Test email dispatched to your inbox!");
+        } catch (err) {
+            console.error("Failed to send test email:", err);
+            toast.error(err?.message || "Failed to dispatch test email. Please check server email credentials.");
+        } finally {
+            setSendingTestEmail(false);
         }
     };
 
@@ -416,18 +430,48 @@ const StudentProfile = () => {
                             </div>
                         </div>
 
-                        {devicePermission === 'granted' && (
+                        {/* Action Buttons for Testing Notifications */}
+                        <div className="d-flex flex-column gap-2 mt-3">
+                            {/* Device Notification Test Button */}
+                            {devicePermission === 'granted' && (
+                                <button
+                                    type="button"
+                                    className="btn btn-sm btn-outline-primary w-100 rounded-pill fw-semibold d-flex align-items-center justify-content-center gap-2 py-2"
+                                    onClick={sendTestDeviceNotification}
+                                >
+                                    <FaBell /> Send Test Device Alert
+                                </button>
+                            )}
+
+                            {devicePermission !== 'granted' && devicePermission !== 'denied' && (
+                                <button
+                                    type="button"
+                                    className="btn btn-sm btn-outline-primary w-100 rounded-pill fw-semibold d-flex align-items-center justify-content-center gap-2 py-2"
+                                    onClick={async () => {
+                                        const perm = await requestDeviceNotificationPermission();
+                                        if (perm === 'granted') {
+                                            sendTestDeviceNotification();
+                                        }
+                                    }}
+                                >
+                                    <FaBell /> Enable & Test Device Alert
+                                </button>
+                            )}
+
+                            {/* Email Broadcast Test Button */}
                             <button
-                                className="btn btn-sm btn-outline-primary w-100 rounded-pill fw-semibold d-flex align-items-center justify-content-center gap-2 py-2"
-                                onClick={sendTestDeviceNotification}
+                                type="button"
+                                className="btn btn-sm btn-outline-secondary w-100 rounded-pill fw-semibold d-flex align-items-center justify-content-center gap-2 py-2"
+                                onClick={handleSendTestEmail}
+                                disabled={sendingTestEmail || !user?.email}
                             >
-                                <FaBell /> Send Test Notification to this Device
+                                <FaEnvelope /> {sendingTestEmail ? 'Dispatching Test Email...' : 'Send Test Email Notice'}
                             </button>
-                        )}
+                        </div>
 
                         {devicePermission === 'denied' && (
-                            <div className="alert alert-warning border-0 p-2 small mb-0 rounded-3" style={{ fontSize: '0.75rem' }}>
-                                Notifications are blocked by your browser. Click the site settings icon next to the URL bar to allow notifications.
+                            <div className="alert alert-warning border-0 p-2 small mt-2 mb-0 rounded-3" style={{ fontSize: '0.75rem' }}>
+                                Device alerts are blocked in your browser. Click the site settings lock/tune icon in the browser address bar to allow notifications.
                             </div>
                         )}
                     </div>

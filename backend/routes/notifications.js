@@ -78,4 +78,37 @@ router.delete('/', verifyToken, async (req, res) => {
     }
 });
 
+const sendEmail = require('../utils/sendEmail');
+const { getNotificationEmail } = require('../utils/emailTemplates');
+const User = require('../models/User');
+
+// Send test email notification to verified user's email
+router.post('/test-email', verifyToken, async (req, res) => {
+    try {
+        const user = await User.findById(req.user.id);
+        if (!user || !user.email) {
+            return res.status(400).json({ message: "No email address found for this user account" });
+        }
+
+        const emailHtml = getNotificationEmail(
+            user.firstName || 'Student',
+            'Test Notification',
+            'This is a verified test email dispatched from UC-Central to confirm your email notification delivery is functioning properly in production.',
+            '/student/dashboard',
+            req
+        );
+
+        await sendEmail({
+            email: user.email,
+            subject: '🔔 UC-Central Notification Test',
+            html: emailHtml
+        });
+
+        res.status(200).json({ message: `Test email successfully dispatched to ${user.email}` });
+    } catch (err) {
+        console.error("Test Email Route Error:", err);
+        res.status(500).json({ message: err.message || "Failed to dispatch test email" });
+    }
+});
+
 module.exports = router;
