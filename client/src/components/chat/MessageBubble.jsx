@@ -21,7 +21,8 @@ import {
     FaSave,
     FaShare,
     FaRegSmile,
-    FaPlus
+    FaPlus,
+    FaCopy
 } from 'react-icons/fa';
 
 const QUICK_EMOJIS = ['👍', '❤️', '😂', '😮', '😢', '😡'];
@@ -417,7 +418,7 @@ const MessageBubble = ({
                         <div className="d-flex flex-column">
                             <div
                                 className="position-relative rounded-4 overflow-hidden bg-black d-flex align-items-center justify-content-center shadow-sm hover-lift"
-                                style={{ width: '280px', height: '170px', cursor: 'pointer' }}
+                                style={{ width: 'min(100%, 280px)', maxWidth: '100%', height: '170px', cursor: 'pointer' }}
                                 onClick={() => onViewVideo && onViewVideo(message.fileUrl)}
                             >
                                 <video
@@ -531,6 +532,13 @@ const MessageBubble = ({
         );
     };
 
+    const handleCopyText = (e) => {
+        e?.stopPropagation();
+        if (message.content) {
+            navigator.clipboard.writeText(message.content);
+        }
+    };
+
     return (
         <div className={`d-flex mb-2 ${isOwn ? 'justify-content-end' : 'justify-content-start'} position-relative`}>
             {/* Avatar for other user */}
@@ -541,14 +549,13 @@ const MessageBubble = ({
                             <img
                                 src={sender.profilePicture}
                                 alt={sender.firstName || "User"}
-                                className="rounded-circle border"
+                                className="rounded-circle border object-fit-cover shadow-xs"
                                 width="32"
                                 height="32"
                                 title={`${sender?.firstName || ''} ${sender?.lastName || ''}`}
-                                style={{ objectFit: 'cover' }}
                             />
                         ) : (
-                            <div className="rounded-circle border bg-white d-flex align-items-center justify-content-center text-primary fw-bold" style={{ width: '32px', height: '32px', fontSize: '12px' }} title={`${sender?.firstName || ''} ${sender?.lastName || ''}`}>
+                            <div className="rounded-circle border bg-white d-flex align-items-center justify-content-center text-primary fw-bold shadow-xs" style={{ width: '32px', height: '32px', fontSize: '12px' }} title={`${sender?.firstName || ''} ${sender?.lastName || ''}`}>
                                 {getInitials(sender)}
                             </div>
                         )
@@ -579,13 +586,15 @@ const MessageBubble = ({
                             borderBottomLeftRadius: !isOwn ? '4px' : (isMedia ? '16px' : '18px'),
                             width: 'fit-content',
                             minWidth: isMedia ? 'auto' : '44px',
-                            maxWidth: '100%'
+                            maxWidth: '100%',
+                            wordBreak: 'break-word',
+                            overflowWrap: 'anywhere'
                         }}
                     >
                         {renderContent()}
                     </div>
 
-                    {/* Hover Controls: Quick Reaction Trigger + More Options Dropdown */}
+                    {/* Controls: Quick Reaction Trigger + More Options Dropdown */}
                     {!isEditing && (
                         <div className="bubble-actions d-flex align-items-center gap-1 mx-1.5 opacity-0 group-hover-visible transition-opacity">
                             {/* Emoji Reaction Trigger Button */}
@@ -602,7 +611,7 @@ const MessageBubble = ({
                                 <FaRegSmile size={13} className="text-secondary" />
                             </button>
 
-                            {/* Dropdown Menu (Edit / Forward / Delete) */}
+                            {/* Dropdown Menu (Copy / Edit / Forward / Delete) */}
                             <div className="dropdown">
                                 <button
                                     type="button"
@@ -614,7 +623,14 @@ const MessageBubble = ({
                                 >
                                     <FaEllipsisV size={11} />
                                 </button>
-                                <ul className="dropdown-menu dropdown-menu-end shadow-sm border-0 rounded-3" style={{ zIndex: 1050, minWidth: '130px' }}>
+                                <ul className="dropdown-menu dropdown-menu-end shadow-sm border-0 rounded-3" style={{ zIndex: 1050, minWidth: '135px' }}>
+                                    {message.content && (
+                                        <li>
+                                            <button className="dropdown-item small d-flex align-items-center py-2" onClick={handleCopyText}>
+                                                <FaCopy className="me-2 text-secondary" size={12} /> Copy Text
+                                            </button>
+                                        </li>
+                                    )}
                                     {isOwn && (
                                         <li>
                                             <button className="dropdown-item small d-flex align-items-center py-2" onClick={() => setIsEditing(true)}>
@@ -627,9 +643,10 @@ const MessageBubble = ({
                                             <FaShare className="me-2 text-info" size={13} /> Forward
                                         </button>
                                     </li>
+                                    <li><hr className="dropdown-divider my-1" /></li>
                                     <li>
                                         <button className="dropdown-item small d-flex align-items-center py-2 text-danger" onClick={handleDelete}>
-                                            <FaTrash className="me-2" size={13} /> Delete
+                                            <FaTrash className="me-2" size={12} /> Delete
                                         </button>
                                     </li>
                                 </ul>
