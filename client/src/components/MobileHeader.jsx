@@ -51,7 +51,7 @@ const MobileHeader = () => {
         <header
             className="mobile-top-header d-md-none sticky-top bg-white border-bottom shadow-xs px-3 py-2"
             style={{
-                zIndex: 1035,
+                zIndex: 1020,
                 backdropFilter: 'blur(12px)',
                 WebkitBackdropFilter: 'blur(12px)',
                 backgroundColor: 'rgba(255, 255, 255, 0.95)'

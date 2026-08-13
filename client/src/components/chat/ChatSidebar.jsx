@@ -256,7 +256,7 @@ const ChatSidebar = ({
             )}
 
             {/* Conversation Tiles List */}
-            <div className="flex-grow-1 overflow-y-auto overflow-x-hidden custom-scrollbar bg-white chat-sidebar-scroll" style={{ minHeight: 0, paddingBottom: '80px' }}>
+            <div className="flex-grow-1 overflow-y-auto overflow-x-hidden custom-scrollbar bg-white chat-sidebar-scroll" style={{ minHeight: 0 }}>
                 {filteredConversations.length > 0 ? (
                     <>
                         {searchTerm && (
@@ -421,7 +421,7 @@ const ChatSidebar = ({
             <button
                 type="button"
                 className="d-md-none position-absolute end-0 me-3 btn btn-primary rounded-circle shadow-lg d-flex align-items-center justify-content-center hover-lift"
-                style={{ width: '52px', height: '52px', bottom: '76px', zIndex: 1020 }}
+                style={{ width: '52px', height: '52px', bottom: '24px', zIndex: 1020 }}
                 onClick={() => setShowNewChatModal(true)}
                 title="New Message"
             >

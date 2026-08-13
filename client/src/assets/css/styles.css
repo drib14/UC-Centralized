@@ -446,14 +446,19 @@ footer {
 
 @media (max-width: 768px) {
     .sidebar {
-        margin-left: -255px;
+        margin-left: -280px;
+        min-width: 280px;
+        max-width: 280px;
+        z-index: 1090 !important;
+        box-shadow: 10px 0 30px rgba(0, 0, 0, 0.35);
     }
     .sidebar.active {
         margin-left: 0;
+        z-index: 1090 !important;
     }
     #page-content-wrapper {
         margin-left: 0 !important;
-        padding: 10px 8px 84px 8px !important;
+        padding: 10px 8px 24px 8px !important;
         width: 100% !important;
     }
 

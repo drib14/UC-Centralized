@@ -81,8 +81,8 @@ const Sidebar = () => {
             {/* Mobile Overlay */}
             {isMobile && mobileActive && (
                 <div
-                    className="position-fixed top-0 start-0 w-100 h-100 bg-dark opacity-50 animate-fade-in"
-                    style={{ zIndex: 999 }}
+                    className="position-fixed top-0 start-0 w-100 h-100 animate-fade-in"
+                    style={{ zIndex: 1080, backgroundColor: 'rgba(0, 0, 0, 0.65)', backdropFilter: 'blur(4px)' }}
                     onClick={handleMobileClick}
                 ></div>
             )}
