@@ -22,11 +22,24 @@ const sendEmail = async (options) => {
     socketTimeout: 15000,
   });
 
+  const path = require('path');
+  const fs = require('fs');
+  const attachments = [];
+  const logoPath = path.join(__dirname, 'logo.png');
+  if (fs.existsSync(logoPath)) {
+    attachments.push({
+      filename: 'uc-central-logo.png',
+      path: logoPath,
+      cid: 'uc_central_logo' // matches <img src="cid:uc_central_logo" />
+    });
+  }
+
   const mailOptions = {
     from: `"UC-Central" <${user}>`,
     to: options.email,
     subject: options.subject,
     html: options.html,
+    attachments: attachments
   };
 
   try {

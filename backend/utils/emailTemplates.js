@@ -69,7 +69,8 @@ const resolveClientUrl = (req, targetPath = '') => {
 /**
  * Common Header with University of Cebu Seal & UC-Central Branding
  */
-const getEmailHeader = (categoryTitle = 'Campus Notification', badgeColor = '#002b7f', badgeText = 'UC-CENTRAL BULLETIN') => {
+const getEmailHeader = (categoryTitle = 'Campus Notification', badgeColor = '#002b7f', badgeText = 'UC-CENTRAL BULLETIN', req = null) => {
+    const remoteLogoUrl = resolveClientUrl(req, '/uc-central-logo.png');
     return `
     <!-- Header Block -->
     <tr>
@@ -77,9 +78,9 @@ const getEmailHeader = (categoryTitle = 'Campus Notification', badgeColor = '#00
             <table border="0" cellpadding="0" cellspacing="0" width="100%" style="max-width: 520px; margin: 0 auto; text-align: center;">
                 <tr>
                     <td align="center" style="padding-bottom: 12px;">
-                        <!-- Logo Seal Emblem -->
+                        <!-- Logo Seal Emblem with CID inline attachment & remote fallback -->
                         <div style="display: inline-block; width: 68px; height: 68px; background: #ffffff; border-radius: 50%; padding: 4px; box-shadow: 0 4px 12px rgba(0,0,0,0.25); border: 2px solid #fbbf24;">
-                            <img src="https://uc-central.vercel.app/uc-central-logo.png" alt="University of Cebu Seal" width="60" height="60" style="display: block; border-radius: 50%; width: 60px; height: 60px; object-fit: contain; margin: 0 auto;" />
+                            <img src="cid:uc_central_logo" alt="University of Cebu Seal" width="60" height="60" style="display: block; border-radius: 50%; width: 60px; height: 60px; object-fit: contain; margin: 0 auto;" onerror="this.onerror=null;this.src='${remoteLogoUrl}';" />
                         </div>
                     </td>
                 </tr>
@@ -156,7 +157,7 @@ const getNotificationEmail = (name, type, content, rawLink, req = null) => {
             <tr>
                 <td align="center">
                     <table border="0" cellpadding="0" cellspacing="0" width="100%" style="max-width: 600px; background-color: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,0.08); border: 1px solid #e2e8f0;">
-                        ${getEmailHeader('Campus Notification', accentColor, typeBadgeText)}
+                        ${getEmailHeader('Campus Notification', accentColor, typeBadgeText, req)}
                         
                         <!-- Content Body -->
                         <tr>
@@ -224,7 +225,7 @@ const getPasswordResetEmail = (name, resetCode, rawLink, req = null) => {
             <tr>
                 <td align="center">
                     <table border="0" cellpadding="0" cellspacing="0" width="100%" style="max-width: 600px; background-color: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,0.08); border: 1px solid #e2e8f0;">
-                        ${getEmailHeader('Account Security & Recovery', '#002b7f', 'PASSWORD RESET CODE')}
+                        ${getEmailHeader('Account Security & Recovery', '#002b7f', 'PASSWORD RESET CODE', req)}
                         
                         <!-- Content Body -->
                         <tr>
