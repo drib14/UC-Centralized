@@ -1,7 +1,9 @@
 import React, { useState, useMemo } from 'react';
+import { Link } from 'react-router-dom';
 import {
     FaSearch, FaEdit, FaTimes, FaCircle, FaPlus,
-    FaVolumeMute, FaImage, FaVideo, FaMicrophone, FaFile, FaCheck, FaCheckDouble
+    FaVolumeMute, FaImage, FaVideo, FaMicrophone, FaFile, FaCheck, FaCheckDouble,
+    FaArrowLeft
 } from 'react-icons/fa';
 
 const ChatSidebar = ({
@@ -101,11 +103,21 @@ const ChatSidebar = ({
         return <span>{prefix}{lastMsg.content || 'Message'}</span>;
     };
 
+    const homeRoute = currentUser?.role === 'admin' ? '/admin/dashboard' : '/student/dashboard';
+
     return (
         <div className="d-flex flex-column h-100 bg-white w-100 position-relative" style={{ height: '100%', minHeight: 0, overflow: 'hidden' }}>
             {/* Topbar Header */}
             <div className="p-3 border-bottom d-flex align-items-center justify-content-between flex-shrink-0 bg-white">
                 <div className="d-flex align-items-center gap-2">
+                    <Link
+                        to={homeRoute}
+                        className="btn btn-sm btn-light border rounded-circle shadow-xs d-flex align-items-center justify-content-center d-md-none me-1 hover-lift"
+                        style={{ width: '36px', height: '36px' }}
+                        title="Back to Home Dashboard"
+                    >
+                        <FaArrowLeft size={14} className="text-secondary" />
+                    </Link>
                     <h5 className="fw-bold font-outfit text-dark mb-0">Messages</h5>
                     {unreadCountTotal > 0 && (
                         <span className="badge rounded-pill bg-primary px-2 py-0.5 text-white fw-bold" style={{ fontSize: '0.72rem' }}>
@@ -244,7 +256,7 @@ const ChatSidebar = ({
             )}
 
             {/* Conversation Tiles List */}
-            <div className="flex-grow-1 overflow-y-auto overflow-x-hidden custom-scrollbar bg-white" style={{ minHeight: 0 }}>
+            <div className="flex-grow-1 overflow-y-auto overflow-x-hidden custom-scrollbar bg-white chat-sidebar-scroll" style={{ minHeight: 0, paddingBottom: '80px' }}>
                 {filteredConversations.length > 0 ? (
                     <>
                         {searchTerm && (
@@ -408,8 +420,8 @@ const ChatSidebar = ({
             {/* Mobile Floating Action Button (FAB) */}
             <button
                 type="button"
-                className="d-md-none position-absolute bottom-0 end-0 m-3 btn btn-primary rounded-circle shadow-lg d-flex align-items-center justify-content-center hover-lift"
-                style={{ width: '50px', height: '50px', zIndex: 100 }}
+                className="d-md-none position-absolute end-0 me-3 btn btn-primary rounded-circle shadow-lg d-flex align-items-center justify-content-center hover-lift"
+                style={{ width: '52px', height: '52px', bottom: '76px', zIndex: 1020 }}
                 onClick={() => setShowNewChatModal(true)}
                 title="New Message"
             >

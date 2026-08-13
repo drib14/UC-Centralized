@@ -15,11 +15,6 @@ const MobileNav = () => {
     const { unreadMessageCount } = useSocket();
     const location = useLocation();
 
-    // Hide mobile bottom nav on chat pages so chat is 100% full-height edge-to-edge
-    if (location.pathname.includes('/messages')) {
-        return null;
-    }
-
     if (!user) return null;
 
     const isAdmin = user.role === 'admin';
@@ -30,7 +25,7 @@ const MobileNav = () => {
             className="mobile-bottom-nav d-md-none position-fixed bottom-0 start-0 end-0 bg-white border-top shadow-lg"
             style={{
                 zIndex: 1040,
-                height: '60px',
+                height: '62px',
                 paddingBottom: 'env(safe-area-inset-bottom)'
             }}
             aria-label="Mobile Navigation"
@@ -43,7 +38,7 @@ const MobileNav = () => {
                             className={({ isActive }) => `mobile-nav-item d-flex flex-column align-items-center justify-content-center text-decoration-none py-1 flex-grow-1 ${isActive ? 'text-primary fw-bold active' : 'text-secondary'}`}
                         >
                             <FaTableColumns size={18} />
-                            <span style={{ fontSize: '0.68rem', marginTop: '2px' }}>Home</span>
+                            <span style={{ fontSize: '0.7rem', marginTop: '2px' }}>Home</span>
                         </NavLink>
 
                         <NavLink
@@ -51,7 +46,7 @@ const MobileNav = () => {
                             className={({ isActive }) => `mobile-nav-item d-flex flex-column align-items-center justify-content-center text-decoration-none py-1 flex-grow-1 ${isActive ? 'text-primary fw-bold active' : 'text-secondary'}`}
                         >
                             <FaCashRegister size={18} />
-                            <span style={{ fontSize: '0.68rem', marginTop: '2px' }}>POS</span>
+                            <span style={{ fontSize: '0.7rem', marginTop: '2px' }}>POS</span>
                         </NavLink>
 
                         <NavLink
@@ -59,7 +54,25 @@ const MobileNav = () => {
                             className={({ isActive }) => `mobile-nav-item d-flex flex-column align-items-center justify-content-center text-decoration-none py-1 flex-grow-1 ${isActive ? 'text-primary fw-bold active' : 'text-secondary'}`}
                         >
                             <FaClipboardList size={18} />
-                            <span style={{ fontSize: '0.68rem', marginTop: '2px' }}>Orders</span>
+                            <span style={{ fontSize: '0.7rem', marginTop: '2px' }}>Orders</span>
+                        </NavLink>
+
+                        <NavLink
+                            to="/admin/messages"
+                            className={({ isActive }) => `mobile-nav-item d-flex flex-column align-items-center justify-content-center text-decoration-none py-1 flex-grow-1 position-relative ${isActive ? 'text-primary fw-bold active' : 'text-secondary'}`}
+                        >
+                            <div className="position-relative">
+                                <FaEnvelope size={18} />
+                                {unreadMessageCount > 0 && (
+                                    <span
+                                        className="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger"
+                                        style={{ fontSize: '0.55rem', padding: '2px 4px' }}
+                                    >
+                                        {unreadMessageCount > 9 ? '9+' : unreadMessageCount}
+                                    </span>
+                                )}
+                            </div>
+                            <span style={{ fontSize: '0.7rem', marginTop: '2px' }}>Chat</span>
                         </NavLink>
 
                         <NavLink
@@ -67,7 +80,7 @@ const MobileNav = () => {
                             className={({ isActive }) => `mobile-nav-item d-flex flex-column align-items-center justify-content-center text-decoration-none py-1 flex-grow-1 ${isActive ? 'text-primary fw-bold active' : 'text-secondary'}`}
                         >
                             <FaShirt size={18} />
-                            <span style={{ fontSize: '0.68rem', marginTop: '2px' }}>Merch</span>
+                            <span style={{ fontSize: '0.7rem', marginTop: '2px' }}>Merch</span>
                         </NavLink>
 
                         <NavLink
@@ -75,7 +88,7 @@ const MobileNav = () => {
                             className={({ isActive }) => `mobile-nav-item d-flex flex-column align-items-center justify-content-center text-decoration-none py-1 flex-grow-1 ${isActive ? 'text-primary fw-bold active' : 'text-secondary'}`}
                         >
                             <FaUsers size={18} />
-                            <span style={{ fontSize: '0.68rem', marginTop: '2px' }}>Users</span>
+                            <span style={{ fontSize: '0.7rem', marginTop: '2px' }}>Users</span>
                         </NavLink>
                     </>
                 ) : (

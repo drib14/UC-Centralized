@@ -453,7 +453,14 @@ footer {
     }
     #page-content-wrapper {
         margin-left: 0 !important;
-        padding: 12px 10px 76px 10px;
+        padding: 10px 8px 84px 8px !important;
+        width: 100% !important;
+    }
+
+    #page-content-wrapper > .container-fluid {
+        padding-left: 4px !important;
+        padding-right: 4px !important;
+        width: 100% !important;
     }
 
     #page-content-wrapper.chat-page-wrapper {
