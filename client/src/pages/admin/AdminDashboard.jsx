@@ -304,7 +304,7 @@ const AdminDashboard = () => {
                                 <li className="list-group-item d-flex justify-content-between align-items-center px-0 py-3 border-bottom">
                                     <div className="d-flex align-items-center">
                                         <FaServer className="me-2 text-success" />
-                                        <span className="fw-semibold">Node.js Server</span>
+                                        <span className="fw-semibold">Campus Application Server</span>
                                     </div>
                                     <span className="badge bg-success bg-opacity-10 text-success border border-success px-3 py-1 rounded-pill">
                                         <FaCircleCheck className="me-1" /> Online
@@ -313,7 +313,7 @@ const AdminDashboard = () => {
                                 <li className="list-group-item d-flex justify-content-between align-items-center px-0 py-3 border-bottom">
                                     <div className="d-flex align-items-center">
                                         <FaDatabase className="me-2 text-primary" />
-                                        <span className="fw-semibold">MongoDB Database</span>
+                                        <span className="fw-semibold">Primary Campus Database</span>
                                     </div>
                                     <span className="badge bg-success bg-opacity-10 text-success border border-success px-3 py-1 rounded-pill">
                                         Connected
@@ -322,10 +322,10 @@ const AdminDashboard = () => {
                                 <li className="list-group-item d-flex justify-content-between align-items-center px-0 py-3 border-bottom">
                                     <div className="d-flex align-items-center">
                                         <FaMicrochip className="me-2 text-info" />
-                                        <span className="fw-semibold">Worker / PID</span>
+                                        <span className="fw-semibold">Instance Node / PID</span>
                                     </div>
                                     <span className="fw-mono small text-dark">
-                                        PID {systemHealth?.processId || '—'} ({systemHealth?.workerId || 'Worker 1'})
+                                        PID {systemHealth?.processId || '—'} ({systemHealth?.workerId || 'Node 1'})
                                     </span>
                                 </li>
                                 <li className="list-group-item d-flex justify-content-between align-items-center px-0 py-3 border-bottom">
@@ -349,7 +349,7 @@ const AdminDashboard = () => {
                             </ul>
 
                             <div className="alert alert-light border rounded-3 p-3 mt-3 mb-0 small text-muted">
-                                <strong>Campus Topology:</strong> Multi-core clustered architecture with sticky WebSocket session balancing ready for campus-wide load.
+                                <strong>Campus Infrastructure:</strong> High-availability multi-instance architecture with real-time sync ready for university load.
                             </div>
                         </div>
                     </div>

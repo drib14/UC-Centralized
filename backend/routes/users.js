@@ -118,14 +118,54 @@ router.get('/', verifyAdmin, async (req, res) => {
     }
 });
 
-// UPDATE USER (Admins Only)
+// UPDATE USER (Admins Only - Manual Credentials & Records Editing)
 router.put('/:id', verifyAdmin, async (req, res) => {
     try {
         if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
             return res.status(400).json({ message: "Invalid user ID" });
         }
         const updateData = { ...req.body };
-        if (updateData.password) {
+
+        // Validate Student ID if provided
+        if (updateData.studentId !== undefined) {
+            updateData.studentId = String(updateData.studentId).trim();
+            if (!/^\d+$/.test(updateData.studentId)) {
+                return res.status(400).json({ message: "Student ID must contain numbers only." });
+            }
+            const existingIdUser = await User.findOne({
+                studentId: updateData.studentId,
+                _id: { $ne: req.params.id }
+            });
+            if (existingIdUser) {
+                return res.status(400).json({ message: "Student ID is already assigned to another user." });
+            }
+        }
+
+        // Validate Email if provided
+        if (updateData.email !== undefined) {
+            updateData.email = String(updateData.email).trim().toLowerCase();
+            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            if (!emailRegex.test(updateData.email)) {
+                return res.status(400).json({ message: "Please provide a valid email address." });
+            }
+            const existingEmailUser = await User.findOne({
+                email: updateData.email,
+                _id: { $ne: req.params.id }
+            });
+            if (existingEmailUser) {
+                return res.status(400).json({ message: "Email address is already assigned to another user." });
+            }
+        }
+
+        // Trim names if provided
+        if (updateData.firstName) updateData.firstName = String(updateData.firstName).trim();
+        if (updateData.lastName) updateData.lastName = String(updateData.lastName).trim();
+        if (updateData.year) updateData.year = String(updateData.year).trim();
+        if (updateData.department) updateData.department = String(updateData.department).trim();
+        if (updateData.program !== undefined) updateData.program = String(updateData.program).trim();
+
+        // Validate Password if provided
+        if (updateData.password && updateData.password.trim() !== '') {
             const passRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]).{8,}$/;
             if (!passRegex.test(updateData.password)) {
                 return res.status(400).json({
@@ -134,7 +174,10 @@ router.put('/:id', verifyAdmin, async (req, res) => {
             }
             const salt = await bcrypt.genSalt(10);
             updateData.password = await bcrypt.hash(updateData.password, salt);
+        } else {
+            delete updateData.password; // Do not overwrite if empty
         }
+
         const updatedUser = await User.findByIdAndUpdate(
             req.params.id,
             { $set: updateData },

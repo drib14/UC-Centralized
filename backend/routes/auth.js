@@ -79,7 +79,7 @@ router.post('/login', async (req, res) => {
 
         if (!user) return res.status(404).json({ message: "User not found" });
 
-        const validPassword = await bcrypt.compare(password, user.password);
+        const validPassword = await bcrypt.compare(String(password), user.password);
         if (!validPassword) return res.status(400).json({ message: "Wrong password" });
 
         const accessToken = jwt.sign(
@@ -108,31 +108,50 @@ router.get('/me', verifyToken, async (req, res) => {
     }
 });
 
-// GENERATE API KEY
-router.post('/generate-api-key', verifyToken, async (req, res) => {
-    try {
-        const key = crypto.randomBytes(32).toString('hex');
-        await User.findByIdAndUpdate(req.user.id, { apiKey: key });
-        res.status(200).json({ apiKey: key });
-    } catch (err) {
-        console.error("Generate API Key Error:", err);
-        res.status(500).json({ message: "Failed to generate API Key" });
-    }
-});
-
-// UPDATE PROFILE
+// UPDATE PROFILE (Students / Users Self-Management)
 router.put('/profile', verifyToken, parser.single('image'), async (req, res) => {
     try {
-        // Strictly whitelist allowed update fields to prevent privilege escalation or security bypass
-        const allowedFields = ['firstName', 'lastName', 'department', 'program', 'year', 'notificationPreferences'];
         const updateData = {};
 
-        for (const field of allowedFields) {
-            if (req.body[field] !== undefined) {
-                updateData[field] = req.body[field];
+        // 1. Email Address (The only editable student identity field)
+        if (req.body.email !== undefined && req.body.email !== null) {
+            const newEmail = String(req.body.email).trim().toLowerCase();
+            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            if (!emailRegex.test(newEmail)) {
+                return res.status(400).json({ message: "Please provide a valid email address." });
+            }
+
+            // Check if already taken by another user
+            const existingEmailUser = await User.findOne({
+                email: newEmail,
+                _id: { $ne: req.user.id }
+            });
+            if (existingEmailUser) {
+                return res.status(400).json({ message: "Email address is already in use by another account." });
+            }
+
+            updateData.email = newEmail;
+        }
+
+        // 2. Notification Preferences
+        if (req.body.notificationPreferences !== undefined) {
+            let notifPrefs = req.body.notificationPreferences;
+            if (typeof notifPrefs === 'string') {
+                try {
+                    notifPrefs = JSON.parse(notifPrefs);
+                } catch (e) {
+                    // Ignore parse error
+                }
+            }
+            if (typeof notifPrefs === 'object' && notifPrefs !== null) {
+                updateData.notificationPreferences = {
+                    email: notifPrefs.email !== undefined ? Boolean(notifPrefs.email) : true,
+                    app: notifPrefs.app !== undefined ? Boolean(notifPrefs.app) : true
+                };
             }
         }
 
+        // 3. Password Security Update
         if (req.body.password) {
             const passRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]).{8,}$/;
             if (!passRegex.test(req.body.password)) {
@@ -144,8 +163,11 @@ router.put('/profile', verifyToken, parser.single('image'), async (req, res) => 
             updateData.password = await bcrypt.hash(req.body.password, salt);
         }
 
+        // 4. Profile Photo
         if (req.file) {
             updateData.profileImage = req.file.path;
+        } else if (req.body.removeImage === 'true' || req.body.removeImage === true) {
+            updateData.profileImage = '';
         }
 
         const updatedUser = await User.findByIdAndUpdate(
@@ -262,7 +284,8 @@ router.post('/verify-code', async (req, res) => {
             return res.status(400).json({ message: 'Code has expired. Please request a new one.' });
         }
 
-        if (user.resetCode !== code) {
+        const stringCode = String(code).trim();
+        if (user.resetCode !== stringCode) {
             const update = { $inc: { resetAttempts: 1 } };
             if (user.resetAttempts + 1 >= 10) {
                 update.$set = {
@@ -298,19 +321,23 @@ router.post('/reset-password', async (req, res) => {
     try {
         const { token, password, confirmPassword } = req.body;
 
+        if (!token || !password || !confirmPassword) {
+            return res.status(400).json({ message: "All fields are required." });
+        }
+
         if (password !== confirmPassword) {
             return res.status(400).json({ message: "Passwords do not match." });
         }
 
         // Password strength check
         const passRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]).{8,}$/;
-        if (!passRegex.test(req.body.password)) {
+        if (!passRegex.test(password)) {
             return res.status(400).json({
                 message: "Password is not strong enough. It must be at least 8 characters long and include an uppercase letter, a lowercase letter, a number, and a special character."
             });
         }
 
-        const hashedToken = crypto.createHash('sha256').update(token).digest('hex');
+        const hashedToken = crypto.createHash('sha256').update(String(token)).digest('hex');
 
         const user = await User.findOne({
             resetPasswordToken: hashedToken,

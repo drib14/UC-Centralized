@@ -123,7 +123,7 @@ const StudentMerch = () => {
                             <input
                                 type="text"
                                 className="form-control bg-light border-0"
-                                placeholder="Search merchandise by name or keyword..."
+                                placeholder="Search merchandise..."
                                 value={search}
                                 onChange={e => setSearch(e.target.value)}
                             />

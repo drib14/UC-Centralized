@@ -14,8 +14,6 @@ const merchRoute = require('./routes/merch');
 const orderRoute = require('./routes/orders');
 const announcementRoute = require('./routes/announcements');
 const statsRoute = require('./routes/stats');
-const docsRoute = require('./routes/docs');
-const oauthRoute = require('./routes/oauth');
 const messageRoute = require('./routes/messages');
 const notificationRoute = require('./routes/notifications');
 const departmentRoute = require('./routes/departments');
@@ -30,8 +28,34 @@ for (const envKey of requiredEnv) {
     }
 }
 
+const {
+    apiLimiter,
+    authLimiter,
+    messageLimiter,
+    securityHeaders,
+    mongoSanitizeMiddleware
+} = require('./middleware/security');
+
+// App Config & Security Hardening
 const app = express();
 const server = http.createServer(app);
+
+// Slowloris & Request Timeout Hardening
+server.headersTimeout = 65000;
+server.requestTimeout = 60000;
+
+// 1. Security Headers (Protection against XSS, clickjacking, MIME sniffing)
+app.use(securityHeaders);
+
+// 2. Trust Proxy for reverse proxy / load balancer IP resolution
+app.enable('trust proxy');
+
+// 3. Payload size protection (Prevent memory exhaustion attacks)
+app.use(express.json({ limit: '2mb' }));
+app.use(express.urlencoded({ extended: true, limit: '2mb' }));
+
+// 4. NoSQL / Mongo Operator Injection Sanitizer
+app.use(mongoSanitizeMiddleware);
 
 // Allowed Origins for CORS
 const allowedOrigins = [
@@ -42,10 +66,20 @@ const allowedOrigins = [
     process.env.CLIENT_URL
 ].filter(Boolean);
 
+const isAllowedOrigin = (origin) => {
+    if (!origin) return true;
+    if (allowedOrigins.includes(origin)) return true;
+    // Allow localhost on any port for dev
+    if (/^http:\/\/localhost(:\d+)?$/.test(origin) || /^http:\/\/127\.0\.0\.1(:\d+)?$/.test(origin)) return true;
+    // Allow official vercel previews
+    if (/^https:\/\/([a-z0-9-]+\.)?uc-centralized\.vercel\.app$/.test(origin)) return true;
+    return false;
+};
+
 const io = new Server(server, {
     cors: {
         origin: (origin, callback) => {
-            if (!origin || allowedOrigins.includes(origin) || allowedOrigins.some(ao => origin.startsWith(ao))) {
+            if (isAllowedOrigin(origin)) {
                 callback(null, true);
             } else {
                 callback(new Error('Not allowed by CORS'));
@@ -56,15 +90,11 @@ const io = new Server(server, {
     }
 });
 
-// App Config
 app.set('io', io);
-app.use(express.json({ limit: '10mb' }));
-app.enable('trust proxy');
 
 app.use(cors({
     origin: (origin, callback) => {
-        // Allow requests with no origin (like mobile apps, curl, server-to-server) or in whitelist
-        if (!origin || allowedOrigins.includes(origin) || allowedOrigins.some(ao => origin.startsWith(ao))) {
+        if (isAllowedOrigin(origin)) {
             callback(null, true);
         } else {
             callback(new Error('Blocked by CORS policy'));
@@ -73,6 +103,21 @@ app.use(cors({
     credentials: true,
     optionsSuccessStatus: 200
 }));
+
+// Rate Limiters
+app.use('/api', apiLimiter);
+app.use('/api/auth/login', authLimiter);
+app.use('/api/auth/register', authLimiter);
+app.use('/api/auth/forgot-password', authLimiter);
+app.use('/api/auth/verify-code', authLimiter);
+app.use('/api/auth/reset-password', authLimiter);
+app.use('/auth/login', authLimiter);
+app.use('/auth/register', authLimiter);
+app.use('/auth/forgot-password', authLimiter);
+app.use('/auth/verify-code', authLimiter);
+app.use('/auth/reset-password', authLimiter);
+app.use('/api/messages', messageLimiter);
+app.use('/messages', messageLimiter);
 
 // --- DATABASE ---
 const { seedDefaultAdmin } = require('./utils/seedAdmin');
@@ -178,8 +223,6 @@ const routes = [
     { path: '/orders', handler: orderRoute },
     { path: '/announcements', handler: announcementRoute },
     { path: '/stats', handler: statsRoute },
-    { path: '/documentation', handler: docsRoute },
-    { path: '/oauth', handler: oauthRoute },
     { path: '/messages', handler: messageRoute },
     { path: '/notifications', handler: notificationRoute },
     { path: '/departments', handler: departmentRoute }

@@ -54,14 +54,24 @@ const AdminUsers = () => {
 
     const handleUpdate = async (e) => {
         if (e) e.preventDefault();
-        if (!editData.firstName.trim() || !editData.lastName.trim()) {
+        if (!editData.firstName?.trim() || !editData.lastName?.trim()) {
             toast.error("First Name and Last Name are required");
+            return;
+        }
+        if (!editData.studentId?.trim()) {
+            toast.error("ID Number / Student ID is required");
+            return;
+        }
+        if (!editData.email?.trim()) {
+            toast.error("Email address is required");
             return;
         }
 
         setSubmitting(true);
         try {
             const payload = {
+                studentId: editData.studentId.trim(),
+                email: editData.email.trim().toLowerCase(),
                 role: editData.role,
                 firstName: editData.firstName.trim(),
                 lastName: editData.lastName.trim(),
@@ -69,8 +79,11 @@ const AdminUsers = () => {
                 program: editData.program || '',
                 year: editData.year || '1'
             };
+            if (editData.password && editData.password.trim() !== '') {
+                payload.password = editData.password.trim();
+            }
             await API.updateUser(editData._id, payload);
-            toast.success("User profile updated successfully");
+            toast.success("User credentials and records updated successfully");
             setShowEdit(false);
             setEditData(null);
             loadUsers();
@@ -224,7 +237,7 @@ const AdminUsers = () => {
                             <input
                                 type="text"
                                 className="form-control bg-light border-0"
-                                placeholder="Search by name, student ID, or email..."
+                                placeholder="Search users..."
                                 value={search}
                                 onChange={e => setSearch(e.target.value)}
                             />
@@ -377,6 +390,31 @@ const AdminUsers = () => {
                                 <div className="modal-body p-4">
                                     <div className="row">
                                         <div className="col-md-6 mb-3">
+                                            <label className="form-label fw-semibold">ID / Student ID Number *</label>
+                                            <input
+                                                type="text"
+                                                className="form-control font-monospace"
+                                                placeholder="ID Number"
+                                                required
+                                                value={editData.studentId || ''}
+                                                onChange={e => setEditData({ ...editData, studentId: e.target.value })}
+                                            />
+                                        </div>
+                                        <div className="col-md-6 mb-3">
+                                            <label className="form-label fw-semibold">Email Address *</label>
+                                            <input
+                                                type="email"
+                                                className="form-control"
+                                                placeholder="Email address"
+                                                required
+                                                value={editData.email || ''}
+                                                onChange={e => setEditData({ ...editData, email: e.target.value })}
+                                            />
+                                        </div>
+                                    </div>
+
+                                    <div className="row">
+                                        <div className="col-md-6 mb-3">
                                             <label className="form-label fw-semibold">First Name *</label>
                                             <input
                                                 type="text"
@@ -431,7 +469,7 @@ const AdminUsers = () => {
                                             <input
                                                 type="text"
                                                 className="form-control"
-                                                placeholder="BSIT"
+                                                placeholder="Program (e.g. BSIT)"
                                                 value={editData.program || ''}
                                                 onChange={e => setEditData({ ...editData, program: e.target.value })}
                                             />
@@ -449,6 +487,22 @@ const AdminUsers = () => {
                                                 <option value="4">4th Year</option>
                                             </select>
                                         </div>
+                                    </div>
+
+                                    <hr />
+
+                                    <div className="mb-2">
+                                        <label className="form-label fw-semibold">Admin Password Reset / Override</label>
+                                        <input
+                                            type="password"
+                                            className="form-control"
+                                            placeholder="New password (optional)"
+                                            value={editData.password || ''}
+                                            onChange={e => setEditData({ ...editData, password: e.target.value })}
+                                        />
+                                        <small className="text-muted">
+                                            Set a temporary or new password if student is locked out (min 8 chars, mixed case, number, symbol).
+                                        </small>
                                     </div>
                                 </div>
                                 <div className="modal-footer bg-light rounded-bottom-4">

@@ -269,7 +269,7 @@ const StudentEvents = () => {
                             <input
                                 type="text"
                                 className="form-control bg-light border-0"
-                                placeholder="Search events by title, venue, or description..."
+                                placeholder="Search events..."
                                 value={search}
                                 onChange={e => setSearch(e.target.value)}
                             />

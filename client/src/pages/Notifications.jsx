@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import API from '../utils/api';
 import { useSocket } from '../context/SocketContext';
+import { useAuth } from '../context/AuthContext';
 import { FaBell, FaCheck, FaBullhorn, FaCalendarDays, FaEnvelope, FaTrash } from 'react-icons/fa6';
 import { toast } from 'react-toastify';
 
@@ -9,6 +10,7 @@ const Notifications = () => {
     const [notifications, setLocalNotifications] = useState([]);
     const [loading, setLoading] = useState(true);
     const { setUnreadCount, socket } = useSocket();
+    const { user } = useAuth();
     const navigate = useNavigate();
 
     useEffect(() => {
@@ -100,10 +102,11 @@ const Notifications = () => {
         }
 
         // Redirect logic
-        if (notification.type === 'announcement') navigate('/student/dashboard');
-        if (notification.type === 'event') navigate('/student/events');
-        if (notification.type === 'message') navigate('/student/messages');
-        if (notification.type === 'alert' && notification.content.includes('Order')) navigate('/student/cart');
+        const isStudent = user?.role === 'student';
+        if (notification.type === 'announcement') navigate(isStudent ? '/student/dashboard' : '/admin/announcements');
+        if (notification.type === 'event') navigate(isStudent ? '/student/events' : '/admin/events');
+        if (notification.type === 'message' && isStudent) navigate('/student/messages');
+        if (notification.type === 'alert' && notification.content.includes('Order')) navigate(isStudent ? '/student/cart' : '/admin/orders');
         if (notification.type === 'alert' && notification.content.includes('Low Stock')) navigate('/admin/merch');
     };
 

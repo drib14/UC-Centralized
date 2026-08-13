@@ -280,7 +280,7 @@ const Register = () => {
                                     type="email"
                                     className="form-control"
                                     id="email"
-                                    placeholder="name@example.com"
+                                    placeholder="Email address"
                                     required
                                     value={formData.email}
                                     onChange={handleChange}
@@ -295,7 +295,7 @@ const Register = () => {
                                     pattern="[0-9]*"
                                     className="form-control"
                                     id="studentId"
-                                    placeholder="12345678"
+                                    placeholder="ID Number"
                                     required
                                     value={formData.studentId}
                                     onChange={handleChange}
@@ -360,7 +360,7 @@ const Register = () => {
                                         type="text"
                                         className="form-control"
                                         id="program"
-                                        placeholder="BSIT"
+                                        placeholder="Program (e.g. BSIT)"
                                         required
                                         value={formData.program}
                                         onChange={handleChange}
@@ -416,7 +416,7 @@ const Register = () => {
                                         type={showPassword ? 'text' : 'password'}
                                         className="form-control"
                                         id="password"
-                                        placeholder="••••••••"
+                                        placeholder="Password"
                                         required
                                         value={formData.password}
                                         onChange={handleChange}
@@ -440,7 +440,7 @@ const Register = () => {
                                         type={showConfirmPassword ? 'text' : 'password'}
                                         className="form-control"
                                         id="confirmPassword"
-                                        placeholder="••••••••"
+                                        placeholder="Confirm password"
                                         required
                                         value={formData.confirmPassword}
                                         onChange={handleChange}

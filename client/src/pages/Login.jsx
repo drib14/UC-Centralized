@@ -49,7 +49,7 @@ const Login = () => {
                                 type="text"
                                 className="form-control"
                                 id="studentId"
-                                placeholder="Enter ID or email"
+                                placeholder="Student ID or Email"
                                 required
                                 value={studentId}
                                 onChange={(e) => setStudentId(e.target.value)}
@@ -64,7 +64,7 @@ const Login = () => {
                                 type={showPassword ? 'text' : 'password'}
                                 className="form-control"
                                 id="password"
-                                placeholder="••••••••"
+                                placeholder="Password"
                                 required
                                 value={password}
                                 onChange={(e) => setPassword(e.target.value)}

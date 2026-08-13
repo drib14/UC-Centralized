@@ -1,28 +1,51 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import API from '../../utils/api';
 import { useAuth } from '../../context/AuthContext';
+import { useSocket } from '../../context/SocketContext';
 import { toast } from 'react-toastify';
-import { Link } from 'react-router-dom';
 import SEO from '../../components/SEO';
 import StudentProfileSkeleton from '../../components/skeletons/StudentProfileSkeleton';
+import PasswordStrength from '../../components/PasswordStrength';
 import {
     FaUser, FaPencil, FaShirt, FaEye, FaEyeSlash,
-    FaKey, FaCopy, FaBook, FaGraduationCap, FaCalendarDays,
-    FaLocationDot, FaIdCard, FaCircleCheck
+    FaLock, FaCheck, FaXmark, FaCalendarDays,
+    FaLocationDot, FaIdCard, FaCircleCheck, FaGraduationCap,
+    FaEnvelope, FaBuildingColumns, FaShieldHalved, FaBell,
+    FaMobileScreenButton, FaCamera, FaTrash
 } from 'react-icons/fa6';
 
 const StudentProfile = () => {
     const { user, syncSession } = useAuth();
+    const {
+        devicePermission,
+        requestDeviceNotificationPermission,
+        sendTestDeviceNotification
+    } = useSocket();
+
     const [orders, setOrders] = useState([]);
     const [myEvents, setMyEvents] = useState([]);
     const [departments, setDepartments] = useState([]);
     const [loading, setLoading] = useState(true);
-    const [showEdit, setShowEdit] = useState(false);
-    const [showPassword, setShowPassword] = useState(false);
-    const [editForm, setEditForm] = useState({ firstName: '', lastName: '', password: '', image: null });
-    const [apiKey, setApiKey] = useState('');
-    const [showApiKey, setShowApiKey] = useState(false);
-    const [saving, setSaving] = useState(false);
+
+    // Email Editing State
+    const [isEditingEmail, setIsEditingEmail] = useState(false);
+    const [emailInput, setEmailInput] = useState('');
+    const [savingEmail, setSavingEmail] = useState(false);
+
+    // Password Security State
+    const [showPasswordSection, setShowPasswordSection] = useState(false);
+    const [passwordForm, setPasswordForm] = useState({ newPassword: '', confirmPassword: '' });
+    const [showNewPass, setShowNewPass] = useState(false);
+    const [showConfirmPass, setShowConfirmPass] = useState(false);
+    const [savingPassword, setSavingPassword] = useState(false);
+
+    // Notification Preferences State
+    const [notifPrefs, setNotifPrefs] = useState({ email: true, app: true });
+    const [savingNotif, setSavingNotif] = useState(false);
+
+    // Profile Photo Upload State
+    const [uploadingPhoto, setUploadingPhoto] = useState(false);
+    const fileInputRef = useRef(null);
 
     const loadActivity = useCallback(async () => {
         try {
@@ -42,58 +65,158 @@ const StudentProfile = () => {
         } catch (e) {
             console.error(e);
         } finally {
-            setTimeout(() => setLoading(false), 400);
+            setTimeout(() => setLoading(false), 350);
         }
     }, [user]);
 
     useEffect(() => {
         if (user) {
-            setEditForm({
-                firstName: user.firstName || (user.name ? user.name.split(' ')[0] : ''),
-                lastName: user.lastName || (user.name ? user.name.split(' ').pop() : ''),
-                password: '',
-                image: null
-            });
-            if (user.apiKey) setApiKey(user.apiKey);
+            setEmailInput(user.email || '');
+            if (user.notificationPreferences) {
+                setNotifPrefs({
+                    email: user.notificationPreferences.email !== false,
+                    app: user.notificationPreferences.app !== false
+                });
+            }
             loadActivity();
         }
     }, [user, loadActivity]);
 
-    const handleSave = async (e) => {
+    // Handle Email Update
+    const handleSaveEmail = async (e) => {
         if (e) e.preventDefault();
-        setSaving(true);
+        const trimmedEmail = emailInput.trim().toLowerCase();
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+        if (!trimmedEmail || !emailRegex.test(trimmedEmail)) {
+            return toast.error("Please enter a valid email address.");
+        }
+
+        if (trimmedEmail === user.email?.toLowerCase()) {
+            setIsEditingEmail(false);
+            return;
+        }
+
+        setSavingEmail(true);
+        try {
+            await API.updateProfile({ email: trimmedEmail });
+            await syncSession();
+            toast.success("Email address updated successfully!");
+            setIsEditingEmail(false);
+        } catch (err) {
+            toast.error(err.message || "Failed to update email address.");
+        } finally {
+            setSavingEmail(false);
+        }
+    };
+
+    // Handle Password Update
+    const handleSavePassword = async (e) => {
+        if (e) e.preventDefault();
+        if (passwordForm.newPassword !== passwordForm.confirmPassword) {
+            return toast.error("Passwords do not match.");
+        }
+
+        const passRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]).{8,}$/;
+        if (!passRegex.test(passwordForm.newPassword)) {
+            return toast.error("Password must be at least 8 characters long and include an uppercase letter, a lowercase letter, a number, and a special character.");
+        }
+
+        setSavingPassword(true);
+        try {
+            await API.updateProfile({ password: passwordForm.newPassword });
+            toast.success("Password changed successfully!");
+            setPasswordForm({ newPassword: '', confirmPassword: '' });
+            setShowPasswordSection(false);
+        } catch (err) {
+            toast.error(err.message || "Failed to change password.");
+        } finally {
+            setSavingPassword(false);
+        }
+    };
+
+    // Handle Photo Upload
+    const handlePhotoChange = async (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        if (!file.type.startsWith('image/')) {
+            return toast.error("Please select a valid image file.");
+        }
+
+        if (file.size > 5 * 1024 * 1024) {
+            return toast.error("Image file size must be less than 5MB.");
+        }
+
+        setUploadingPhoto(true);
         try {
             const formData = new FormData();
-            formData.append('firstName', editForm.firstName);
-            formData.append('lastName', editForm.lastName);
-            if (editForm.password) formData.append('password', editForm.password);
-            if (editForm.image) formData.append('image', editForm.image);
-
+            formData.append('image', file);
             await API.updateProfile(formData);
             await syncSession();
-            toast.success("Profile updated successfully");
-            setShowEdit(false);
-        } catch (e) {
-            toast.error(e.message || "Update failed");
+            toast.success("Profile photo updated successfully!");
+        } catch (err) {
+            toast.error(err.message || "Failed to upload photo.");
         } finally {
-            setSaving(false);
+            setUploadingPhoto(false);
         }
     };
 
-    const handleGenerateApiKey = async () => {
+    // Handle Remove Photo
+    const handleRemovePhoto = async () => {
+        if (!window.confirm("Remove profile photo?")) return;
+        setUploadingPhoto(true);
         try {
-            const res = await API.generateApiKey();
-            setApiKey(res.apiKey);
-            toast.success("API Key generated successfully");
-        } catch (e) {
-            toast.error(e.message || "Failed to generate API Key");
+            await API.updateProfile({ removeImage: true });
+            await syncSession();
+            toast.success("Profile photo removed.");
+        } catch (err) {
+            toast.error(err.message || "Failed to remove photo.");
+        } finally {
+            setUploadingPhoto(false);
         }
     };
 
-    const copyToClipboard = () => {
-        if (!apiKey) return;
-        navigator.clipboard.writeText(apiKey);
-        toast.success("API Key copied to clipboard");
+    // Handle Device Push Notification Toggle
+    const handleDeviceNotificationToggle = async () => {
+        if (!notifPrefs.app) {
+            // Turning ON -> request real browser/device permission
+            const perm = await requestDeviceNotificationPermission();
+            if (perm === 'granted') {
+                const updatedPrefs = { ...notifPrefs, app: true };
+                setNotifPrefs(updatedPrefs);
+                await saveNotificationPreferences(updatedPrefs);
+                toast.success("Device notifications enabled!");
+            } else if (perm === 'denied') {
+                toast.error("Notification permission was denied in your browser settings. Please enable notifications in your browser/device permissions.");
+            }
+        } else {
+            // Turning OFF
+            const updatedPrefs = { ...notifPrefs, app: false };
+            setNotifPrefs(updatedPrefs);
+            await saveNotificationPreferences(updatedPrefs);
+            toast.info("Device notifications disabled.");
+        }
+    };
+
+    // Handle Email Notifications Toggle
+    const handleEmailNotificationToggle = async () => {
+        const updatedPrefs = { ...notifPrefs, email: !notifPrefs.email };
+        setNotifPrefs(updatedPrefs);
+        await saveNotificationPreferences(updatedPrefs);
+        toast.info(updatedPrefs.email ? "Email announcements enabled." : "Email announcements muted.");
+    };
+
+    const saveNotificationPreferences = async (prefs) => {
+        setSavingNotif(true);
+        try {
+            await API.updateProfile({ notificationPreferences: prefs });
+            await syncSession();
+        } catch (e) {
+            console.error("Failed to save notification preferences", e);
+        } finally {
+            setSavingNotif(false);
+        }
     };
 
     const getInitials = () => {
@@ -115,11 +238,12 @@ const StudentProfile = () => {
 
     return (
         <div className="container-fluid py-4">
-            <SEO title="Student Profile" description="Manage your student identification, activity, and developer settings." />
+            <SEO title="Student Profile & Records" description="Official academic identification, account security, and campus records." />
 
             <div className="row g-4">
-                {/* Left Column: Student Identity Card */}
-                <div className="col-lg-4">
+                {/* Left Column: Student Identity & Profile Controls */}
+                <div className="col-lg-5 col-xl-4">
+                    {/* Official Campus Identification Card */}
                     <div className="card border-0 shadow-sm rounded-4 bg-white text-center overflow-hidden mb-4">
                         <div className="p-4" style={{ backgroundColor: deptObj?.color || '#003399', color: '#fff' }}>
                             <div className="position-relative d-inline-block mb-3">
@@ -138,83 +262,342 @@ const StudentProfile = () => {
                                         {getInitials()}
                                     </div>
                                 )}
+
+                                {/* Photo Upload Badge Button */}
+                                <button
+                                    className="btn btn-sm btn-light rounded-circle shadow position-absolute bottom-0 end-0 p-2 d-flex align-items-center justify-content-center"
+                                    style={{ width: '34px', height: '34px' }}
+                                    title="Update Photo"
+                                    onClick={() => fileInputRef.current?.click()}
+                                    disabled={uploadingPhoto}
+                                >
+                                    <FaCamera size={14} className="text-primary" />
+                                </button>
+                                <input
+                                    type="file"
+                                    ref={fileInputRef}
+                                    className="d-none"
+                                    accept="image/*"
+                                    onChange={handlePhotoChange}
+                                />
                             </div>
+
                             <h4 className="fw-bold mb-1">{studentName}</h4>
-                            <span className="badge bg-white text-dark rounded-pill px-3 py-1 fw-bold text-uppercase">
-                                {user.role === 'admin' ? 'Campus Admin' : 'Student'}
-                            </span>
+                            <div className="d-flex justify-content-center gap-2 align-items-center">
+                                <span className="badge bg-white text-dark rounded-pill px-3 py-1 fw-bold text-uppercase">
+                                    {user.role === 'admin' ? 'Campus Administrator' : 'Enrolled Student'}
+                                </span>
+                                {user.profileImage && (
+                                    <button
+                                        className="btn btn-sm btn-outline-light border-0 py-0 px-2 small opacity-75 hover-opacity-100"
+                                        onClick={handleRemovePhoto}
+                                        title="Remove photo"
+                                    >
+                                        <FaTrash size={11} />
+                                    </button>
+                                )}
+                            </div>
                         </div>
 
+                        {/* Official Academic Records List (Locked) */}
                         <div className="card-body p-4 text-start">
+                            <div className="d-flex align-items-center justify-content-between mb-3">
+                                <h6 className="fw-bold text-dark mb-0 d-flex align-items-center">
+                                    <FaIdCard className="me-2 text-primary" /> Official University Records
+                                </h6>
+                                <span className="badge bg-secondary bg-opacity-10 text-secondary border border-secondary rounded-pill px-2 py-1 small">
+                                    <FaLock size={10} className="me-1" /> Locked
+                                </span>
+                            </div>
+
                             <ul className="list-group list-group-flush mb-3">
-                                <li className="list-group-item d-flex justify-content-between align-items-center px-0 py-2">
-                                    <span className="text-muted small">Student ID</span>
+                                <li className="list-group-item d-flex justify-content-between align-items-center px-0 py-2 border-bottom">
+                                    <span className="text-muted small">Student ID Number</span>
                                     <span className="fw-mono fw-bold text-dark">{user.studentId || '—'}</span>
                                 </li>
-                                <li className="list-group-item d-flex justify-content-between align-items-center px-0 py-2">
-                                    <span className="text-muted small">Department</span>
+                                <li className="list-group-item d-flex justify-content-between align-items-center px-0 py-2 border-bottom">
+                                    <span className="text-muted small">First Name</span>
+                                    <span className="fw-semibold text-dark">{user.firstName || '—'}</span>
+                                </li>
+                                <li className="list-group-item d-flex justify-content-between align-items-center px-0 py-2 border-bottom">
+                                    <span className="text-muted small">Last Name</span>
+                                    <span className="fw-semibold text-dark">{user.lastName || '—'}</span>
+                                </li>
+                                <li className="list-group-item d-flex justify-content-between align-items-center px-0 py-2 border-bottom">
+                                    <span className="text-muted small">College Department</span>
                                     <span className="badge text-white px-2 py-1 rounded-pill" style={{ backgroundColor: deptObj?.color || '#003399' }}>
                                         {user.department || 'General'}
                                     </span>
                                 </li>
-                                <li className="list-group-item d-flex justify-content-between align-items-center px-0 py-2">
-                                    <span className="text-muted small">Program</span>
-                                    <span className="fw-semibold text-dark">{user.program || 'N/A'}</span>
+                                <li className="list-group-item d-flex justify-content-between align-items-center px-0 py-2 border-bottom">
+                                    <span className="text-muted small">Degree Program</span>
+                                    <span className="fw-semibold text-dark text-truncate" style={{ maxWidth: '170px' }}>
+                                        {user.program || 'N/A'}
+                                    </span>
                                 </li>
                                 <li className="list-group-item d-flex justify-content-between align-items-center px-0 py-2">
                                     <span className="text-muted small">Year Level</span>
-                                    <span className="fw-semibold text-dark">{user.year ? `Year ${user.year}` : '1st Year'}</span>
-                                </li>
-                                <li className="list-group-item d-flex justify-content-between align-items-center px-0 py-2">
-                                    <span className="text-muted small">Email Address</span>
-                                    <span className="text-secondary small">{user.email}</span>
+                                    <span className="badge bg-light text-dark border px-2 py-1 fw-bold">
+                                        {user.year ? `Year ${user.year}` : '1st Year'}
+                                    </span>
                                 </li>
                             </ul>
 
-                            <button
-                                className="btn btn-outline-primary w-100 rounded-pill fw-semibold d-flex align-items-center justify-content-center gap-2 mb-3"
-                                onClick={() => setShowEdit(true)}
-                            >
-                                <FaPencil size={12} /> Edit Profile & Security
-                            </button>
+                            <div className="alert alert-light border rounded-3 p-2 small text-muted d-flex align-items-start gap-2 mb-0">
+                                <FaLock className="text-secondary mt-1 flex-shrink-0" size={12} />
+                                <span style={{ fontSize: '0.75rem' }}>
+                                    Official student records are managed by the University Registrar. Contact campus administration to request name or program corrections.
+                                </span>
+                            </div>
                         </div>
                     </div>
 
-                    {/* Developer & API Console Card */}
-                    <div className="card border-0 shadow-sm rounded-4 bg-white p-4">
-                        <h6 className="fw-bold text-dark d-flex align-items-center mb-3">
-                            <FaKey className="me-2 text-warning" /> Developer & API Access
-                        </h6>
-                        <label className="form-label small text-muted">Personal API Key</label>
-                        <div className="input-group mb-2">
-                            <input
-                                type={showApiKey ? "text" : "password"}
-                                className="form-control form-control-sm bg-light border-0"
-                                value={apiKey || ''}
-                                readOnly
-                                placeholder="No API key generated"
-                            />
-                            <button className="btn btn-light btn-sm border-0" type="button" onClick={() => setShowApiKey(!showApiKey)}>
-                                {showApiKey ? <FaEyeSlash size={14} /> : <FaEye size={14} />}
-                            </button>
-                            <button className="btn btn-outline-primary btn-sm" type="button" onClick={copyToClipboard} disabled={!apiKey}>
-                                <FaCopy size={14} />
-                            </button>
+                    {/* Cross-Device Push Notification Settings */}
+                    <div className="card border-0 shadow-sm rounded-4 bg-white p-4 mb-4">
+                        <div className="d-flex align-items-center justify-content-between mb-3">
+                            <h6 className="fw-bold text-dark mb-0 d-flex align-items-center">
+                                <FaBell className="me-2 text-warning" /> Device Notifications
+                            </h6>
+                            <span className={`badge rounded-pill px-2 py-1 small ${
+                                devicePermission === 'granted' ? 'bg-success bg-opacity-10 text-success border border-success' :
+                                devicePermission === 'denied' ? 'bg-danger bg-opacity-10 text-danger border border-danger' :
+                                'bg-warning bg-opacity-10 text-dark border border-warning'
+                            }`}>
+                                {devicePermission === 'granted' ? 'Permission: Active' :
+                                 devicePermission === 'denied' ? 'Permission: Blocked' : 'Permission: Default'}
+                            </span>
                         </div>
-                        <button className="btn btn-sm btn-primary rounded-pill w-100 mb-2 fw-semibold" onClick={handleGenerateApiKey}>
-                            {apiKey ? 'Regenerate API Key' : 'Generate API Key'}
-                        </button>
-                        <Link to="/documentation" className="btn btn-sm btn-light border rounded-pill w-100 d-flex align-items-center justify-content-center gap-2 mb-2">
-                            <FaBook size={12} /> API Documentation
-                        </Link>
-                        <Link to="/student/developer" className="btn btn-sm btn-light border rounded-pill w-100 d-flex align-items-center justify-content-center gap-2">
-                            <FaKey size={12} /> OAuth Apps Console
-                        </Link>
+
+                        <p className="text-muted small mb-3">
+                            Receive real-time campus alerts, announcement broadcasts, and activity updates directly on your computer, laptop, or phone.
+                        </p>
+
+                        <div className="list-group list-group-flush mb-3">
+                            {/* Native Device Push Toggle */}
+                            <div className="list-group-item d-flex justify-content-between align-items-center px-0 py-2 border-bottom">
+                                <div className="d-flex align-items-center">
+                                    <FaMobileScreenButton className="me-2 text-primary" />
+                                    <div>
+                                        <div className="fw-semibold small text-dark">Native Device Push</div>
+                                        <small className="text-muted" style={{ fontSize: '0.75rem' }}>Desktop & mobile alerts</small>
+                                    </div>
+                                </div>
+                                <div className="form-check form-switch mb-0">
+                                    <input
+                                        className="form-check-input"
+                                        type="checkbox"
+                                        role="switch"
+                                        checked={notifPrefs.app && devicePermission === 'granted'}
+                                        onChange={handleDeviceNotificationToggle}
+                                        disabled={savingNotif}
+                                    />
+                                </div>
+                            </div>
+
+                            {/* Email Broadcast Alerts */}
+                            <div className="list-group-item d-flex justify-content-between align-items-center px-0 py-2">
+                                <div className="d-flex align-items-center">
+                                    <FaEnvelope className="me-2 text-primary" />
+                                    <div>
+                                        <div className="fw-semibold small text-dark">Email Broadcasts</div>
+                                        <small className="text-muted" style={{ fontSize: '0.75rem' }}>Announcements to your inbox</small>
+                                    </div>
+                                </div>
+                                <div className="form-check form-switch mb-0">
+                                    <input
+                                        className="form-check-input"
+                                        type="checkbox"
+                                        role="switch"
+                                        checked={notifPrefs.email}
+                                        onChange={handleEmailNotificationToggle}
+                                        disabled={savingNotif}
+                                    />
+                                </div>
+                            </div>
+                        </div>
+
+                        {devicePermission === 'granted' && (
+                            <button
+                                className="btn btn-sm btn-outline-primary w-100 rounded-pill fw-semibold"
+                                onClick={sendTestDeviceNotification}
+                            >
+                                <FaBell className="me-1" /> Send Test Notification to this Device
+                            </button>
+                        )}
+
+                        {devicePermission === 'denied' && (
+                            <div className="alert alert-warning border-0 p-2 small mb-0 rounded-3" style={{ fontSize: '0.75rem' }}>
+                                Notifications are blocked by your browser. Click the site settings icon next to the URL bar to allow notifications.
+                            </div>
+                        )}
                     </div>
                 </div>
 
-                {/* Right Column: Orders & Event Registrations */}
-                <div className="col-lg-8">
+                {/* Right Column: Editable Account Details & Activity */}
+                <div className="col-lg-7 col-xl-8">
+                    {/* Editable Student Information (Email & Credentials) */}
+                    <div className="card border-0 shadow-sm rounded-4 bg-white p-4 mb-4">
+                        <div className="d-flex align-items-center justify-content-between mb-3">
+                            <div>
+                                <h5 className="fw-bold text-dark mb-1 d-flex align-items-center">
+                                    <FaEnvelope className="me-2 text-primary" /> Contact & Account Credentials
+                                </h5>
+                                <small className="text-muted">Manage your editable account address and password security.</small>
+                            </div>
+                        </div>
+
+                        {/* Email Management Section */}
+                        <div className="bg-light rounded-4 p-3 mb-3 border">
+                            <div className="d-flex justify-content-between align-items-center mb-2">
+                                <label className="form-label fw-bold text-dark mb-0 small">
+                                    Registered Email Address
+                                </label>
+                                {!isEditingEmail ? (
+                                    <button
+                                        className="btn btn-sm btn-outline-primary rounded-pill px-3 py-1 d-flex align-items-center gap-1"
+                                        onClick={() => setIsEditingEmail(true)}
+                                    >
+                                        <FaPencil size={11} /> Edit Email
+                                    </button>
+                                ) : (
+                                    <button
+                                        className="btn btn-sm btn-outline-secondary rounded-pill px-3 py-1 d-flex align-items-center gap-1"
+                                        onClick={() => {
+                                            setIsEditingEmail(false);
+                                            setEmailInput(user.email || '');
+                                        }}
+                                        disabled={savingEmail}
+                                    >
+                                        <FaXmark size={11} /> Cancel
+                                    </button>
+                                )}
+                            </div>
+
+                            {!isEditingEmail ? (
+                                <div className="d-flex align-items-center justify-content-between">
+                                    <span className="fw-semibold text-dark">{user.email}</span>
+                                    <span className="badge bg-success bg-opacity-10 text-success border border-success rounded-pill px-2 py-1 small">
+                                        <FaCheck className="me-1" /> Active
+                                    </span>
+                                </div>
+                            ) : (
+                                <form onSubmit={handleSaveEmail}>
+                                    <div className="input-group mb-2">
+                                        <input
+                                            type="email"
+                                            className="form-control bg-white"
+                                            placeholder="New email address"
+                                            value={emailInput}
+                                            onChange={(e) => setEmailInput(e.target.value)}
+                                            required
+                                            autoFocus
+                                        />
+                                        <button
+                                            type="submit"
+                                            className="btn btn-primary fw-semibold px-4"
+                                            disabled={savingEmail}
+                                        >
+                                            {savingEmail ? 'Saving...' : 'Save Email'}
+                                        </button>
+                                    </div>
+                                    <small className="text-muted" style={{ fontSize: '0.75rem' }}>
+                                        Make sure you have access to this email. It is used for password recovery and notifications.
+                                    </small>
+                                </form>
+                            )}
+                        </div>
+
+                        {/* Password Security Accordion / Section */}
+                        <div className="border rounded-4 p-3 bg-light">
+                            <div className="d-flex justify-content-between align-items-center">
+                                <div className="d-flex align-items-center gap-2">
+                                    <FaShieldHalved className="text-primary" />
+                                    <div>
+                                        <div className="fw-bold small text-dark">Password & Security</div>
+                                        <small className="text-muted">Update your account password</small>
+                                    </div>
+                                </div>
+                                <button
+                                    className="btn btn-sm btn-outline-primary rounded-pill px-3"
+                                    onClick={() => setShowPasswordSection(!showPasswordSection)}
+                                >
+                                    {showPasswordSection ? 'Close' : 'Change Password'}
+                                </button>
+                            </div>
+
+                            {showPasswordSection && (
+                                <form onSubmit={handleSavePassword} className="mt-3 pt-3 border-top">
+                                    <div className="row g-3 mb-3">
+                                        <div className="col-md-6">
+                                            <label className="form-label fw-semibold small">New Password</label>
+                                            <div className="input-group">
+                                                <input
+                                                    type={showNewPass ? "text" : "password"}
+                                                    className="form-control bg-white"
+                                                    placeholder="New password"
+                                                    value={passwordForm.newPassword}
+                                                    onChange={e => setPasswordForm({ ...passwordForm, newPassword: e.target.value })}
+                                                    required
+                                                />
+                                                <button
+                                                    type="button"
+                                                    className="btn btn-outline-secondary"
+                                                    onClick={() => setShowNewPass(!showNewPass)}
+                                                >
+                                                    {showNewPass ? <FaEyeSlash /> : <FaEye />}
+                                                </button>
+                                            </div>
+                                        </div>
+                                        <div className="col-md-6">
+                                            <label className="form-label fw-semibold small">Confirm New Password</label>
+                                            <div className="input-group">
+                                                <input
+                                                    type={showConfirmPass ? "text" : "password"}
+                                                    className="form-control bg-white"
+                                                    placeholder="Confirm password"
+                                                    value={passwordForm.confirmPassword}
+                                                    onChange={e => setPasswordForm({ ...passwordForm, confirmPassword: e.target.value })}
+                                                    required
+                                                />
+                                                <button
+                                                    type="button"
+                                                    className="btn btn-outline-secondary"
+                                                    onClick={() => setShowConfirmPass(!showConfirmPass)}
+                                                >
+                                                    {showConfirmPass ? <FaEyeSlash /> : <FaEye />}
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {/* Password Strength Component */}
+                                    {passwordForm.newPassword && (
+                                        <div className="mb-3">
+                                            <PasswordStrength password={passwordForm.newPassword} />
+                                        </div>
+                                    )}
+
+                                    <div className="d-flex justify-content-end gap-2">
+                                        <button
+                                            type="button"
+                                            className="btn btn-sm btn-light border rounded-pill px-3"
+                                            onClick={() => setShowPasswordSection(false)}
+                                        >
+                                            Cancel
+                                        </button>
+                                        <button
+                                            type="submit"
+                                            className="btn btn-sm btn-primary rounded-pill px-4 fw-semibold"
+                                            disabled={savingPassword}
+                                        >
+                                            {savingPassword ? 'Updating...' : 'Update Password'}
+                                        </button>
+                                    </div>
+                                </form>
+                            )}
+                        </div>
+                    </div>
+
                     {/* Orders History Card */}
                     <div className="card border-0 shadow-sm rounded-4 bg-white p-4 mb-4">
                         <h5 className="fw-bold text-dark d-flex align-items-center mb-3">
@@ -307,78 +690,6 @@ const StudentProfile = () => {
                     </div>
                 </div>
             </div>
-
-            {/* Edit Profile Modal */}
-            {showEdit && (
-                <div className="modal fade show d-block" tabIndex="-1" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>
-                    <div className="modal-dialog modal-dialog-centered">
-                        <div className="modal-content border-0 rounded-4 shadow">
-                            <div className="modal-header bg-primary text-white rounded-top-4">
-                                <h5 className="modal-title fw-bold">Edit Profile & Settings</h5>
-                                <button type="button" className="btn-close btn-close-white" onClick={() => setShowEdit(false)}></button>
-                            </div>
-                            <form onSubmit={handleSave}>
-                                <div className="modal-body p-4">
-                                    <div className="mb-3">
-                                        <label className="form-label fw-semibold">Profile Photo</label>
-                                        <input
-                                            type="file"
-                                            className="form-control"
-                                            onChange={e => setEditForm({ ...editForm, image: e.target.files[0] })}
-                                        />
-                                    </div>
-                                    <div className="row mb-3">
-                                        <div className="col">
-                                            <label className="form-label fw-semibold">First Name</label>
-                                            <input
-                                                type="text"
-                                                className="form-control"
-                                                required
-                                                value={editForm.firstName}
-                                                onChange={e => setEditForm({ ...editForm, firstName: e.target.value })}
-                                            />
-                                        </div>
-                                        <div className="col">
-                                            <label className="form-label fw-semibold">Last Name</label>
-                                            <input
-                                                type="text"
-                                                className="form-control"
-                                                required
-                                                value={editForm.lastName}
-                                                onChange={e => setEditForm({ ...editForm, lastName: e.target.value })}
-                                            />
-                                        </div>
-                                    </div>
-                                    <hr />
-                                    <div className="mb-3">
-                                        <label className="form-label fw-semibold">Update Password (Optional)</label>
-                                        <div className="input-group">
-                                            <input
-                                                className="form-control"
-                                                type={showPassword ? 'text' : 'password'}
-                                                value={editForm.password}
-                                                onChange={e => setEditForm({ ...editForm, password: e.target.value })}
-                                                placeholder="Leave blank to keep current"
-                                            />
-                                            <span className="input-group-text" onClick={() => setShowPassword(!showPassword)} style={{ cursor: 'pointer' }}>
-                                                {showPassword ? <FaEyeSlash /> : <FaEye />}
-                                            </span>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div className="modal-footer bg-light rounded-bottom-4">
-                                    <button type="button" className="btn btn-secondary" onClick={() => setShowEdit(false)}>
-                                        Cancel
-                                    </button>
-                                    <button type="submit" className="btn btn-primary fw-semibold" disabled={saving}>
-                                        {saving ? 'Saving...' : 'Save Changes'}
-                                    </button>
-                                </div>
-                            </form>
-                        </div>
-                    </div>
-                </div>
-            )}
         </div>
     );
 };

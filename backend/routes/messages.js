@@ -199,7 +199,7 @@ router.put('/conversations/:conversationId/read', verifyToken, async (req, res) 
     }
 });
 
-// SEARCH USERS
+// SEARCH USERS (Students searching fellow students only)
 router.get('/search/users', verifyToken, async (req, res) => {
     try {
         const query = req.query.q || '';
@@ -228,18 +228,14 @@ router.get('/search/users', verifyToken, async (req, res) => {
             });
         }
 
-        const allMatches = await User.find({
+        // Only find fellow student accounts - students cannot search for or message admins
+        const studentMatches = await User.find({
             _id: { $ne: req.user.id },
+            role: 'student',
             $or: searchConditions
         }).select('firstName lastName profileImage name department role isOnline lastSeen').limit(30);
 
-        const validRoles = ['student', 'admin', 'developer'];
-        const filteredMatches = allMatches.filter(u => {
-            const userRole = u.role || 'student';
-            return validRoles.includes(userRole);
-        });
-
-        const mappedUsers = filteredMatches.map(u => {
+        const mappedUsers = studentMatches.map(u => {
             const userObj = u.toObject();
             userObj.profilePicture = userObj.profileImage || userObj.profilePicture;
             return userObj;
@@ -257,9 +253,21 @@ router.get('/search/users', verifyToken, async (req, res) => {
 // SEND MESSAGE (POST /)
 router.post('/', verifyToken, parser.single('file'), async (req, res) => {
     try {
+        if (req.user.role === 'admin') {
+            return res.status(403).json({ message: "Administrators manage the application and cannot participate in direct messaging." });
+        }
+
         const { recipientId, content, conversationId, type } = req.body;
         const senderId = req.user.id;
         let chatId = conversationId;
+
+        if (recipientId) {
+            const recipientUser = await User.findById(recipientId);
+            if (!recipientUser) return res.status(404).json({ message: "Recipient user not found" });
+            if (recipientUser.role === 'admin') {
+                return res.status(400).json({ message: "Messaging administrators directly is not supported. Please visit the admin office or check official announcements." });
+            }
+        }
 
         if (!chatId && recipientId) {
             const existingConversation = await Conversation.findOne({

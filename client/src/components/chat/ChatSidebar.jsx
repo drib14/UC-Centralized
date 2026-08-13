@@ -70,7 +70,7 @@ const ChatSidebar = ({
                     <input
                         type="text"
                         className="form-control bg-light border-0"
-                        placeholder="Search chats or people..."
+                        placeholder="Search conversations..."
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
                     />

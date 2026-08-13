@@ -262,7 +262,7 @@ const AdminEvents = () => {
                             <input
                                 type="text"
                                 className="form-control bg-light border-0"
-                                placeholder="Search events by title, venue, or details..."
+                                placeholder="Search events..."
                                 value={search}
                                 onChange={e => setSearch(e.target.value)}
                             />
@@ -424,7 +424,7 @@ const AdminEvents = () => {
                                             <input
                                                 type="text"
                                                 className="form-control"
-                                                placeholder="Main Gymnasium"
+                                                placeholder="Venue"
                                                 required
                                                 value={formData.location}
                                                 onChange={e => setFormData({ ...formData, location: e.target.value })}
@@ -459,7 +459,7 @@ const AdminEvents = () => {
                                         <textarea
                                             className="form-control"
                                             rows="3"
-                                            placeholder="Event description"
+                                            placeholder="Description"
                                             value={formData.description}
                                             onChange={e => setFormData({ ...formData, description: e.target.value })}
                                         ></textarea>
@@ -549,7 +549,7 @@ const AdminEvents = () => {
                                             <input
                                                 type="text"
                                                 className="form-control"
-                                                placeholder="Main Gymnasium"
+                                                placeholder="Venue"
                                                 required
                                                 value={editData.location}
                                                 onChange={e => setEditData({ ...editData, location: e.target.value })}
@@ -584,7 +584,7 @@ const AdminEvents = () => {
                                         <textarea
                                             className="form-control"
                                             rows="3"
-                                            placeholder="Event description"
+                                            placeholder="Description"
                                             value={editData.description}
                                             onChange={e => setEditData({ ...editData, description: e.target.value })}
                                         ></textarea>

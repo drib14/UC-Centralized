@@ -60,7 +60,7 @@ const ResetPassword = () => {
                                 type={showPassword ? 'text' : 'password'}
                                 className="form-control"
                                 id="password"
-                                placeholder="••••••••"
+                                placeholder="New password"
                                 value={password}
                                 onChange={(e) => setPassword(e.target.value)}
                                 required
@@ -78,7 +78,7 @@ const ResetPassword = () => {
                                 type={showConfirmPassword ? 'text' : 'password'}
                                 className="form-control"
                                 id="confirmPassword"
-                                placeholder="••••••••"
+                                placeholder="Confirm password"
                                 value={confirmPassword}
                                 onChange={(e) => setConfirmPassword(e.target.value)}
                                 required

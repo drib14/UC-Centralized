@@ -301,7 +301,7 @@ const AdminMerch = () => {
                             <input
                                 type="text"
                                 className="form-control bg-light border-0"
-                                placeholder="Search products by name or description..."
+                                placeholder="Search products..."
                                 value={search}
                                 onChange={e => setSearch(e.target.value)}
                             />
@@ -315,7 +315,7 @@ const AdminMerch = () => {
                                     className={`btn btn-sm rounded-pill px-3 fw-semibold text-capitalize ${categoryFilter === cat ? 'btn-primary' : 'btn-light'}`}
                                     onClick={() => setCategoryFilter(cat)}
                                 >
-                                    {cat === 'ALL' ? 'All Categories' : cat}
+                                    {cat === 'ALL' ? 'All Items' : cat}
                                 </button>
                             ))}
                         </div>
@@ -323,26 +323,25 @@ const AdminMerch = () => {
                 </div>
             </div>
 
-            {/* Products Table */}
-            <div className="card border-0 shadow-sm rounded-4 overflow-hidden bg-white">
+            {/* Product Table / Grid */}
+            <div className="card border-0 shadow-sm rounded-4 bg-white overflow-hidden">
                 <div className="table-responsive">
                     <table className="table table-hover align-middle mb-0">
-                        <thead className="table-light">
+                        <thead className="bg-light">
                             <tr>
-                                <th className="ps-4">Product</th>
+                                <th className="ps-4">Item</th>
                                 <th>Category</th>
                                 <th>Price</th>
-                                <th>Stock Status</th>
-                                <th>Variants Breakdown</th>
+                                <th>Stock / Variants</th>
                                 <th className="text-end pe-4">Actions</th>
                             </tr>
                         </thead>
                         <tbody>
                             {filteredMerch.length === 0 ? (
                                 <tr>
-                                    <td colSpan="6" className="text-center py-5 text-muted">
-                                        <FaShirt size={36} className="mb-2 opacity-50" />
-                                        <p className="mb-0">No merchandise found matching your criteria.</p>
+                                    <td colSpan="5" className="text-center py-5 text-muted">
+                                        <FaShirt size={40} className="mb-2 opacity-25" />
+                                        <p className="mb-0">No merchandise items found matching your filter.</p>
                                     </td>
                                 </tr>
                             ) : (
@@ -350,57 +349,60 @@ const AdminMerch = () => {
                                     <tr key={item._id}>
                                         <td className="ps-4">
                                             <div className="d-flex align-items-center gap-3">
-                                                <img
-                                                    src={item.image || 'https://via.placeholder.com/80'}
-                                                    alt={item.name}
-                                                    className="rounded-3 object-fit-cover shadow-sm"
-                                                    style={{ width: '48px', height: '48px' }}
-                                                />
+                                                {item.image ? (
+                                                    <img
+                                                        src={item.image}
+                                                        alt={item.name}
+                                                        className="rounded-3 border object-fit-cover"
+                                                        style={{ width: '48px', height: '48px' }}
+                                                    />
+                                                ) : (
+                                                    <div className="rounded-3 bg-light border d-flex align-items-center justify-content-center text-muted" style={{ width: '48px', height: '48px' }}>
+                                                        <FaShirt size={20} />
+                                                    </div>
+                                                )}
                                                 <div>
                                                     <div className="fw-bold text-dark">{item.name}</div>
-                                                    <small className="text-muted line-clamp-1">{item.description || 'No description'}</small>
+                                                    <small className="text-muted line-clamp-1" style={{ maxWidth: '250px' }}>{item.description || 'No description'}</small>
                                                 </div>
                                             </div>
                                         </td>
                                         <td>
-                                            <span className="badge bg-light text-dark border text-capitalize px-3 py-1 rounded-pill">
-                                                <FaTag className="me-1 text-primary" size={10} /> {item.category || 'General'}
+                                            <span className="badge bg-light text-dark border px-2 py-1 rounded-pill text-capitalize">
+                                                {item.category || 'other'}
                                             </span>
                                         </td>
-                                        <td className="fw-bold text-primary">
+                                        <td className="fw-bold text-dark">
                                             {formatCurrency(item.price)}
                                         </td>
                                         <td>
-                                            {getStockBadge(item.stock)}
-                                        </td>
-                                        <td>
-                                            {item.variants && item.variants.length > 0 ? (
-                                                <div className="d-flex flex-wrap gap-1">
-                                                    {item.variants.map((v, i) => (
-                                                        <span key={i} className="badge bg-light text-secondary border small">
-                                                            {v.size}/{v.color} ({v.stock})
-                                                        </span>
-                                                    ))}
+                                            {item.category === 'wearable' && Array.isArray(item.variants) && item.variants.length > 0 ? (
+                                                <div>
+                                                    <span className="badge bg-primary bg-opacity-10 text-primary border border-primary px-2 py-1 rounded-pill">
+                                                        {item.stock} in stock ({item.variants.length} variants)
+                                                    </span>
                                                 </div>
                                             ) : (
-                                                <span className="text-muted small">Standard Single Variant</span>
+                                                <span className={`badge px-2 py-1 rounded-pill ${item.stock <= 5 ? 'bg-danger bg-opacity-10 text-danger border border-danger' : 'bg-success bg-opacity-10 text-success border border-success'}`}>
+                                                    {item.stock} in stock
+                                                </span>
                                             )}
                                         </td>
                                         <td className="text-end pe-4">
-                                            <div className="btn-group">
+                                            <div className="d-flex justify-content-end gap-2">
                                                 <button
-                                                    className="btn btn-sm btn-outline-primary"
+                                                    className="btn btn-outline-primary btn-sm rounded-circle p-2 d-flex align-items-center justify-content-center"
                                                     onClick={() => openEditModal(item)}
-                                                    title="Edit Product"
+                                                    title="Edit Item"
                                                 >
-                                                    <FaPencil />
+                                                    <FaPenToSquare size={13} />
                                                 </button>
                                                 <button
-                                                    className="btn btn-sm btn-outline-danger"
-                                                    onClick={() => { setDeleteTarget(item); setShowDelete(true); }}
-                                                    title="Delete Product"
+                                                    className="btn btn-outline-danger btn-sm rounded-circle p-2 d-flex align-items-center justify-content-center"
+                                                    onClick={() => { setDeleteId(item._id); setShowDelete(true); }}
+                                                    title="Delete Item"
                                                 >
-                                                    <FaTrash />
+                                                    <FaTrash size={13} />
                                                 </button>
                                             </div>
                                         </td>
@@ -412,14 +414,14 @@ const AdminMerch = () => {
                 </div>
             </div>
 
-            {/* CREATE PRODUCT MODAL */}
+            {/* Create Product Modal */}
             {showCreate && (
                 <div className="modal fade show d-block" tabIndex="-1" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>
-                    <div className="modal-dialog modal-lg modal-dialog-centered">
+                    <div className="modal-dialog modal-dialog-centered modal-lg">
                         <div className="modal-content border-0 rounded-4 shadow">
                             <div className="modal-header bg-primary text-white rounded-top-4">
-                                <h5 className="modal-title d-flex align-items-center fw-bold">
-                                    <FaPlus className="me-2" /> Add Merchandise Product
+                                <h5 className="modal-title d-flex align-items-center">
+                                    <FaShirt className="me-2" /> Add Merchandise Item
                                 </h5>
                                 <button type="button" className="btn-close btn-close-white" onClick={() => setShowCreate(false)}></button>
                             </div>
@@ -431,7 +433,7 @@ const AdminMerch = () => {
                                             <input
                                                 type="text"
                                                 className="form-control"
-                                                placeholder="Merchandise name"
+                                                placeholder="Item name"
                                                 required
                                                 value={form.name}
                                                 onChange={e => setForm({ ...form, name: e.target.value })}
@@ -444,7 +446,7 @@ const AdminMerch = () => {
                                                 type="number"
                                                 step="0.01"
                                                 className="form-control"
-                                                placeholder="0.00"
+                                                placeholder="Price"
                                                 required
                                                 value={form.price}
                                                 onChange={e => setForm({ ...form, price: e.target.value })}
@@ -471,7 +473,7 @@ const AdminMerch = () => {
                                             <input
                                                 type="number"
                                                 className="form-control"
-                                                placeholder="0"
+                                                placeholder="Stock"
                                                 value={form.stock}
                                                 onChange={e => setForm({ ...form, stock: e.target.value })}
                                             />
@@ -500,7 +502,7 @@ const AdminMerch = () => {
                                                 <input
                                                     type="text"
                                                     className="form-control form-control-sm"
-                                                    placeholder="Black"
+                                                    placeholder="Color"
                                                     value={newVariant.color}
                                                     onChange={e => setNewVariant({ ...newVariant, color: e.target.value })}
                                                 />
@@ -509,7 +511,7 @@ const AdminMerch = () => {
                                                 <input
                                                     type="number"
                                                     className="form-control form-control-sm"
-                                                    placeholder="0"
+                                                    placeholder="Stock"
                                                     value={newVariant.stock}
                                                     onChange={e => setNewVariant({ ...newVariant, stock: e.target.value })}
                                                 />
@@ -568,7 +570,7 @@ const AdminMerch = () => {
                                         <textarea
                                             className="form-control"
                                             rows="2"
-                                            placeholder="Item description"
+                                            placeholder="Description"
                                             value={form.description}
                                             onChange={e => setForm({ ...form, description: e.target.value })}
                                         ></textarea>
@@ -588,14 +590,14 @@ const AdminMerch = () => {
                 </div>
             )}
 
-            {/* EDIT PRODUCT MODAL */}
-            {showEditModal && editData && (
+            {/* Edit Product Modal */}
+            {showEditModal && (
                 <div className="modal fade show d-block" tabIndex="-1" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>
-                    <div className="modal-dialog modal-lg modal-dialog-centered">
+                    <div className="modal-dialog modal-dialog-centered modal-lg">
                         <div className="modal-content border-0 rounded-4 shadow">
                             <div className="modal-header bg-warning text-dark rounded-top-4">
-                                <h5 className="modal-title d-flex align-items-center fw-bold">
-                                    <FaPencil className="me-2" /> Edit Product ({editData.name})
+                                <h5 className="modal-title fw-bold d-flex align-items-center">
+                                    <FaPenToSquare className="me-2" /> Edit Product
                                 </h5>
                                 <button type="button" className="btn-close" onClick={() => setShowEditModal(false)}></button>
                             </div>
@@ -607,7 +609,7 @@ const AdminMerch = () => {
                                             <input
                                                 type="text"
                                                 className="form-control"
-                                                placeholder="Merchandise name"
+                                                placeholder="Item name"
                                                 required
                                                 value={editData.name}
                                                 onChange={e => setEditData({ ...editData, name: e.target.value })}
@@ -619,7 +621,7 @@ const AdminMerch = () => {
                                                 type="number"
                                                 step="0.01"
                                                 className="form-control"
-                                                placeholder="0.00"
+                                                placeholder="Price"
                                                 required
                                                 value={editData.price}
                                                 onChange={e => setEditData({ ...editData, price: e.target.value })}
@@ -646,7 +648,7 @@ const AdminMerch = () => {
                                             <input
                                                 type="number"
                                                 className="form-control"
-                                                placeholder="0"
+                                                placeholder="Stock"
                                                 value={editData.stock}
                                                 onChange={e => setEditData({ ...editData, stock: e.target.value })}
                                             />
@@ -675,7 +677,7 @@ const AdminMerch = () => {
                                                 <input
                                                     type="text"
                                                     className="form-control form-control-sm"
-                                                    placeholder="Black"
+                                                    placeholder="Color"
                                                     value={newVariant.color}
                                                     onChange={e => setNewVariant({ ...newVariant, color: e.target.value })}
                                                 />
@@ -684,7 +686,7 @@ const AdminMerch = () => {
                                                 <input
                                                     type="number"
                                                     className="form-control form-control-sm"
-                                                    placeholder="0"
+                                                    placeholder="Stock"
                                                     value={newVariant.stock}
                                                     onChange={e => setNewVariant({ ...newVariant, stock: e.target.value })}
                                                 />
@@ -743,7 +745,7 @@ const AdminMerch = () => {
                                         <textarea
                                             className="form-control"
                                             rows="2"
-                                            placeholder="Item description"
+                                            placeholder="Description"
                                             value={editData.description}
                                             onChange={e => setEditData({ ...editData, description: e.target.value })}
                                         ></textarea>

@@ -265,7 +265,7 @@ const AdminDepartments = () => {
                             <input
                                 type="text"
                                 className="form-control bg-light border-0"
-                                placeholder="Search departments by code or name..."
+                                placeholder="Search departments..."
                                 value={search}
                                 onChange={e => setSearch(e.target.value)}
                             />
@@ -397,7 +397,7 @@ const AdminDepartments = () => {
                                         <input
                                             type="text"
                                             className="form-control"
-                                            placeholder="CCS"
+                                            placeholder="Department code"
                                             required
                                             value={createForm.code}
                                             onChange={e => setCreateForm({ ...createForm, code: e.target.value.toUpperCase() })}
@@ -411,7 +411,7 @@ const AdminDepartments = () => {
                                         <input
                                             type="text"
                                             className="form-control"
-                                            placeholder="College of Computer Studies"
+                                            placeholder="Department name"
                                             required
                                             value={createForm.name}
                                             onChange={e => setCreateForm({ ...createForm, name: e.target.value })}
@@ -423,7 +423,7 @@ const AdminDepartments = () => {
                                         <textarea
                                             className="form-control"
                                             rows="2"
-                                            placeholder="Information Technology, Computer Science"
+                                            placeholder="Description"
                                             value={createForm.description}
                                             onChange={e => setCreateForm({ ...createForm, description: e.target.value })}
                                         ></textarea>
@@ -507,7 +507,7 @@ const AdminDepartments = () => {
                                         <input
                                             type="text"
                                             className="form-control"
-                                            placeholder="CCS"
+                                            placeholder="Department code"
                                             required
                                             value={editData.code}
                                             onChange={e => setEditData({ ...editData, code: e.target.value.toUpperCase() })}
@@ -519,7 +519,7 @@ const AdminDepartments = () => {
                                         <input
                                             type="text"
                                             className="form-control"
-                                            placeholder="College of Computer Studies"
+                                            placeholder="Department name"
                                             required
                                             value={editData.name}
                                             onChange={e => setEditData({ ...editData, name: e.target.value })}
@@ -531,7 +531,7 @@ const AdminDepartments = () => {
                                         <textarea
                                             className="form-control"
                                             rows="2"
-                                            placeholder="Information Technology, Computer Science"
+                                            placeholder="Description"
                                             value={editData.description}
                                             onChange={e => setEditData({ ...editData, description: e.target.value })}
                                         ></textarea>

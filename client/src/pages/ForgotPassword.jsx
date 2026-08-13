@@ -49,7 +49,7 @@ const ForgotPassword = () => {
                                 type="text"
                                 className="form-control"
                                 id="studentId"
-                                placeholder="12345678"
+                                placeholder="ID Number"
                                 value={studentId}
                                 onChange={(e) => setStudentId(e.target.value)}
                                 required
@@ -64,7 +64,7 @@ const ForgotPassword = () => {
                                 type="email"
                                 className="form-control"
                                 id="email"
-                                placeholder="name@example.com"
+                                placeholder="Email address"
                                 value={email}
                                 onChange={(e) => setEmail(e.target.value)}
                                 required

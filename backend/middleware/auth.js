@@ -3,7 +3,6 @@ const User = require('../models/User');
 
 const verifyToken = async (req, res, next) => {
     const authHeader = req.headers.authorization;
-    const apiKey = req.headers['x-api-key'];
 
     if (authHeader && authHeader.startsWith('Bearer ')) {
         const token = authHeader.split(' ')[1];
@@ -19,19 +18,6 @@ const verifyToken = async (req, res, next) => {
             req.user = user;
             next();
         });
-    } else if (apiKey) {
-        try {
-            const user = await User.findOne({ apiKey: String(apiKey).trim() });
-            if (user) {
-                req.user = { id: user._id.toString(), role: user.role };
-                next();
-            } else {
-                return res.status(401).json({ message: "Invalid API Key." });
-            }
-        } catch (err) {
-            console.error("Auth Middleware Error:", err);
-            return res.status(500).json({ message: "Authentication verification failed." });
-        }
     } else {
         return res.status(401).json({ message: "You are not authenticated." });
     }

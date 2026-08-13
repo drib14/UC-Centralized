@@ -364,7 +364,7 @@ const AdminPOS = () => {
                                             <input
                                                 type="text"
                                                 className="form-control bg-light border-0 small"
-                                                placeholder="Search student name or ID..."
+                                                placeholder="Search student..."
                                                 value={userQuery}
                                                 onChange={handleSearchChange}
                                             />
@@ -444,7 +444,7 @@ const AdminPOS = () => {
                                         <input
                                             type="number"
                                             className="form-control bg-light border-0 fw-bold"
-                                            placeholder="0.00"
+                                            placeholder="Cash amount"
                                             value={cashTendered}
                                             onChange={e => setCashTendered(e.target.value)}
                                         />

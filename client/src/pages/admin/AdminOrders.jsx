@@ -181,7 +181,7 @@ const AdminOrders = () => {
                             <input
                                 type="text"
                                 className="form-control bg-light border-0"
-                                placeholder="Search by customer name, student ID, or order ID..."
+                                placeholder="Search orders..."
                                 value={search}
                                 onChange={e => setSearch(e.target.value)}
                             />
