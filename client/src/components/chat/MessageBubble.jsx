@@ -42,12 +42,16 @@ const formatAudioTime = (seconds) => {
     return `${mins}:${secs < 10 ? '0' : ''}${secs}`;
 };
 
-// --- AUDIO PLAYER COMPONENT (Messenger Style) ---
-const MessengerAudioPlayer = ({ src, isOwn }) => {
+// --- AUDIO PLAYER COMPONENT (Customized Messenger/WhatsApp Style) ---
+const MessengerAudioPlayer = ({ src, fileName = '', fileSize = 0, isOwn }) => {
     const audioRef = useRef(null);
     const [isPlaying, setIsPlaying] = useState(false);
     const [currentTime, setCurrentTime] = useState(0);
     const [duration, setDuration] = useState(0);
+    const [playbackRate, setPlaybackRate] = useState(1);
+
+    const isVoiceNote = !fileName || fileName.toLowerCase().includes('voice-') || fileName.toLowerCase().includes('recording');
+    const displayName = isVoiceNote ? 'Voice Message' : fileName;
 
     useEffect(() => {
         const audio = audioRef.current;
@@ -83,8 +87,18 @@ const MessengerAudioPlayer = ({ src, isOwn }) => {
             audioRef.current.pause();
             setIsPlaying(false);
         } else {
-            audioRef.current.play().then(() => setIsPlaying(true)).catch(e => console.error(e));
+            audioRef.current.play().then(() => setIsPlaying(true)).catch(e => console.error("Audio playback error:", e));
         }
+    };
+
+    const toggleSpeed = (e) => {
+        e.stopPropagation();
+        if (!audioRef.current) return;
+        const speeds = [1, 1.5, 2];
+        const nextIdx = (speeds.indexOf(playbackRate) + 1) % speeds.length;
+        const nextSpeed = speeds[nextIdx];
+        audioRef.current.playbackRate = nextSpeed;
+        setPlaybackRate(nextSpeed);
     };
 
     const handleSeek = (e) => {
@@ -100,49 +114,93 @@ const MessengerAudioPlayer = ({ src, isOwn }) => {
     const progress = duration > 0 ? (currentTime / duration) * 100 : 0;
 
     // Simulated waveform bars heights
-    const waveformHeights = [35, 60, 40, 85, 55, 95, 70, 45, 80, 60, 90, 50, 75, 40, 65, 85, 50, 70, 40, 60];
+    const waveformHeights = [30, 60, 45, 85, 55, 95, 75, 45, 85, 60, 95, 50, 80, 40, 70, 90, 55, 75, 45, 65, 85, 40, 60];
 
     return (
-        <div className={`messenger-audio-player d-flex align-items-center p-2 rounded-4 ${isOwn ? 'text-white' : 'text-dark'}`} style={{ minWidth: '220px', maxWidth: '300px' }}>
+        <div className={`messenger-audio-player d-flex flex-column p-2 rounded-4 ${isOwn ? 'text-white' : 'text-dark'}`} style={{ minWidth: '240px', maxWidth: '320px' }}>
             <audio ref={audioRef} src={src} preload="metadata" />
-            
-            <button
-                type="button"
-                className={`btn rounded-circle d-flex align-items-center justify-content-center me-2 shadow-sm ${isOwn ? 'btn-light text-primary' : 'btn-primary text-white'}`}
-                style={{ width: '36px', height: '36px', flexShrink: 0 }}
-                onClick={togglePlay}
-            >
-                {isPlaying ? <FaPause size={12} /> : <FaPlay size={12} className="ms-1" />}
-            </button>
 
-            <div className="flex-grow-1 d-flex flex-column justify-content-center cursor-pointer" onClick={handleSeek}>
-                {/* Waveform Visualization */}
-                <div className="d-flex align-items-center gap-1 mb-1" style={{ height: '24px' }}>
-                    {waveformHeights.map((h, i) => {
-                        const barProgress = (i / waveformHeights.length) * 100;
-                        const isFilled = barProgress <= progress;
-                        return (
-                            <div
-                                key={i}
-                                className="rounded-pill transition-all"
-                                style={{
-                                    width: '3px',
-                                    height: `${h}%`,
-                                    backgroundColor: isFilled
-                                        ? (isOwn ? '#ffffff' : 'var(--uc-navy-primary, #002b7f)')
-                                        : (isOwn ? 'rgba(255, 255, 255, 0.4)' : 'rgba(0, 43, 127, 0.2)'),
-                                    transform: isPlaying && isFilled ? 'scaleY(1.1)' : 'scaleY(1)',
-                                    transition: 'all 0.15s ease'
-                                }}
-                            />
-                        );
-                    })}
+            {/* Audio Title & Meta Info */}
+            {!isVoiceNote && (
+                <div className="d-flex align-items-center justify-content-between mb-1 px-1">
+                    <span className="fw-bold text-truncate small" style={{ maxWidth: '190px' }} title={displayName}>
+                        {displayName}
+                    </span>
+                    {fileSize > 0 && (
+                        <span className="small opacity-75" style={{ fontSize: '0.68rem' }}>
+                            {formatFileSize(fileSize)}
+                        </span>
+                    )}
+                </div>
+            )}
+            
+            <div className="d-flex align-items-center">
+                {/* Play / Pause Circular Button */}
+                <button
+                    type="button"
+                    className={`btn rounded-circle d-flex align-items-center justify-content-center me-2 shadow-sm hover-scale flex-shrink-0 ${isOwn ? 'btn-light text-primary' : 'btn-primary text-white'}`}
+                    style={{ width: '38px', height: '38px' }}
+                    onClick={togglePlay}
+                    title={isPlaying ? "Pause" : "Play"}
+                >
+                    {isPlaying ? <FaPause size={13} /> : <FaPlay size={13} className="ms-1" />}
+                </button>
+
+                {/* Waveform & Duration Container */}
+                <div className="flex-grow-1 d-flex flex-column justify-content-center cursor-pointer me-2" onClick={handleSeek}>
+                    {/* Interactive Waveform Visualization */}
+                    <div className="d-flex align-items-center gap-1 mb-1" style={{ height: '26px' }}>
+                        {waveformHeights.map((h, i) => {
+                            const barProgress = (i / waveformHeights.length) * 100;
+                            const isFilled = barProgress <= progress;
+                            return (
+                                <div
+                                    key={i}
+                                    className="rounded-pill transition-all"
+                                    style={{
+                                        width: '3px',
+                                        height: `${h}%`,
+                                        backgroundColor: isFilled
+                                            ? (isOwn ? '#ffffff' : 'var(--uc-navy-primary, #002b7f)')
+                                            : (isOwn ? 'rgba(255, 255, 255, 0.4)' : 'rgba(0, 43, 127, 0.22)'),
+                                        transform: isPlaying && isFilled ? 'scaleY(1.15)' : 'scaleY(1)',
+                                        transition: 'all 0.15s ease'
+                                    }}
+                                />
+                            );
+                        })}
+                    </div>
+
+                    {/* Timestamps */}
+                    <div className="d-flex justify-content-between align-items-center font-monospace" style={{ fontSize: '0.7rem', opacity: 0.88 }}>
+                        <span>{formatAudioTime(currentTime)}</span>
+                        <span>{formatAudioTime(duration || 0)}</span>
+                    </div>
                 </div>
 
-                {/* Duration & Timestamp */}
-                <div className="d-flex justify-content-between align-items-center" style={{ fontSize: '0.68rem', opacity: 0.85 }}>
-                    <span>{formatAudioTime(currentTime)}</span>
-                    <span>{formatAudioTime(duration || 0)}</span>
+                {/* Speed Toggle & Download Action Buttons */}
+                <div className="d-flex align-items-center gap-1 flex-shrink-0">
+                    <button
+                        type="button"
+                        className={`btn btn-sm px-1 py-0 rounded-pill fw-bold hover-scale ${isOwn ? 'btn-outline-light text-white' : 'btn-outline-primary'}`}
+                        style={{ fontSize: '0.68rem', minWidth: '30px', height: '22px' }}
+                        onClick={toggleSpeed}
+                        title="Playback speed"
+                    >
+                        {playbackRate}x
+                    </button>
+                    <a
+                        href={src}
+                        download={fileName || 'audio-message'}
+                        target="_blank"
+                        rel="noreferrer"
+                        className={`btn btn-sm rounded-circle p-1 d-flex align-items-center justify-content-center hover-scale ${isOwn ? 'text-white text-opacity-75' : 'text-secondary'}`}
+                        style={{ width: '24px', height: '24px' }}
+                        title="Download audio"
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        <FaDownload size={10} />
+                    </a>
                 </div>
             </div>
         </div>
@@ -224,19 +282,35 @@ const MessageBubble = ({
     // Determine specific file category and configuration
     const getFileCategory = (msg) => {
         const fileName = msg.fileName || (msg.fileUrl ? msg.fileUrl.split('/').pop().split('?')[0] : 'Attachment');
-        const ext = fileName.split('.').pop().toLowerCase();
-        const type = msg.type || '';
+        const ext = (fileName.split('.').pop() || '').toLowerCase();
+        const type = (msg.type || '').toLowerCase();
+        const fileType = (msg.fileType || '').toLowerCase();
+        const nameLower = (fileName || '').toLowerCase();
+        const urlLower = (msg.fileUrl || '').toLowerCase();
 
-        if (type === 'image' || ['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg', 'bmp', 'ico', 'heic'].includes(ext)) {
+        // 1. All Audio Formats (Priority #1: Catch all audio formats, including voice recordings, mp3, wav, webm audio, etc., even if backend/Cloudinary tagged them as video)
+        const isAudio =
+            type === 'audio' ||
+            fileType.startsWith('audio/') ||
+            ['mp3', 'wav', 'ogg', 'm4a', 'aac', 'flac', 'wma', 'opus', 'weba', 'mid', 'midi', 'amr', 'aiff', 'caf', 'oga', 'spx', '3ga', 'voc'].includes(ext) ||
+            ((ext === 'webm' || ext === 'ogg' || ext === 'mp4') && (nameLower.includes('voice') || nameLower.includes('audio') || nameLower.includes('record') || urlLower.includes('voice') || urlLower.includes('audio')));
+
+        if (isAudio) {
+            return { category: 'audio', fileName, ext, label: 'Audio Message', color: '#10b981', bg: '#ecfdf5' };
+        }
+
+        // 2. Images
+        if (type === 'image' || fileType.startsWith('image/') || ['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg', 'bmp', 'ico', 'heic', 'tiff'].includes(ext)) {
             return { category: 'image', fileName, ext };
         }
-        if (type === 'video' || ['mp4', 'webm', 'mov', 'avi', 'mkv', 'flv', 'wmv', 'm4v', '3gp'].includes(ext)) {
+
+        // 3. True Video Formats (Excludes audio webm)
+        if (type === 'video' || fileType.startsWith('video/') || ['mp4', 'mov', 'avi', 'mkv', 'flv', 'wmv', 'm4v', '3gp', 'ogv', 'webm'].includes(ext)) {
             return { category: 'video', fileName, ext };
         }
-        if (type === 'audio' || ['mp3', 'wav', 'ogg', 'm4a', 'aac', 'flac', 'wma'].includes(ext)) {
-            return { category: 'audio', fileName, ext };
-        }
-        if (type === 'pdf' || ext === 'pdf') {
+
+        // 4. PDFs, Documents, Spreadsheets, Presentations, Archives, Code, Files
+        if (type === 'pdf' || ext === 'pdf' || fileType === 'application/pdf') {
             return { category: 'pdf', fileName, ext, label: 'PDF Document', color: '#dc2626', bg: '#fef2f2', icon: <FaFilePdf /> };
         }
         if (type === 'document' || ['doc', 'docx', 'rtf', 'odt', 'pages'].includes(ext)) {
@@ -367,7 +441,12 @@ const MessageBubble = ({
                 case 'audio':
                     return (
                         <div className="d-flex flex-column">
-                            <MessengerAudioPlayer src={message.fileUrl} isOwn={isOwn} />
+                            <MessengerAudioPlayer
+                                src={message.fileUrl}
+                                fileName={fileInfo?.fileName || message.fileName}
+                                fileSize={message.fileSize}
+                                isOwn={isOwn}
+                            />
                             {message.content && (
                                 <div className={`mt-1 px-1 message-text fw-medium ${isOwn ? 'text-white' : 'text-dark'}`} style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word', fontSize: '0.925rem' }}>
                                     {message.content}

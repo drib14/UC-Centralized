@@ -16,16 +16,28 @@ function escapeRegex(text) {
 function detectFileType(mimetype = '', originalname = '') {
     const mime = (mimetype || '').toLowerCase();
     const ext = ((originalname || '').split('.').pop() || '').toLowerCase();
+    const nameLower = (originalname || '').toLowerCase();
 
+    // 1. Audio Priority: Detect all audio types, voice messages, and audio-based webm files
+    if (
+        mime.startsWith('audio/') ||
+        ['mp3', 'wav', 'ogg', 'm4a', 'aac', 'flac', 'wma', 'opus', 'weba', 'mid', 'midi', 'amr', 'aiff', 'caf', 'oga', 'spx', '3ga', 'voc'].includes(ext) ||
+        ((ext === 'webm' || ext === 'ogg' || ext === 'mp4') && (nameLower.includes('voice') || nameLower.includes('audio') || nameLower.includes('record') || mime.includes('audio')))
+    ) {
+        return 'audio';
+    }
+
+    // 2. Images
     if (mime.startsWith('image/') || ['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg', 'bmp', 'ico', 'heic', 'tiff'].includes(ext)) {
         return 'image';
     }
-    if (mime.startsWith('video/') || ['mp4', 'webm', 'mov', 'avi', 'mkv', 'flv', 'wmv', 'm4v', '3gp', 'ogv'].includes(ext)) {
+
+    // 3. Videos (excluding audio webm)
+    if (mime.startsWith('video/') || ['mp4', 'mov', 'avi', 'mkv', 'flv', 'wmv', 'm4v', '3gp', 'ogv', 'webm'].includes(ext)) {
         return 'video';
     }
-    if (mime.startsWith('audio/') || ['mp3', 'wav', 'ogg', 'm4a', 'aac', 'flac', 'wma', 'opus', 'mid'].includes(ext)) {
-        return 'audio';
-    }
+
+    // 4. Documents, Spreadsheets, Presentations, PDFs, Archives, Code
     if (mime === 'application/pdf' || ext === 'pdf') {
         return 'pdf';
     }
