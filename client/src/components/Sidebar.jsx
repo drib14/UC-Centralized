@@ -7,7 +7,7 @@ import logo from '../assets/uc-central-logo.svg';
 import {
     FaTableColumns, FaCalendarDays, FaShirt, FaEnvelope, FaCartShopping, FaUser, FaRightFromBracket,
     FaUsers, FaBullhorn, FaClipboardList, FaCashRegister, FaChevronLeft, FaChevronRight, FaBook, FaBell,
-    FaBuildingColumns
+    FaBuildingColumns, FaXmark
 } from 'react-icons/fa6';
 
 const Sidebar = () => {
@@ -25,16 +25,25 @@ const Sidebar = () => {
         }
 
         const handleResize = () => {
-            setIsMobile(window.innerWidth <= 768);
-            if (window.innerWidth <= 768) {
+            const mobile = window.innerWidth <= 768;
+            setIsMobile(mobile);
+            if (mobile) {
                 setCollapsed(false);
             } else {
                 setMobileActive(false);
             }
         };
 
+        const handleOpenMobile = () => {
+            setMobileActive(true);
+        };
+
         window.addEventListener('resize', handleResize);
-        return () => window.removeEventListener('resize', handleResize);
+        window.addEventListener('openMobileSidebar', handleOpenMobile);
+        return () => {
+            window.removeEventListener('resize', handleResize);
+            window.removeEventListener('openMobileSidebar', handleOpenMobile);
+        };
     }, []);
 
     const toggleSidebar = () => {
@@ -72,7 +81,7 @@ const Sidebar = () => {
             {/* Mobile Overlay */}
             {isMobile && mobileActive && (
                 <div
-                    className="position-fixed top-0 start-0 w-100 h-100 bg-dark opacity-50"
+                    className="position-fixed top-0 start-0 w-100 h-100 bg-dark opacity-50 animate-fade-in"
                     style={{ zIndex: 999 }}
                     onClick={handleMobileClick}
                 ></div>
@@ -85,7 +94,17 @@ const Sidebar = () => {
                     </div>
                 )}
 
-                <div className="sidebar-header">
+                <div className="sidebar-header position-relative">
+                    {isMobile && (
+                        <button
+                            type="button"
+                            className="btn btn-sm btn-link text-white position-absolute top-0 end-0 m-2 p-1 opacity-75 hover-opacity-100 text-decoration-none"
+                            onClick={() => setMobileActive(false)}
+                            title="Close Menu"
+                        >
+                            <FaXmark size={20} />
+                        </button>
+                    )}
                     <img src={logo} className="logo-img" alt="Logo" />
                     <span className="sidebar-brand-text">UC-Central</span>
                 </div>

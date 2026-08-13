@@ -11,11 +11,11 @@ import {
     FaLock, FaCheck, FaXmark, FaCalendarDays,
     FaLocationDot, FaIdCard, FaCircleCheck, FaGraduationCap,
     FaEnvelope, FaBuildingColumns, FaShieldHalved, FaBell,
-    FaMobileScreenButton, FaCamera, FaTrash
+    FaMobileScreenButton, FaCamera, FaTrash, FaRightFromBracket
 } from 'react-icons/fa6';
 
 const StudentProfile = () => {
-    const { user, syncSession } = useAuth();
+    const { user, syncSession, logout } = useAuth();
     const {
         devicePermission,
         requestDeviceNotificationPermission,
@@ -474,6 +474,25 @@ const StudentProfile = () => {
                                 Device alerts are blocked in your browser. Click the site settings lock/tune icon in the browser address bar to allow notifications.
                             </div>
                         )}
+                    </div>
+
+                    {/* Account Session & Log Out Card */}
+                    <div className="card border-0 shadow-sm rounded-4 bg-white p-4 mb-4" style={{ borderLeft: '5px solid #dc2626' }}>
+                        <div className="d-flex flex-column gap-2">
+                            <h6 className="fw-bold text-dark mb-1 d-flex align-items-center gap-2 font-outfit">
+                                <FaShieldHalved className="text-danger" /> Account Session
+                            </h6>
+                            <p className="text-muted small mb-3">
+                                Sign out of your active student portal session securely on this device.
+                            </p>
+                            <button
+                                type="button"
+                                className="btn btn-outline-danger w-100 rounded-pill py-2.5 fw-semibold d-flex align-items-center justify-content-center gap-2 hover-lift shadow-xs"
+                                onClick={logout}
+                            >
+                                <FaRightFromBracket size={15} /> Log Out of Account
+                            </button>
+                        </div>
                     </div>
                 </div>
 

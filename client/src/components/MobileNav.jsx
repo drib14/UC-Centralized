@@ -6,7 +6,7 @@ import { useSocket } from '../context/SocketContext';
 import {
     FaTableColumns, FaCalendarDays, FaShirt, FaEnvelope,
     FaCartShopping, FaUser, FaCashRegister, FaClipboardList,
-    FaUsers
+    FaUsers, FaBars
 } from 'react-icons/fa6';
 
 const MobileNav = () => {
@@ -90,6 +90,16 @@ const MobileNav = () => {
                             <FaUsers size={18} />
                             <span style={{ fontSize: '0.7rem', marginTop: '2px' }}>Users</span>
                         </NavLink>
+
+                        <button
+                            type="button"
+                            className="mobile-nav-item d-flex flex-column align-items-center justify-content-center text-decoration-none py-1 flex-grow-1 border-0 bg-transparent text-secondary"
+                            onClick={() => window.dispatchEvent(new Event('openMobileSidebar'))}
+                            title="Open Menu & Log Out"
+                        >
+                            <FaBars size={18} />
+                            <span style={{ fontSize: '0.7rem', marginTop: '2px' }}>Menu</span>
+                        </button>
                     </>
                 ) : (
                     <>
