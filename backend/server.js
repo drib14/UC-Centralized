@@ -71,8 +71,8 @@ const isAllowedOrigin = (origin) => {
     if (allowedOrigins.includes(origin)) return true;
     // Allow localhost on any port for dev
     if (/^http:\/\/localhost(:\d+)?$/.test(origin) || /^http:\/\/127\.0\.0\.1(:\d+)?$/.test(origin)) return true;
-    // Allow official vercel previews
-    if (/^https:\/\/([a-z0-9-]+\.)?uc-centralized\.vercel\.app$/.test(origin)) return true;
+    // Allow all official vercel deployments and preview URLs
+    if (/^https:\/\/([a-z0-9-]+\.)*vercel\.app$/.test(origin)) return true;
     return false;
 };
 
